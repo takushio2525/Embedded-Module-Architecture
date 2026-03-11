@@ -3,3 +3,27 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# LaTeX build artifacts
+doc/*.aux
+doc/*.bbl
+doc/*.blg
+doc/*.idx
+doc/*.ind
+doc/*.lof
+doc/*.lot
+doc/*.out
+doc/*.toc
+doc/*.acn
+doc/*.acr
+doc/*.alg
+doc/*.glg
+doc/*.glo
+doc/*.gls
+doc/*.ist
+doc/*.fls
+doc/*.log
+doc/*.fdb_latexmk
+doc/*.synctex.gz
+doc/*.dvi
+doc/*.pdf
