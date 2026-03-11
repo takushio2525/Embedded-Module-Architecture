@@ -1,0 +1,184 @@
+% API仕様
+\section{API仕様}
+
+\subsection{IModuleインターフェース}
+
+\begin{apibox}{IModule — モジュールインターフェース}
+\textbf{定義ファイル:} \texttt{lib/ModuleCore/IModule.h}
+
+全ハードウェアモジュールが実装すべき抽象インターフェース。
+\texttt{init()}と\texttt{update()}の2つの仮想関数により、統一的なライフサイクル管理を実現する。
+\end{apibox}
+
+\begin{lstlisting}[style=cpp, caption={IModuleインターフェース定義}]
+class IModule {
+public:
+    // モジュールの初期化
+    // 戻り値: true=成功, false=失敗
+    virtual bool init() = 0;
+
+    // モジュールの更新（毎ループ呼び出される）
+    // 引数: sys - プロジェクト共有データへのポインタ
+    virtual void update(SystemData* sys) = 0;
+
+    // 仮想デストラクタ
+    virtual ~IModule() {}
+};
+\end{lstlisting}
+
+\subsubsection{init()}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値 & \texttt{bool} — \texttt{true}で初期化成功、\texttt{false}で失敗 \\
+呼び出しタイミング & \texttt{setup()}内で1回のみ \\
+責務 & ハードウェアの初期化、ピン設定、ModuleTimerの\texttt{setTime()}呼び出し等 \\
+エラー時 & \texttt{false}を返す。呼び出し側でモジュールの無効化やログ出力を行う \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{update(SystemData* sys)}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数 & \texttt{SystemData*} — プロジェクト共有データへのポインタ \\
+戻り値 & \texttt{void} \\
+呼び出しタイミング & \texttt{loop()}内で毎ループ呼び出される \\
+責務 & センサー読み取り、出力制御、SystemDataの更新 \\
+エラー時 & SystemData内のサブ構造体にエラーフラグを設定 \\
+\bottomrule
+\end{tabularx}
+
+% -------------------------------------------
+
+\subsection{ModuleTimerクラス}
+
+\begin{apibox}{ModuleTimer — ノンブロッキングタイマー}
+\textbf{定義ファイル:} \texttt{lib/ModuleCore/ModuleTimer.h}
+
+\texttt{millis()}ベースのシンプルなタイマークラス。
+\texttt{delay()}を使用せずに周期実行・デバウンス・ワンショット・タイムアウト等を実現する。
+インスタンスを複数作成することで、モジュール内で複数のタイマーを独立に管理できる。
+\end{apibox}
+
+\begin{lstlisting}[style=cpp, caption={ModuleTimerクラス定義}]
+class ModuleTimer {
+private:
+    unsigned long _startTime;
+
+public:
+    // コンストラクタ
+    ModuleTimer() : _startTime(0) {}
+
+    // 基準時刻をセット
+    // 引数なし: getNowTime()が0から開始
+    // 引数あり: getNowTime()が指定値から開始
+    void setTime(unsigned long offsetMs = 0) {
+        _startTime = millis() - offsetMs;
+    }
+
+    // 基準時刻からの経過時間(ms)を取得
+    unsigned long getNowTime() const {
+        return millis() - _startTime;
+    }
+};
+\end{lstlisting}
+
+\subsubsection{setTime(unsigned long offsetMs = 0)}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数 & \texttt{offsetMs}（デフォルト: 0） — 初期オフセット値(ms) \\
+戻り値 & \texttt{void} \\
+動作 & 内部の基準時刻を\texttt{millis() - offsetMs}に設定する。
+       \texttt{offsetMs = 0}の場合、直後の\texttt{getNowTime()}は0を返す。
+       \texttt{offsetMs = 100}の場合、直後の\texttt{getNowTime()}は100を返す \\
+用途 & タイマーの開始・リセット。\texttt{init()}内および周期リセット時に使用 \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{getNowTime() const}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数 & なし \\
+戻り値 & \texttt{unsigned long} — 最後の\texttt{setTime()}からの経過時間(ms) \\
+動作 & \texttt{millis() - \_startTime}を返す \\
+用途 & 経過時間の判定。条件分岐と組み合わせて周期実行・デバウンス等を実現 \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{使用パターン}
+
+\begin{lstlisting}[style=cpp, caption={周期実行パターン}]
+ModuleTimer readTimer;
+
+void init() {
+    readTimer.setTime();
+}
+
+void update(SystemData* sys) {
+    if (readTimer.getNowTime() >= 1000) {
+        readTimer.setTime();  // リセット
+        sys->temp.temperature = readSensor();
+    }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=cpp, caption={デバウンスパターン}]
+ModuleTimer debounce;
+
+void update(SystemData* sys) {
+    bool rawInput = digitalRead(BUTTON_PIN);
+
+    if (rawInput != lastRawInput) {
+        debounce.setTime();  // 入力変化でリセット
+        lastRawInput = rawInput;
+    }
+
+    if (debounce.getNowTime() >= 50) {
+        sys->button.pressed = lastRawInput;  // 50ms安定で確定
+    }
+}
+\end{lstlisting}
+
+% -------------------------------------------
+
+\subsection{SystemData構造体}
+
+\begin{apibox}{SystemData — プロジェクト共有データ}
+\textbf{定義ファイル:} \texttt{include/SystemData.h}（プロジェクト固有）
+
+各モジュールが定義するサブ構造体を集約した、プロジェクト固有のデータ構造体。
+全モジュールの\texttt{update()}メソッドに共有ポインタとして渡される。
+\end{apibox}
+
+\subsubsection{設計ルール}
+
+\begin{enumerate}
+    \item 各モジュールは、自身が管理するデータをサブ構造体として定義する（モジュールのヘッダーファイル内）
+    \item \texttt{SystemData}構造体は、プロジェクトで使用するモジュールのサブ構造体をメンバとして持つ
+    \item モジュールは\texttt{update()}内で、自身のサブ構造体に書き込み、必要に応じて他モジュールのサブ構造体を読み取る
+\end{enumerate}
+
+\begin{lstlisting}[style=cpp, caption={SystemData構成例}]
+// SystemData.h
+#pragma once
+#include "LedModule.h"
+#include "TempSensorModule.h"
+#include "CameraModule.h"
+
+struct SystemData {
+    LedData led;
+    TempData temp;
+    CameraData camera;
+};
+\end{lstlisting}

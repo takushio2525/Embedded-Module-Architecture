@@ -1,0 +1,47 @@
+% 背景・課題
+\section{背景・課題}
+
+\subsection{組み込み開発における一般的な課題}
+
+組み込みシステムの開発において、以下のような問題が頻繁に発生する：
+
+\begin{enumerate}
+    \item \textbf{delay()の乱用} \\
+    ブロッキング関数である\texttt{delay()}を使用すると、その間は他の処理が完全に停止する。
+    複数のセンサーやアクチュエータを同時に制御する場合、\texttt{delay()}は致命的なボトルネックとなる。
+
+    \item \textbf{モジュール間の密結合} \\
+    各ハードウェアモジュールの制御コードが\texttt{loop()}内に直接記述されると、コードの肥大化・複雑化が進み、
+    モジュールの追加・削除・変更が困難になる。
+
+    \item \textbf{出力の重複・不整合} \\
+    統一的なライフサイクル管理がない場合、同一フレーム内で複数回のセンサー読み取りや出力が
+    発生するなど、処理の重複や不整合が起こりやすい。
+
+    \item \textbf{グローバル変数の氾濫} \\
+    モジュール間のデータ共有にグローバル変数を多用すると、依存関係が不明瞭になり、
+    バグの原因となる。
+\end{enumerate}
+
+\subsection{ESP32-S3 CAMの特徴}
+
+本プロジェクトで使用するESP32-S3 N16R8 CAM開発ボードは、以下の特徴を持つ：
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{0.8\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{仕様} \\
+\midrule
+MCU & ESP32-S3（デュアルコア Xtensa LX7） \\
+Flash & 16MB（N16） \\
+PSRAM & 8MB（R8、OPI接続） \\
+通信 & WiFi + Bluetooth 5.0 \\
+カメラ & OV2640 / OV5640 対応 \\
+フレームワーク & Arduino \\
+\bottomrule
+\end{tabularx}
+\caption{ESP32-S3 N16R8 CAM 主要スペック}
+\end{table}
+
+多機能なハードウェアを効率的に管理するために、統一的なモジュール管理アーキテクチャが求められる。

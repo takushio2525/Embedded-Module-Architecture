@@ -1,0 +1,60 @@
+% ファイル構成
+\section{ファイル構成}
+
+\subsection{ディレクトリ構造}
+
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+Embedded-Module-Architecture/
++-- .devcontainer/
+|   +-- Dockerfile              ... LaTeX環境用コンテナ定義
+|   +-- devcontainer.json       ... DevContainer設定
++-- doc/
+|   +-- .latexmkrc              ... latexmk設定
+|   +-- main.tex                ... 仕様書本体
+|   +-- sections/               ... 仕様書の各セクション
+|       +-- cover.tex
+|       +-- revision.tex
+|       +-- overview.tex
+|       +-- background.tex
+|       +-- purpose.tex
+|       +-- architecture.tex
+|       +-- files.tex
+|       +-- techstack.tex
+|       +-- api.tex
+|       +-- execution.tex
++-- include/                    ... プロジェクト固有ヘッダー
+|   +-- SystemData.h            ... SystemData構造体定義
++-- lib/
+|   +-- ModuleCore/             ... コアライブラリ
+|       +-- IModule.h           ... IModuleインターフェース
+|       +-- ModuleTimer.h       ... ModuleTimerクラス
++-- src/
+|   +-- main.cpp                ... エントリーポイント
++-- test/                       ... テストコード
++-- platformio.ini              ... PlatformIO設定
++-- README.md                   ... プロジェクト概要
+\end{lstlisting}
+
+\subsection{ファイル一覧と機能対応}
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{ファイル} & \textbf{種別} & \textbf{説明} \\
+\midrule
+\texttt{lib/ModuleCore/IModule.h} & コア & IModuleインターフェース定義 \\
+\texttt{lib/ModuleCore/ModuleTimer.h} & コア & ModuleTimerクラス定義 \\
+\texttt{include/SystemData.h} & プロジェクト固有 & SystemData構造体（使用するモジュールのサブ構造体を集約） \\
+\texttt{src/main.cpp} & プロジェクト固有 & エントリーポイント（モジュール登録・ループ制御） \\
+\bottomrule
+\end{tabularx}
+
+\subsection{ライブラリ構成方針}
+
+\begin{itemize}
+    \item \textbf{lib/ModuleCore/} — プロジェクト非依存のコアコンポーネント（IModule、ModuleTimer）。
+    他のプロジェクトにもそのまま流用可能。
+    \item \textbf{lib/各モジュール名/} — 個別のハードウェアモジュール実装。
+    それぞれが\texttt{IModule}を継承し、モジュール固有のサブ構造体を定義する。
+    \item \textbf{include/} — プロジェクト固有のヘッダー
+    （\texttt{SystemData.h}等、プロジェクトで使用するモジュールの組み合わせに依存するファイル）。
+\end{itemize}

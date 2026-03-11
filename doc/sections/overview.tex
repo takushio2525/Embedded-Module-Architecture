@@ -1,0 +1,27 @@
+% 概要
+\section{概要}
+
+\subsection{プロジェクト名}
+Embedded Module Architecture — ESP32-S3 CAM サンプルプロジェクト
+
+\subsection{コンセプト}
+本プロジェクトは、組み込みシステムにおける\textbf{Moduleインターフェース設計パターン}のリファレンス実装である。
+ESP32-S3 N16R8 CAM開発ボードを題材に、カメラ・センサー・LED・LCD等の多様なハードウェアモジュールを
+統一的なインターフェースで管理する手法を示す。
+
+\subsection{設計思想}
+本アーキテクチャの根幹となる3つの要素：
+
+\begin{enumerate}
+    \item \textbf{IModuleインターフェース} — 全モジュールが\texttt{init()}と\texttt{update()}を実装する統一的なライフサイクル管理
+    \item \textbf{ModuleTimerクラス} — \texttt{delay()}を一切使用しないノンブロッキングなタイマー制御
+    \item \textbf{SystemDataパターン} — プロジェクト固有の共有状態をサブ構造体で一元管理し、モジュール間のデータ連携を実現
+\end{enumerate}
+
+この設計により、以下を実現する：
+\begin{itemize}
+    \item モジュールの追加・削除が容易
+    \item 処理順序が決定論的（ループ内で順番に実行）
+    \item 複数回出力や処理の重複が発生しない
+    \item ゲームループ（ECS）に類似した、組み込みに適した実行モデル
+\end{itemize}

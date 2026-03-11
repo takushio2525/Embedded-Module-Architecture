@@ -1,0 +1,108 @@
+% 実行モデル詳細
+\section{実行モデル詳細}
+
+\subsection{ライフサイクル}
+
+本アーキテクチャのモジュールは、以下のライフサイクルに従う：
+
+\begin{enumerate}
+    \item \textbf{インスタンス生成}（グローバルスコープ） \\
+    モジュールのコンストラクタが呼ばれる。ModuleTimerのメンバ変数が\texttt{\_startTime = 0}で初期化される。
+    この時点では\texttt{millis()}は信頼できないため、タイマーの実質的な初期化は行わない。
+
+    \item \textbf{init()呼び出し}（\texttt{setup()}内） \\
+    ハードウェアの初期化、ピンモード設定、ModuleTimerの\texttt{setTime()}呼び出しを行う。
+    失敗時は\texttt{false}を返し、呼び出し側でエラーハンドリングを行う。
+
+    \item \textbf{update()ループ}（\texttt{loop()}内） \\
+    毎ループ呼び出される。ModuleTimerの\texttt{getNowTime()}で経過時間を確認し、
+    必要なタイミングでのみ実処理を実行する。
+\end{enumerate}
+
+\subsection{タイミング制御}
+
+\texttt{delay()}は一切使用しない。すべてのタイミング制御はModuleTimerで行う。
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{パターン} & \textbf{方法} & \textbf{コード例} \\
+\midrule
+周期実行 &
+\texttt{getNowTime() >= interval}で判定し、\texttt{setTime()}でリセット &
+1秒ごとのセンサー読み取り \\
+デバウンス &
+入力変化時に\texttt{setTime()}でリセット、安定後に確定 &
+ボタンのチャタリング除去 \\
+ワンショット &
+\texttt{getNowTime()}で経過時間を確認、フラグで制御 &
+起動後N秒でLED消灯 \\
+タイムアウト &
+\texttt{getNowTime() >= timeout}で時間超過を検出 &
+WiFi接続のタイムアウト \\
+\bottomrule
+\end{tabularx}
+
+\subsection{モジュール間データフロー}
+
+\texttt{SystemData}を介したデータフローの例：
+
+\begin{lstlisting}[style=cpp, caption={モジュール間データフローの例}]
+// 温度センサーモジュール（先に実行）
+void TempSensorModule::update(SystemData* sys) {
+    if (readTimer.getNowTime() >= 1000) {
+        readTimer.setTime();
+        sys->temp.temperature = readSensor();
+        sys->temp.isValid = true;
+    }
+}
+
+// LEDモジュール（後に実行）
+void LedModule::update(SystemData* sys) {
+    // 温度データを読み取って、温度に応じてLEDを制御
+    if (sys->temp.isValid && sys->temp.temperature > 30.0) {
+        sys->led.state = true;   // 30度超でLED点灯
+    } else {
+        sys->led.state = false;
+    }
+    digitalWrite(LED_PIN, sys->led.state);
+}
+\end{lstlisting}
+
+\subsection{モジュール実装テンプレート}
+
+新規モジュールを追加する際の標準テンプレート：
+
+\begin{lstlisting}[style=cpp, caption={モジュール実装テンプレート}]
+// ExampleModule.h
+#pragma once
+#include "IModule.h"
+#include "ModuleTimer.h"
+
+// このモジュール固有のデータ構造体
+struct ExampleData {
+    // モジュールが管理するデータを定義
+    int value;
+    bool hasError;
+};
+
+class ExampleModule : public IModule {
+private:
+    ModuleTimer _updateTimer;  // メンバ変数としてタイマー保持
+
+public:
+    ExampleModule() {}  // コンストラクタ
+
+    bool init() override {
+        _updateTimer.setTime();  // タイマー初期化
+        // ハードウェア初期化処理...
+        return true;
+    }
+
+    void update(SystemData* sys) override {
+        if (_updateTimer.getNowTime() >= 100) {
+            _updateTimer.setTime();
+            // 更新処理...
+        }
+    }
+};
+\end{lstlisting}

@@ -1,0 +1,105 @@
+% システムアーキテクチャ
+\section{システムアーキテクチャ}
+
+\subsection{全体構造}
+
+本アーキテクチャは、以下の3つのコア要素で構成される：
+
+\begin{enumerate}
+    \item \textbf{IModule}（インターフェース） — モジュールのライフサイクルを定義
+    \item \textbf{ModuleTimer}（ユーティリティクラス） — ノンブロッキングなタイマー制御
+    \item \textbf{SystemData}（共有データ構造体） — モジュール間のデータ連携
+\end{enumerate}
+
+\subsection{実行フロー}
+
+プログラムの実行フローは、ゲームループパターンに基づく：
+
+\begin{lstlisting}[style=cpp, caption={基本的な実行フロー}]
+// main.cpp
+#include "IModule.h"
+#include "SystemData.h"
+#include "CameraModule.h"
+#include "LedModule.h"
+
+// システムデータ
+SystemData systemData;
+
+// モジュールインスタンス
+CameraModule cameraModule;
+LedModule ledModule;
+
+// モジュール配列（処理順序を定義）
+IModule* modules[] = {
+    &cameraModule,
+    &ledModule,
+};
+const int MODULE_COUNT = sizeof(modules) / sizeof(modules[0]);
+
+void setup() {
+    Serial.begin(115200);
+
+    // 全モジュールを初期化
+    for (int i = 0; i < MODULE_COUNT; i++) {
+        if (!modules[i]->init()) {
+            Serial.printf("Module %d: init failed\n", i);
+        }
+    }
+}
+
+void loop() {
+    // 全モジュールを順番に更新
+    for (int i = 0; i < MODULE_COUNT; i++) {
+        modules[i]->update(&systemData);
+    }
+}
+\end{lstlisting}
+
+\subsection{設計パターン}
+
+\subsubsection{モジュール配列パターン}
+\texttt{modules[]}配列の順序がそのまま処理の実行順序となる。
+これにより：
+\begin{itemize}
+    \item 処理順序が明示的かつ決定論的
+    \item データの流れが配列の順序に沿って一方向
+    \item 1ループにつき各モジュール1回の更新が保証される
+\end{itemize}
+
+\begin{notebox}{重要：処理順序}
+\texttt{modules[]}配列の順序は、データフローの順序を意味する。\\
+例：カメラモジュールが画像を取得 → LCDモジュールがその画像を表示\\
+この場合、カメラモジュールをLCDモジュールより前に配置する必要がある。
+\end{notebox}
+
+\subsubsection{SystemDataパターン}
+各モジュールは固有のサブ構造体を定義し、それらをプロジェクト固有の\texttt{SystemData}構造体に集約する。
+
+\begin{lstlisting}[style=cpp, caption={SystemDataパターンの構造}]
+// 各モジュールが自身のデータ構造体を定義
+// LedModule.h 内
+struct LedData {
+    bool state;
+    uint8_t brightness;
+};
+
+// TempSensorModule.h 内
+struct TempData {
+    float temperature;
+    bool isValid;
+    bool hasError;
+};
+
+// プロジェクト固有: SystemData.h
+struct SystemData {
+    LedData led;
+    TempData temp;
+    // 使用するモジュールの構造体を追加するだけ
+};
+\end{lstlisting}
+
+\subsubsection{エラーハンドリングパターン}
+\begin{itemize}
+    \item \texttt{init()} — 戻り値\texttt{bool}で初期化の成否を返す。失敗時はモジュールを無効化可能
+    \item \texttt{update()} — エラー発生時は\texttt{SystemData}内のサブ構造体にエラーフラグを設定し、他モジュールから参照可能にする
+\end{itemize}

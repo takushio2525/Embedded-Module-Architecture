@@ -1,0 +1,94 @@
+\documentclass[a4paper,11pt,dvipdfmx]{jsarticle}
+
+%% パッケージ
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+
+%% ページ設定
+\geometry{margin=25mm}
+
+%% ハイパーリンク設定
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+%% コードリスティング設定
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{keyword}{RGB}{0,0,180}
+\definecolor{comment}{RGB}{0,128,0}
+\definecolor{string}{RGB}{163,21,21}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    keywordstyle=\color{keyword}\bfseries,
+    commentstyle=\color{comment},
+    stringstyle=\color{string},
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=4,
+    showstringspaces=false
+}
+
+%% C++用のリスティング設定
+\lstdefinestyle{cpp}{
+    language=C++,
+    morekeywords={override, nullptr, uint8\_t, uint16\_t, uint32\_t, bool}
+}
+
+%% API仕様ボックス
+\newtcolorbox{apibox}[1]{
+    colback=blue!5,
+    colframe=blue!50!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+%% 機能ブロック
+\newtcolorbox{funcblock}[1]{
+    colback=green!5,
+    colframe=green!50!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+%% 注意ボックス
+\newtcolorbox{notebox}[1]{
+    colback=yellow!5,
+    colframe=orange!50!black,
+    title=#1,
+    fonttitle=\bfseries
+}
+
+\begin{document}
+
+\input{sections/cover}
+\input{sections/revision}
+\newpage
+\tableofcontents
+\newpage
+\input{sections/overview}
+\input{sections/background}
+\input{sections/purpose}
+\input{sections/architecture}
+\input{sections/files}
+\input{sections/techstack}
+\input{sections/api}
+\input{sections/execution}
+
+\end{document}

@@ -1,0 +1,37 @@
+% 目的
+\section{目的}
+
+本プロジェクトの目的は以下の通りである：
+
+\subsection{主目的}
+
+\begin{enumerate}
+    \item \textbf{Moduleインターフェース設計パターンの確立} \\
+    組み込みシステムにおけるハードウェアモジュール管理の設計パターンを定義し、
+    リファレンス実装として公開する。
+
+    \item \textbf{再利用可能なアーキテクチャの提供} \\
+    ESP32-S3に限らず、他のマイコンプラットフォームでも適用可能な汎用的な設計として、
+    \texttt{IModule}インターフェース、\texttt{ModuleTimer}クラス、\texttt{SystemData}パターンを提供する。
+\end{enumerate}
+
+\subsection{副次的目的}
+
+\begin{enumerate}
+    \item \textbf{教育・学習用のサンプル} \\
+    組み込み開発の初学者が、モジュール化・非ブロッキング処理・データフロー管理を学べる
+    具体的なコード例を提供する。
+
+    \item \textbf{ESP32-S3 CAMの活用例} \\
+    カメラ、センサー、LED、LCD等の周辺機器を組み合わせた実用的なサンプルアプリケーションを構築する。
+\end{enumerate}
+
+\subsection{範囲}
+
+本プロジェクトが提供するもの：
+\begin{itemize}
+    \item IModuleインターフェースの定義と仕様
+    \item ModuleTimerクラスの実装
+    \item SystemDataパターンの設計指針
+    \item ESP32-S3 CAMを用いたサンプルモジュール群
+\end{itemize}

@@ -1,0 +1,36 @@
+% 技術スタック
+\section{技術スタック}
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{カテゴリ} & \textbf{技術} & \textbf{備考} \\
+\midrule
+MCU & ESP32-S3 N16R8 & デュアルコア Xtensa LX7、16MB Flash、8MB PSRAM \\
+カメラ & OV2640 / OV5640 & 開発ボード付属 \\
+フレームワーク & Arduino & PlatformIO経由 \\
+ビルドツール & PlatformIO & VSCode統合開発環境 \\
+言語 & C++ & Arduino C++（C++11以降） \\
+仕様書 & LaTeX (uplatex) & DevContainer + LaTeX Workshop \\
+バージョン管理 & Git & — \\
+\bottomrule
+\end{tabularx}
+
+\subsection{PlatformIO設定}
+
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single, caption={platformio.ini}]
+[env:esp32-s3-cam-n16r8]
+platform = espressif32
+board = esp32-s3-devkitc-1
+framework = arduino
+monitor_speed = 115200
+
+; --- N16 (16MB Flash) ---
+board_upload.flash_size = 16MB
+board_build.partitions = default_16MB.csv
+
+; --- R8 (8MB PSRAM) ---
+board_build.arduino.memory_type = qio_opi
+build_flags =
+    -D BOARD_HAS_PSRAM
+    -D CORE_DEBUG_LEVEL=3
+\end{lstlisting}
