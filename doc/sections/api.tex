@@ -1,30 +1,45 @@
 % API仕様
 \section{API仕様}
 
-\subsection{IModuleインターフェース}
+\subsection{IModule<T>テンプレートインターフェース}
 
-\begin{apibox}{IModule — モジュールインターフェース}
+\begin{apibox}{IModule<T> — モジュールテンプレートインターフェース}
 \textbf{定義ファイル:} \texttt{lib/ModuleCore/IModule.h}
 
 全ハードウェアモジュールが実装すべき抽象インターフェース。
-\texttt{init()}と\texttt{update()}の2つの仮想関数により、統一的なライフサイクル管理を実現する。
+C++テンプレートにより、プロジェクト固有の型（\texttt{SystemData}等）に一切依存しない。
+\texttt{T}にはプロジェクトで定義した共有データ構造体の型を指定する。
 \end{apibox}
 
-\begin{lstlisting}[style=cpp, caption={IModuleインターフェース定義}]
+\begin{lstlisting}[style=cpp, caption={IModule<T>テンプレートインターフェース定義}]
+// IModule.h — プロジェクト非依存のコアヘッダー
+#pragma once
+
+// <typename T> と書くことで、
+// 「Tという型（構造体）を後から指定する」という宣言になる
+template <typename T>
 class IModule {
 public:
+    // 仮想デストラクタ
+    virtual ~IModule() {}
+
     // モジュールの初期化
     // 戻り値: true=成功, false=失敗
     virtual bool init() = 0;
 
     // モジュールの更新（毎ループ呼び出される）
-    // 引数: sys - プロジェクト共有データへのポインタ
-    virtual void update(SystemData* sys) = 0;
-
-    // 仮想デストラクタ
-    virtual ~IModule() {}
+    // 引数: data - プロジェクト共有データへの参照
+    virtual void update(T& data) = 0;
 };
 \end{lstlisting}
+
+\begin{notebox}{テンプレートを使う理由}
+テンプレートを使わない場合、\texttt{IModule.h}内で\texttt{SystemData}を\texttt{\#include}する必要がある。
+しかし\texttt{SystemData}はプロジェクト固有の型であるため、コアライブラリがプロジェクトに依存してしまう。\\
+\\
+テンプレートにより、\texttt{IModule.h}は何も\texttt{\#include}せずに済み、
+どんなプロジェクトにもそのままコピーして流用できる。
+\end{notebox}
 
 \subsubsection{init()}
 
@@ -39,19 +54,47 @@ public:
 \bottomrule
 \end{tabularx}
 
-\subsubsection{update(SystemData* sys)}
+\subsubsection{update(T\& data)}
 
 \begin{tabularx}{\textwidth}{l X}
 \toprule
 \textbf{項目} & \textbf{内容} \\
 \midrule
-引数 & \texttt{SystemData*} — プロジェクト共有データへのポインタ \\
+引数 & \texttt{T\&} — プロジェクト共有データへの参照（nullにならない） \\
 戻り値 & \texttt{void} \\
 呼び出しタイミング & \texttt{loop()}内で毎ループ呼び出される \\
-責務 & センサー読み取り、出力制御、SystemDataの更新 \\
-エラー時 & SystemData内のサブ構造体にエラーフラグを設定 \\
+責務 & センサー読み取り、出力制御、共有データの更新 \\
+エラー時 & 共有データ内のサブ構造体にエラーフラグを設定 \\
 \bottomrule
 \end{tabularx}
+
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cpp, caption={モジュール実装の例}]
+// LedModule.h
+#pragma once
+#include "IModule.h"
+#include "SystemData.h"  // プロジェクト固有
+
+struct LedData {
+    bool state;
+    uint8_t brightness;
+};
+
+// テンプレート引数にSystemDataを指定して継承
+class LedModule : public IModule<SystemData> {
+public:
+    bool init() override {
+        pinMode(LED_PIN, OUTPUT);
+        return true;
+    }
+
+    // data はポインタではなく参照なので、ドット演算子でアクセス
+    void update(SystemData& data) override {
+        digitalWrite(LED_PIN, data.led.state);
+    }
+};
+\end{lstlisting}
 
 % -------------------------------------------
 
@@ -63,9 +106,14 @@ public:
 \texttt{millis()}ベースのシンプルなタイマークラス。
 \texttt{delay()}を使用せずに周期実行・デバウンス・ワンショット・タイムアウト等を実現する。
 インスタンスを複数作成することで、モジュール内で複数のタイマーを独立に管理できる。
+IModuleと同様にプロジェクト非依存であり、そのまま流用可能。
 \end{apibox}
 
 \begin{lstlisting}[style=cpp, caption={ModuleTimerクラス定義}]
+// ModuleTimer.h — プロジェクト非依存のコアヘッダー
+#pragma once
+#include <Arduino.h>
+
 class ModuleTimer {
 private:
     unsigned long _startTime;
@@ -121,14 +169,15 @@ public:
 \begin{lstlisting}[style=cpp, caption={周期実行パターン}]
 ModuleTimer readTimer;
 
-void init() {
+bool init() override {
     readTimer.setTime();
+    return true;
 }
 
-void update(SystemData* sys) {
+void update(SystemData& data) override {
     if (readTimer.getNowTime() >= 1000) {
         readTimer.setTime();  // リセット
-        sys->temp.temperature = readSensor();
+        data.temp.temperature = readSensor();
     }
 }
 \end{lstlisting}
@@ -136,7 +185,7 @@ void update(SystemData* sys) {
 \begin{lstlisting}[style=cpp, caption={デバウンスパターン}]
 ModuleTimer debounce;
 
-void update(SystemData* sys) {
+void update(SystemData& data) override {
     bool rawInput = digitalRead(BUTTON_PIN);
 
     if (rawInput != lastRawInput) {
@@ -145,7 +194,7 @@ void update(SystemData* sys) {
     }
 
     if (debounce.getNowTime() >= 50) {
-        sys->button.pressed = lastRawInput;  // 50ms安定で確定
+        data.button.pressed = lastRawInput;  // 50ms安定で確定
     }
 }
 \end{lstlisting}
@@ -158,7 +207,8 @@ void update(SystemData* sys) {
 \textbf{定義ファイル:} \texttt{include/SystemData.h}（プロジェクト固有）
 
 各モジュールが定義するサブ構造体を集約した、プロジェクト固有のデータ構造体。
-全モジュールの\texttt{update()}メソッドに共有ポインタとして渡される。
+全モジュールの\texttt{update()}メソッドに参照として渡される。
+\texttt{IModule<T>}のテンプレート引数\texttt{T}として指定する型である。
 \end{apibox}
 
 \subsubsection{設計ルール}

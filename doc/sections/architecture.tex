@@ -6,10 +6,16 @@
 本アーキテクチャは、以下の3つのコア要素で構成される：
 
 \begin{enumerate}
-    \item \textbf{IModule}（インターフェース） — モジュールのライフサイクルを定義
-    \item \textbf{ModuleTimer}（ユーティリティクラス） — ノンブロッキングなタイマー制御
-    \item \textbf{SystemData}（共有データ構造体） — モジュール間のデータ連携
+    \item \textbf{IModule<T>}（テンプレートインターフェース） — モジュールのライフサイクルを定義。プロジェクト非依存
+    \item \textbf{ModuleTimer}（ユーティリティクラス） — ノンブロッキングなタイマー制御。プロジェクト非依存
+    \item \textbf{SystemData}（共有データ構造体） — モジュール間のデータ連携。プロジェクト固有
 \end{enumerate}
+
+\begin{notebox}{コア層とプロジェクト層の分離}
+\texttt{IModule<T>}と\texttt{ModuleTimer}は\textbf{コア層}に属し、プロジェクト固有の型を一切知らない。\\
+\texttt{SystemData}は\textbf{プロジェクト層}に属し、使用するモジュールのサブ構造体を集約する。\\
+テンプレートパラメータ\texttt{T}を用いることで、コア層の完全な独立性を実現している。
+\end{notebox}
 
 \subsection{実行フロー}
 
@@ -30,7 +36,7 @@ CameraModule cameraModule;
 LedModule ledModule;
 
 // モジュール配列（処理順序を定義）
-IModule* modules[] = {
+IModule<SystemData>* modules[] = {
     &cameraModule,
     &ledModule,
 };
@@ -48,9 +54,9 @@ void setup() {
 }
 
 void loop() {
-    // 全モジュールを順番に更新
+    // 全モジュールを順番に更新（参照渡し）
     for (int i = 0; i < MODULE_COUNT; i++) {
-        modules[i]->update(&systemData);
+        modules[i]->update(systemData);
     }
 }
 \end{lstlisting}

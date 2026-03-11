@@ -15,7 +15,7 @@
     失敗時は\texttt{false}を返し、呼び出し側でエラーハンドリングを行う。
 
     \item \textbf{update()ループ}（\texttt{loop()}内） \\
-    毎ループ呼び出される。ModuleTimerの\texttt{getNowTime()}で経過時間を確認し、
+    毎ループ呼び出される。\texttt{SystemData}の参照を受け取り、ModuleTimerの\texttt{getNowTime()}で経過時間を確認し、
     必要なタイミングでのみ実処理を実行する。
 \end{enumerate}
 
@@ -44,27 +44,27 @@ WiFi接続のタイムアウト \\
 
 \subsection{モジュール間データフロー}
 
-\texttt{SystemData}を介したデータフローの例：
+\texttt{SystemData}の参照を介したデータフローの例：
 
 \begin{lstlisting}[style=cpp, caption={モジュール間データフローの例}]
 // 温度センサーモジュール（先に実行）
-void TempSensorModule::update(SystemData* sys) {
+void TempSensorModule::update(SystemData& data) {
     if (readTimer.getNowTime() >= 1000) {
         readTimer.setTime();
-        sys->temp.temperature = readSensor();
-        sys->temp.isValid = true;
+        data.temp.temperature = readSensor();
+        data.temp.isValid = true;
     }
 }
 
 // LEDモジュール（後に実行）
-void LedModule::update(SystemData* sys) {
+void LedModule::update(SystemData& data) {
     // 温度データを読み取って、温度に応じてLEDを制御
-    if (sys->temp.isValid && sys->temp.temperature > 30.0) {
-        sys->led.state = true;   // 30度超でLED点灯
+    if (data.temp.isValid && data.temp.temperature > 30.0) {
+        data.led.state = true;   // 30度超でLED点灯
     } else {
-        sys->led.state = false;
+        data.led.state = false;
     }
-    digitalWrite(LED_PIN, sys->led.state);
+    digitalWrite(LED_PIN, data.led.state);
 }
 \end{lstlisting}
 
@@ -77,6 +77,7 @@ void LedModule::update(SystemData* sys) {
 #pragma once
 #include "IModule.h"
 #include "ModuleTimer.h"
+#include "SystemData.h"
 
 // このモジュール固有のデータ構造体
 struct ExampleData {
@@ -85,7 +86,8 @@ struct ExampleData {
     bool hasError;
 };
 
-class ExampleModule : public IModule {
+// IModule<SystemData> を継承
+class ExampleModule : public IModule<SystemData> {
 private:
     ModuleTimer _updateTimer;  // メンバ変数としてタイマー保持
 
@@ -98,10 +100,10 @@ public:
         return true;
     }
 
-    void update(SystemData* sys) override {
+    void update(SystemData& data) override {
         if (_updateTimer.getNowTime() >= 100) {
             _updateTimer.setTime();
-            // 更新処理...
+            // data.example.value = ...;  // 更新処理
         }
     }
 };
