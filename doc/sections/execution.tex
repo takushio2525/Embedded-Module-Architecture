@@ -7,7 +7,8 @@
 
 \begin{enumerate}
     \item \textbf{インスタンス生成}（グローバルスコープ） \\
-    モジュールのコンストラクタが呼ばれる。ModuleTimerのメンバ変数が\texttt{\_startTime = 0}で初期化される。
+    モジュールのコンストラクタが呼ばれる。\texttt{ProjectConfig.h}で定義したConfig定数を渡し、
+    メンバ変数\texttt{\_config}にコピーされる。ModuleTimerの\texttt{\_startTime = 0}で初期化される。
     この時点では\texttt{millis()}は信頼できないため、タイマーの実質的な初期化は行わない。
 
     \item \textbf{init()呼び出し}（\texttt{setup()}内） \\
@@ -49,9 +50,9 @@ WiFi接続のタイムアウト \\
 \begin{lstlisting}[style=cpp, caption={モジュール間データフローの例}]
 // 温度センサーモジュール（先に実行）
 void TempSensorModule::update(SystemData& data) {
-    if (readTimer.getNowTime() >= 1000) {
-        readTimer.setTime();
-        data.temp.temperature = readSensor();
+    if (_readTimer.getNowTime() >= _config.interval) {
+        _readTimer.setTime();
+        data.temp.temperature = analogRead(_config.tempPin);
         data.temp.isValid = true;
     }
 }
@@ -64,7 +65,7 @@ void LedModule::update(SystemData& data) {
     } else {
         data.led.state = false;
     }
-    digitalWrite(LED_PIN, data.led.state);
+    digitalWrite(_config.ledPin, data.led.state);
 }
 \end{lstlisting}
 
@@ -77,11 +78,15 @@ void LedModule::update(SystemData& data) {
 #pragma once
 #include "IModule.h"
 #include "ModuleTimer.h"
-#include "SystemData.h"
 
-// このモジュール固有のデータ構造体
+// --- Config構造体（ピンアサイン・設定） ---
+struct ExampleConfig {
+    uint8_t inputPin;         // 入力ピン
+    unsigned long interval;   // 更新間隔(ms)
+};
+
+// --- Data構造体（モジュール間共有データ） ---
 struct ExampleData {
-    // モジュールが管理するデータを定義
     int value;
     bool hasError;
 };
@@ -89,19 +94,22 @@ struct ExampleData {
 // IModule<SystemData> を継承
 class ExampleModule : public IModule<SystemData> {
 private:
-    ModuleTimer _updateTimer;  // メンバ変数としてタイマー保持
+    ExampleConfig _config;     // Configをメンバとして保持
+    ModuleTimer _updateTimer;  // タイマー
 
 public:
-    ExampleModule() {}  // コンストラクタ
+    // コンストラクタ: Config構造体をconst参照で受け取る
+    ExampleModule(const ExampleConfig& config)
+        : _config(config) {}
 
     bool init() override {
+        pinMode(_config.inputPin, INPUT);
         _updateTimer.setTime();  // タイマー初期化
-        // ハードウェア初期化処理...
         return true;
     }
 
     void update(SystemData& data) override {
-        if (_updateTimer.getNowTime() >= 100) {
+        if (_updateTimer.getNowTime() >= _config.interval) {
             _updateTimer.setTime();
             // data.example.value = ...;  // 更新処理
         }

@@ -3,17 +3,19 @@
 
 \subsection{全体構造}
 
-本アーキテクチャは、以下の3つのコア要素で構成される：
+本アーキテクチャは、以下の4つのコア要素で構成される：
 
 \begin{enumerate}
     \item \textbf{IModule<T>}（テンプレートインターフェース） — モジュールのライフサイクルを定義。プロジェクト非依存
     \item \textbf{ModuleTimer}（ユーティリティクラス） — ノンブロッキングなタイマー制御。プロジェクト非依存
     \item \textbf{SystemData}（共有データ構造体） — モジュール間のデータ連携。プロジェクト固有
+    \item \textbf{モジュールConfig}（設定構造体） — 各モジュールのピンアサインや設定を構造体で定義。プロジェクト固有
 \end{enumerate}
 
 \begin{notebox}{コア層とプロジェクト層の分離}
 \texttt{IModule<T>}と\texttt{ModuleTimer}は\textbf{コア層}に属し、プロジェクト固有の型を一切知らない。\\
-\texttt{SystemData}は\textbf{プロジェクト層}に属し、使用するモジュールのサブ構造体を集約する。\\
+\texttt{SystemData}とモジュールConfigは\textbf{プロジェクト層}に属し、
+前者は使用するモジュールのサブ構造体を集約し、後者はハードウェア構成（ピンアサイン等）を定義する。\\
 テンプレートパラメータ\texttt{T}を用いることで、コア層の完全な独立性を実現している。
 \end{notebox}
 
@@ -24,16 +26,16 @@
 \begin{lstlisting}[style=cpp, caption={基本的な実行フロー}]
 // main.cpp
 #include "IModule.h"
-#include "SystemData.h"
+#include "ProjectConfig.h"  // SystemData + Config定義
 #include "CameraModule.h"
 #include "LedModule.h"
 
 // システムデータ
 SystemData systemData;
 
-// モジュールインスタンス
-CameraModule cameraModule;
-LedModule ledModule;
+// モジュールインスタンス（Config構造体を渡して生成）
+CameraModule cameraModule(CAMERA_CONFIG);
+LedModule ledModule(LED_CONFIG);
 
 // モジュール配列（処理順序を定義）
 IModule<SystemData>* modules[] = {
@@ -102,6 +104,42 @@ struct SystemData {
     TempData temp;
     // 使用するモジュールの構造体を追加するだけ
 };
+\end{lstlisting}
+
+\subsubsection{モジュールConfigパターン}
+各モジュールは、自身に必要なピンアサインや設定を\texttt{Config}構造体として定義する。
+モジュールのコンストラクタではピン番号を個別に受け取るのではなく、Config構造体を受け取ることで、
+ハードウェア構成を明示的かつ安全に管理する。
+
+\begin{funcblock}{Configパターンの利点}
+\begin{itemize}
+    \item コンストラクタの引数順序を覚える必要がない（構造体のメンバ名で明示的に指定）
+    \item 全モジュールのピンアサインが\texttt{ProjectConfig.h}に集約され、一覧性が高い
+    \item 回路設計担当者は\texttt{ProjectConfig.h}のConfig定義セクションだけを見れば回路設計が可能
+    \item 将来的にピン以外の設定（I2Cアドレス、動作モード等）もConfig構造体に追加して拡張可能
+\end{itemize}
+\end{funcblock}
+
+\begin{lstlisting}[style=cpp, caption={モジュールConfigパターンの例}]
+// LedModule.h 内 — Config構造体を定義
+struct LedConfig {
+    uint8_t ledPin;      // LED出力ピン
+};
+
+// モジュールクラスはコンストラクタでConfigを受け取る
+class LedModule : public IModule<SystemData> {
+private:
+    LedConfig _config;
+public:
+    LedModule(const LedConfig& config) : _config(config) {}
+    // ...
+};
+
+// ProjectConfig.h 内 — プロジェクトのピンアサインを集約
+const LedConfig LED_CONFIG = { .ledPin = 13 };
+
+// main.cpp — Config定数を渡してインスタンス生成
+LedModule ledModule(LED_CONFIG);
 \end{lstlisting}
 
 \subsubsection{エラーハンドリングパターン}

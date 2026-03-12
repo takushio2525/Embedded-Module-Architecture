@@ -76,6 +76,12 @@ public:
 #include "IModule.h"
 #include "SystemData.h"  // プロジェクト固有
 
+// モジュール固有のConfig構造体
+struct LedConfig {
+    uint8_t ledPin;  // LED出力ピン
+};
+
+// モジュール固有のデータ構造体
 struct LedData {
     bool state;
     uint8_t brightness;
@@ -83,15 +89,20 @@ struct LedData {
 
 // テンプレート引数にSystemDataを指定して継承
 class LedModule : public IModule<SystemData> {
+private:
+    LedConfig _config;  // Configをメンバとして保持
 public:
+    // コンストラクタでConfig構造体を受け取る
+    LedModule(const LedConfig& config) : _config(config) {}
+
     bool init() override {
-        pinMode(LED_PIN, OUTPUT);
+        pinMode(_config.ledPin, OUTPUT);  // Configのピンを使用
         return true;
     }
 
     // data はポインタではなく参照なので、ドット演算子でアクセス
     void update(SystemData& data) override {
-        digitalWrite(LED_PIN, data.led.state);
+        digitalWrite(_config.ledPin, data.led.state);
     }
 };
 \end{lstlisting}
@@ -201,34 +212,124 @@ void update(SystemData& data) override {
 
 % -------------------------------------------
 
-\subsection{SystemData構造体}
+\subsection{ProjectConfigファイル}
 
-\begin{apibox}{SystemData — プロジェクト共有データ}
-\textbf{定義ファイル:} \texttt{include/SystemData.h}（プロジェクト固有）
+\begin{apibox}{ProjectConfig — プロジェクト固有設定の集約}
+\textbf{定義ファイル:} \texttt{include/ProjectConfig.h}（プロジェクト固有）
 
-各モジュールが定義するサブ構造体を集約した、プロジェクト固有のデータ構造体。
-全モジュールの\texttt{update()}メソッドに参照として渡される。
-\texttt{IModule<T>}のテンプレート引数\texttt{T}として指定する型である。
+各モジュールのConfigインスタンス（ピンアサイン等）と\texttt{SystemData}構造体を
+1つのファイルに集約した、プロジェクト固有の設定ファイル。
+\texttt{IModule<T>}のテンプレート引数\texttt{T}として指定する\texttt{SystemData}型は、このファイルで定義する。
 \end{apibox}
 
 \subsubsection{設計ルール}
 
 \begin{enumerate}
-    \item 各モジュールは、自身が管理するデータをサブ構造体として定義する（モジュールのヘッダーファイル内）
-    \item \texttt{SystemData}構造体は、プロジェクトで使用するモジュールのサブ構造体をメンバとして持つ
-    \item モジュールは\texttt{update()}内で、自身のサブ構造体に書き込み、必要に応じて他モジュールのサブ構造体を読み取る
+    \item 各モジュールは、自身の\texttt{Config}構造体（型定義）と\texttt{Data}構造体（型定義）をモジュールのヘッダーファイル内に定義する
+    \item \texttt{ProjectConfig.h}には、Configの\textbf{インスタンス}（実際のピン番号等の値）を定義する
+    \item \texttt{SystemData}構造体は、プロジェクトで使用するモジュールのData構造体をメンバとして持つ
+    \item モジュールは\texttt{update()}内で、自身のData構造体に書き込み、必要に応じて他モジュールのData構造体を読み取る
 \end{enumerate}
 
-\begin{lstlisting}[style=cpp, caption={SystemData構成例}]
-// SystemData.h
+\begin{lstlisting}[style=cpp, caption={ProjectConfig構成例}]
+// ProjectConfig.h
 #pragma once
 #include "LedModule.h"
 #include "TempSensorModule.h"
 #include "CameraModule.h"
 
+// ===== モジュールConfig（ピンアサイン・設定値） =====
+const LedConfig LED_CONFIG = { .ledPin = 13 };
+const TempSensorConfig TEMP_CONFIG = { .tempPin = 36 };
+const CameraConfig CAMERA_CONFIG = { .sdaPin = 21, .sclPin = 22 };
+
+// ===== システムデータ =====
 struct SystemData {
     LedData led;
     TempData temp;
     CameraData camera;
+};
+\end{lstlisting}
+
+\begin{notebox}{ProjectConfig.hの構成}
+\texttt{ProjectConfig.h}は2つのセクションで構成される：\\
+\textbf{モジュールConfigセクション} — 各モジュールのConfigインスタンス（ピン番号等の具体的な値）。
+回路設計担当者はこのセクションだけを参照すればよい。\\
+\textbf{システムデータセクション} — 各モジュールのData構造体を集約した\texttt{SystemData}構造体。
+モジュール間のデータ連携に使用する。
+\end{notebox}
+
+% -------------------------------------------
+
+\subsection{モジュールConfig構造体}
+
+\begin{apibox}{モジュールConfig — ハードウェア設定構造体}
+各モジュールが必要とするピンアサインや設定をまとめた構造体。
+各モジュールのヘッダーファイル内で型を定義し、
+\texttt{ProjectConfig.h}内で具体的な値を持つインスタンスを定義する。
+\end{apibox}
+
+\subsubsection{命名規則}
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{要素} & \textbf{命名規則} & \textbf{例} \\
+\midrule
+Config構造体の型名 & \texttt{\{Module\}Config} & \texttt{LedConfig}, \texttt{CameraConfig} \\
+Configインスタンス名 & \texttt{\{MODULE\}\_CONFIG}(大文字) & \texttt{LED\_CONFIG}, \texttt{CAMERA\_CONFIG} \\
+Data構造体の型名 & \texttt{\{Module\}Data} & \texttt{LedData}, \texttt{CameraData} \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{設計ルール}
+
+\begin{enumerate}
+    \item Config構造体の\textbf{型定義}は、各モジュールのヘッダーファイル内に記述する
+    \item Config構造体の\textbf{インスタンス}（実際のピン番号等）は\texttt{ProjectConfig.h}に集約する
+    \item モジュールのコンストラクタは\texttt{const \{Module\}Config\&}（const参照）でConfigを受け取る
+    \item 受け取ったConfigは、メンバ変数\texttt{\_config}としてコピー保持する
+    \item ピン番号はハードコードせず、必ず\texttt{\_config}経由でアクセスする
+\end{enumerate}
+
+\begin{lstlisting}[style=cpp, caption={Config構造体の定義と使用例}]
+// TempSensorModule.h
+#pragma once
+#include "IModule.h"
+#include "ModuleTimer.h"
+
+// --- Config構造体（ピンアサイン・設定） ---
+struct TempSensorConfig {
+    uint8_t tempPin;          // アナログ入力ピン
+    unsigned long interval;   // 読み取り間隔(ms)
+};
+
+// --- Data構造体（モジュール間共有データ） ---
+struct TempData {
+    float temperature;
+    bool isValid;
+};
+
+class TempSensorModule : public IModule<SystemData> {
+private:
+    TempSensorConfig _config;
+    ModuleTimer _readTimer;
+public:
+    // コンストラクタ: Config構造体をconst参照で受け取る
+    TempSensorModule(const TempSensorConfig& config)
+        : _config(config) {}
+
+    bool init() override {
+        pinMode(_config.tempPin, INPUT);
+        _readTimer.setTime();
+        return true;
+    }
+
+    void update(SystemData& data) override {
+        if (_readTimer.getNowTime() >= _config.interval) {
+            _readTimer.setTime();
+            data.temp.temperature = analogRead(_config.tempPin);
+            data.temp.isValid = true;
+        }
+    }
 };
 \end{lstlisting}

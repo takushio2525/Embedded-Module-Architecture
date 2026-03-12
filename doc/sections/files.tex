@@ -23,7 +23,7 @@ Embedded-Module-Architecture/
 |       +-- api.tex
 |       +-- execution.tex
 +-- include/                    ... プロジェクト固有ヘッダー
-|   +-- SystemData.h            ... SystemData構造体定義
+|   +-- ProjectConfig.h         ... Config定義 + SystemData構造体
 +-- lib/
 |   +-- ModuleCore/             ... コアライブラリ
 |       +-- IModule.h           ... IModuleインターフェース
@@ -43,7 +43,7 @@ Embedded-Module-Architecture/
 \midrule
 \texttt{lib/ModuleCore/IModule.h} & コア & IModuleインターフェース定義 \\
 \texttt{lib/ModuleCore/ModuleTimer.h} & コア & ModuleTimerクラス定義 \\
-\texttt{include/SystemData.h} & プロジェクト固有 & SystemData構造体（使用するモジュールのサブ構造体を集約） \\
+\texttt{include/ProjectConfig.h} & プロジェクト固有 & モジュールConfigインスタンス（ピンアサイン等）+ SystemData構造体 \\
 \texttt{src/main.cpp} & プロジェクト固有 & エントリーポイント（モジュール登録・ループ制御） \\
 \bottomrule
 \end{tabularx}
@@ -56,5 +56,5 @@ Embedded-Module-Architecture/
     \item \textbf{lib/各モジュール名/} — 個別のハードウェアモジュール実装。
     それぞれが\texttt{IModule}を継承し、モジュール固有のサブ構造体を定義する。
     \item \textbf{include/} — プロジェクト固有のヘッダー
-    （\texttt{SystemData.h}等、プロジェクトで使用するモジュールの組み合わせに依存するファイル）。
+    （\texttt{ProjectConfig.h}等、プロジェクトで使用するモジュールの組み合わせ・ピンアサインに依存するファイル）。
 \end{itemize}
