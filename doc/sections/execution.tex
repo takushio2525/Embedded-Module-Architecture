@@ -20,6 +20,103 @@
     必要なタイミングでのみ実処理を実行する。
 \end{enumerate}
 
+\subsection{ループ実行手順（3フェーズモデル）}
+
+\texttt{loop()}内の処理は、以下の3フェーズに分けて実行する。
+この順序を守ることで、モジュール間の暗黙的な依存関係を排除し、各モジュールの独立性を保つ。
+
+\begin{enumerate}
+    \item \textbf{入力フェーズ} — センサー・スイッチ等の入力系モジュールの\texttt{update()}を実行。
+    ハードウェアから値を読み取り、自身の\texttt{SystemData}サブ構造体に書き込む。
+    \item \textbf{ロジックフェーズ} — 入力系の\texttt{SystemData}を読み取り、
+    出力系の\texttt{SystemData}を書き換える制御ロジックを実行する。
+    \item \textbf{出力フェーズ} — LED・モーター等の出力系モジュールの\texttt{update()}を実行。
+    自身の\texttt{SystemData}サブ構造体の値に従ってハードウェアを制御する。
+\end{enumerate}
+
+\begin{notebox}{3フェーズの原則}
+各モジュールは「それ単体で動作する道具」である。\\
+入力モジュールは「値を読んでSystemDataに書く」だけ、出力モジュールは「SystemDataの値に従って動作する」だけ。\\
+モジュールのupdate()内で他モジュールのSystemDataを参照してはならない。\\
+「何をどう制御するか」の判断はロジックフェーズの責務である。
+\end{notebox}
+
+\subsubsection{ロジックフェーズの実装}
+
+ロジックフェーズの具体的な実装方法は開発者に委ねるが、標準的には関数として実装する。
+
+\begin{lstlisting}[style=cpp, caption={ロジックフェーズの標準的な実装}]
+// main.cpp
+void applyPattern(SystemData& data) {
+    // 入力SystemDataを読み、出力SystemDataを書き換える
+    // 例：スイッチが押されたらLEDを点灯
+    data.led.state = data.sw.isPressed;
+
+    // 例：温度が30度を超えたらモーターを回す
+    if (data.temp.isValid && data.temp.temperature > 30.0) {
+        data.motor.speed = 255;
+    } else {
+        data.motor.speed = 0;
+    }
+}
+
+void loop() {
+    // 1. 入力フェーズ
+    for (int i = 0; i < INPUT_COUNT; i++) {
+        inputModules[i]->update(systemData);
+    }
+    // 2. ロジックフェーズ
+    applyPattern(systemData);
+    // 3. 出力フェーズ
+    for (int i = 0; i < OUTPUT_COUNT; i++) {
+        outputModules[i]->update(systemData);
+    }
+}
+\end{lstlisting}
+
+\subsubsection{入出力分離ルール}
+
+1つのデバイスが入力と出力の両方の機能を持つ場合、それぞれを\textbf{別モジュールとして実装}する。
+
+\begin{tabularx}{\textwidth}{l l l}
+\toprule
+\textbf{デバイス} & \textbf{入力モジュール} & \textbf{出力モジュール} \\
+\midrule
+エンコーダ付きモーター & EncoderModule（回転数取得） & MotorModule（モーター制御） \\
+タッチ＋振動デバイス & TouchModule（タッチ検出） & HapticModule（振動出力） \\
+\bottomrule
+\end{tabularx}
+
+これにより、各モジュールの責務が「入力のみ」または「出力のみ」に限定され、モジュールの独立性が保たれる。
+
+\subsubsection{アンチパターン}
+
+出力モジュール内で入力系の\texttt{SystemData}を読み取ってロジックを書く行為は\textbf{禁止}とする。
+
+\begin{lstlisting}[style=cpp, caption={アンチパターン：出力モジュール内でロジックを持つ（禁止）}]
+// NG: LEDモジュール内で温度を判断している
+void LedModule::update(SystemData& data) {
+    // 他モジュールのSystemDataを読んではならない
+    if (data.temp.temperature > 30.0) {
+        data.led.state = true;
+    }
+    digitalWrite(_config.ledPin, data.led.state);
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=cpp, caption={正しい実装：出力モジュールは自身のSystemDataのみ参照}]
+// OK: LEDモジュールは自身のデータだけを見る
+void LedModule::update(SystemData& data) {
+    // 自身のサブ構造体の値に従って動作するだけ
+    digitalWrite(_config.ledPin, data.led.state);
+}
+
+// ロジックは別の場所（applyPattern等）で行う
+void applyPattern(SystemData& data) {
+    data.led.state = (data.temp.temperature > 30.0);
+}
+\end{lstlisting}
+
 \subsection{タイミング制御}
 
 \texttt{delay()}は一切使用しない。すべてのタイミング制御はModuleTimerで行う。
@@ -45,10 +142,11 @@ WiFi接続のタイムアウト \\
 
 \subsection{モジュール間データフロー}
 
-\texttt{SystemData}の参照を介したデータフローの例：
+3フェーズモデルにおける\texttt{SystemData}を介したデータフローの例：
 
-\begin{lstlisting}[style=cpp, caption={モジュール間データフローの例}]
-// 温度センサーモジュール（先に実行）
+\begin{lstlisting}[style=cpp, caption={3フェーズモデルによるデータフロー}]
+// --- 入力フェーズ ---
+// 温度センサーモジュール：ハードウェアから値を読み、自身のデータに書く
 void TempSensorModule::update(SystemData& data) {
     if (_readTimer.getNowTime() >= _config.interval) {
         _readTimer.setTime();
@@ -57,14 +155,19 @@ void TempSensorModule::update(SystemData& data) {
     }
 }
 
-// LEDモジュール（後に実行）
-void LedModule::update(SystemData& data) {
-    // 温度データを読み取って、温度に応じてLEDを制御
+// --- ロジックフェーズ（main.cpp内の関数等） ---
+void applyPattern(SystemData& data) {
+    // 温度に応じてLEDを制御する判断をここで行う
     if (data.temp.isValid && data.temp.temperature > 30.0) {
-        data.led.state = true;   // 30度超でLED点灯
+        data.led.state = true;
     } else {
         data.led.state = false;
     }
+}
+
+// --- 出力フェーズ ---
+// LEDモジュール：自身のデータに従って出力するだけ
+void LedModule::update(SystemData& data) {
     digitalWrite(_config.ledPin, data.led.state);
 }
 \end{lstlisting}

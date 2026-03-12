@@ -21,44 +21,76 @@
 
 \subsection{実行フロー}
 
-プログラムの実行フローは、ゲームループパターンに基づく：
+プログラムの実行フローは、ゲームループパターンに基づき、3フェーズモデルで構成される：
 
-\begin{lstlisting}[style=cpp, caption={基本的な実行フロー}]
+\begin{lstlisting}[style=cpp, caption={3フェーズモデルによる実行フロー}]
 // main.cpp
 #include "IModule.h"
 #include "ProjectConfig.h"  // SystemData + Config定義
-#include "CameraModule.h"
+#include "TempSensorModule.h"
+#include "SwitchModule.h"
 #include "LedModule.h"
+#include "MotorModule.h"
 
 // システムデータ
 SystemData systemData;
 
-// モジュールインスタンス（Config構造体を渡して生成）
-CameraModule cameraModule(CAMERA_CONFIG);
-LedModule ledModule(LED_CONFIG);
+// 入力モジュール（Config構造体を渡して生成）
+TempSensorModule tempModule(TEMP_CONFIG);
+SwitchModule swModule(SW_CONFIG);
 
-// モジュール配列（処理順序を定義）
-IModule<SystemData>* modules[] = {
-    &cameraModule,
-    &ledModule,
+// 出力モジュール
+LedModule ledModule(LED_CONFIG);
+MotorModule motorModule(MOTOR_CONFIG);
+
+// 入力モジュール配列
+IModule<SystemData>* inputModules[] = {
+    &tempModule,
+    &swModule,
 };
-const int MODULE_COUNT = sizeof(modules) / sizeof(modules[0]);
+const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
+
+// 出力モジュール配列
+IModule<SystemData>* outputModules[] = {
+    &ledModule,
+    &motorModule,
+};
+const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
+
+// ロジックフェーズ（標準は関数として実装）
+void applyPattern(SystemData& data) {
+    // 入力SystemDataを読み、出力SystemDataを書き換える
+    data.led.state = data.sw.isPressed;
+    data.motor.speed = (data.temp.temperature > 30.0) ? 255 : 0;
+}
 
 void setup() {
     Serial.begin(115200);
 
-    // 全モジュールを初期化
-    for (int i = 0; i < MODULE_COUNT; i++) {
-        if (!modules[i]->init()) {
-            Serial.printf("Module %d: init failed\n", i);
+    // 全入力モジュールを初期化
+    for (int i = 0; i < INPUT_COUNT; i++) {
+        if (!inputModules[i]->init()) {
+            Serial.printf("Input Module %d: init failed\n", i);
+        }
+    }
+    // 全出力モジュールを初期化
+    for (int i = 0; i < OUTPUT_COUNT; i++) {
+        if (!outputModules[i]->init()) {
+            Serial.printf("Output Module %d: init failed\n", i);
         }
     }
 }
 
 void loop() {
-    // 全モジュールを順番に更新（参照渡し）
-    for (int i = 0; i < MODULE_COUNT; i++) {
-        modules[i]->update(systemData);
+    // 1. 入力フェーズ：センサー値をSystemDataに書き込む
+    for (int i = 0; i < INPUT_COUNT; i++) {
+        inputModules[i]->update(systemData);
+    }
+    // 2. ロジックフェーズ：入力→出力のSystemData変換
+    applyPattern(systemData);
+    // 3. 出力フェーズ：SystemDataの値に従いハードウェア制御
+    for (int i = 0; i < OUTPUT_COUNT; i++) {
+        outputModules[i]->update(systemData);
     }
 }
 \end{lstlisting}
@@ -66,18 +98,20 @@ void loop() {
 \subsection{設計パターン}
 
 \subsubsection{モジュール配列パターン}
-\texttt{modules[]}配列の順序がそのまま処理の実行順序となる。
+\texttt{inputModules[]}と\texttt{outputModules[]}の2つの配列でモジュールを管理する。
+配列の順序がそのまま各フェーズ内の実行順序となる。
 これにより：
 \begin{itemize}
-    \item 処理順序が明示的かつ決定論的
-    \item データの流れが配列の順序に沿って一方向
+    \item 入力と出力の処理順序が明示的かつ決定論的
+    \item 入力→ロジック→出力のデータの流れが保証される
     \item 1ループにつき各モジュール1回の更新が保証される
+    \item 各モジュールが独立した「道具」として機能する
 \end{itemize}
 
 \begin{notebox}{重要：処理順序}
-\texttt{modules[]}配列の順序は、データフローの順序を意味する。\\
-例：カメラモジュールが画像を取得 → LCDモジュールがその画像を表示\\
-この場合、カメラモジュールをLCDモジュールより前に配置する必要がある。
+各フェーズ内での配列順序はデータフローの順序を意味する。\\
+例：温度センサーの値を補正センサーで校正する場合、温度センサーを補正センサーより前に配置する。\\
+ただし、入力と出力のクロス参照（出力モジュールが入力のSystemDataを読む等）は行わない。
 \end{notebox}
 
 \subsubsection{SystemDataパターン}
