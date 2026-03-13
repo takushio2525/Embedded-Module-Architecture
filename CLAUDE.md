@@ -37,7 +37,7 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 | `lib/ModuleCore/IModule.h` | `IModule<T>` テンプレートインターフェース |
 | `lib/ModuleCore/ModuleTimer.h` | `millis()` ベースのノンブロッキングタイマー |
 
-`IModule<T>` はテンプレートパラメータ `T` を使うことで `SystemData` など任意の型に依存せず定義される。メソッドは `init()` と `update(T& data)` の2つのみ。
+`IModule<T>` はテンプレートパラメータ `T` を使うことで `SystemData` など任意の型に依存せず定義される。メソッドは `init()`、`update(T& data)`、`deinit()` の3つ（`deinit()` はデフォルト空実装）。
 
 ### プロジェクト層（プロジェクト固有）
 
@@ -83,3 +83,37 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 - `init()` は `bool` を返す（失敗時は `false`）
 - `update()` でエラーが発生した場合は `SystemData` のサブ構造体にエラーフラグを設定する
 - 周期実行にはメンバ変数として `ModuleTimer` を使い `delay()` を使用しない
+- 各 `{Module}Data` 構造体はメンバにデフォルト値を明示する（例：`bool isValid = false;`、`float temperature = -999.0f;`）
+
+### deinit()パターン
+
+- `IModule<T>` に `deinit()` メソッドがある（デフォルト空実装）
+- リソース解放が必要なモジュールのみオーバーライドする
+- スリープ突入前やモジュール停止時に呼び出す
+
+### スレッドセーフティ
+
+- 3フェーズループの外（割り込み / 別タスク / BLEコールバック等）から `SystemData` に直接触らない
+- 外部からのデータは**モジュール内部バッファ + `volatile` フラグ方式**で受け渡す
+  - 別タスク/割り込み → モジュール内部バッファに書き込み + `volatile` フラグを `true` にする
+  - `update()` でフラグを確認し、バッファから `SystemData` にコピーする
+- 割り込みでもマルチタスクでも同じルールを適用する
+
+### init失敗後の復帰
+
+- `init()` 失敗でモジュールを `enabled = false` にした後、ロジックフェーズで定期的に `init()` を再試行する
+- 再init成功時に `enabled = true` に復帰させる
+
+### ログ出力フォーマット
+
+- フォーマット: `[モジュール名] メッセージ`（例：`[Camera] init failed: timeout`）
+- デバッグログは `#ifdef DEBUG` 等で切り替え可能にする
+
+### Config変更タイミング
+
+- Config変更（セッター呼び出し）は**ロジックフェーズでのみ**行う
+- BLE等の外部からのConfig変更要求は `SystemData` 経由でロジックフェーズに渡す
+
+### メモリ管理
+
+- 大容量バッファ（カメラフレーム等）はPSRAMの使用を推奨する

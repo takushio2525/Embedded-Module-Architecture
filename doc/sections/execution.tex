@@ -23,6 +23,10 @@
     \item \textbf{update()ループ}（\texttt{loop()}内） \\
     毎ループ呼び出される。\texttt{SystemData}の参照を受け取り、ModuleTimerの\texttt{getNowTime()}で経過時間を確認し、
     必要なタイミングでのみ実処理を実行する。
+
+    \item \textbf{deinit()呼び出し}（必要時） \\
+    スリープ突入前やモジュール停止時に呼び出す。ペリフェラルの解放、GPIO状態のリセット等のクリーンアップ処理を行う。
+    デフォルトは空実装であり、リソース解放が必要なモジュールのみオーバーライドする。
 \end{enumerate}
 
 \subsection{ループ実行手順（3フェーズモデル）}
@@ -239,6 +243,65 @@ void loop() {
 軽量な周期処理（センサー読み取り・LED制御等）を共存させる必要がある場合に使用する。
 \end{notebox}
 
+\subsection{外部データアクセスパターン（スレッドセーフティ）}
+
+3フェーズループの外（割り込み・別タスク・BLEコールバック等）から\texttt{SystemData}に直接アクセスしてはならない。
+外部からのデータは、\textbf{モジュール内部バッファ + \texttt{volatile}フラグ方式}で受け渡す。
+割り込みでもマルチタスクでも同じルールを適用する。
+
+\begin{lstlisting}[style=cppstyle, caption={外部データアクセスパターン（volatile フラグ方式）}]
+class BleModule : public IModule<SystemData> {
+private:
+    BleConfig _config;
+    // 内部バッファ（BLEコールバックが書き込む）
+    uint8_t _rxBuffer[128];
+    uint8_t _rxLength = 0;
+    volatile bool _dataReceived = false;  // volatileフラグ
+
+public:
+    BleModule(const BleConfig& config) : _config(config) {}
+
+    // BLEコールバックから呼ばれる（別タスクで実行される）
+    void onReceive(uint8_t* data, uint8_t length) {
+        memcpy(_rxBuffer, data, length);  // バッファに書き込み
+        _rxLength = length;
+        _dataReceived = true;             // フラグを立てる
+    }
+
+    // update()は3フェーズループ内で呼ばれる
+    void update(SystemData& sysData) override {
+        if (_dataReceived) {
+            // フラグが立っていたらバッファからSystemDataへコピー
+            memcpy(sysData.ble.rxData, _rxBuffer, _rxLength);
+            sysData.ble.rxLength = _rxLength;
+            sysData.ble.newData = true;
+            _dataReceived = false;        // フラグをクリア
+        }
+    }
+    // ...
+};
+\end{lstlisting}
+
+\begin{notebox}[volatileフラグ方式を使う理由]
+\texttt{volatile}は「この変数は外部から変更される可能性がある」とコンパイラに伝えるキーワードである。
+これがないと、コンパイラの最適化によりフラグの変更が検出されない場合がある。\\
+\\
+\texttt{bool}型フラグ1個の読み書きは原子的であるため、
+「バッファへの書き込み完了後にフラグを立てる」→「フラグ確認後にバッファを読む」の順序で
+安全にデータを受け渡しできる。mutexは不要である。
+\end{notebox}
+
+\begin{cautionbox}[SystemDataへの直接アクセス禁止]
+以下のコードは\textbf{禁止}である。BLEコールバックや割り込みハンドラから
+\texttt{SystemData}を直接書き換えると、3フェーズループ実行中にデータが変わり不整合が発生する。
+\begin{lstlisting}[style=cppstyle]
+// NG: コールバックからSystemDataに直接書き込み
+void onBleReceive(SystemData& data, uint8_t* payload) {
+    data.ble.command = payload[0];  // 禁止
+}
+\end{lstlisting}
+\end{cautionbox}
+
 \subsection{内部バッファパターン}
 
 カメラ等の重い処理を持つモジュールでは、メインループで取得したデータを
@@ -248,10 +311,10 @@ void loop() {
 \begin{lstlisting}[style=cppstyle, caption={内部バッファパターンの実装例}]
 // CameraModule.h
 struct CameraData {
-    uint8_t* frame;       // フレームデータポインタ
-    size_t frameSize;     // フレームサイズ
-    bool newFrame;        // 新規フレームフラグ
-    bool hasError;
+    uint8_t* frame = nullptr;    // フレームデータポインタ
+    size_t frameSize = 0;        // フレームサイズ
+    bool newFrame = false;       // 新規フレームフラグ
+    bool hasError = false;
 };
 
 class CameraModule : public IModule<SystemData> {
@@ -320,10 +383,10 @@ struct ExampleConfig {
     unsigned long interval;   // 更新間隔(ms)
 };
 
-// --- Data構造体（モジュール間共有データ） ---
+// --- Data構造体（メンバにデフォルト値を明示） ---
 struct ExampleData {
-    int value;
-    bool hasError;
+    int value = 0;
+    bool hasError = false;
 };
 
 // IModule<SystemData> を継承

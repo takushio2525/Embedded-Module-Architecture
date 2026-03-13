@@ -31,6 +31,10 @@ public:
     // 引数: data - プロジェクト共有データへの参照
     virtual void update(T& data) = 0;
 
+    // モジュールの終了処理（リソース解放）
+    // デフォルトは空実装。解放が必要なモジュールのみオーバーライド
+    virtual void deinit() {}
+
     // 動的有効/無効化フラグ
     // false の場合、ループ内で update() がスキップされる
     bool enabled = true;
@@ -78,6 +82,19 @@ public:
 \bottomrule
 \end{tabularx}
 
+\subsubsection{deinit()}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値 & \texttt{void} \\
+呼び出しタイミング & スリープ突入前、モジュール停止時等 \\
+責務 & ペリフェラルの解放、GPIO状態のリセット等のクリーンアップ処理 \\
+デフォルト実装 & 空（何もしない）。リソース解放が必要なモジュールのみオーバーライドする \\
+\bottomrule
+\end{tabularx}
+
 \subsubsection{enabled}
 
 \begin{tabularx}{\textwidth}{l X}
@@ -104,10 +121,10 @@ struct LedConfig {
     uint8_t ledPin;  // LED出力ピン
 };
 
-// モジュール固有のデータ構造体
+// モジュール固有のデータ構造体（メンバにデフォルト値を明示）
 struct LedData {
-    bool state;
-    uint8_t brightness;
+    bool state = false;
+    uint8_t brightness = 0;
 };
 
 // テンプレート引数にSystemDataを指定して継承
@@ -328,10 +345,10 @@ struct TempSensorConfig {
     unsigned long interval;   // 読み取り間隔(ms)
 };
 
-// --- Data構造体（モジュール間共有データ） ---
+// --- Data構造体（メンバにデフォルト値を明示） ---
 struct TempData {
-    float temperature;
-    bool isValid;
+    float temperature = -999.0f;
+    bool isValid = false;
 };
 
 class TempSensorModule : public IModule<SystemData> {

@@ -136,17 +136,18 @@ void loop() {
 
 \begin{lstlisting}[style=cppstyle, caption={SystemDataパターンの構造}]
 // 各モジュールが自身のデータ構造体を定義
+// メンバには必ずデフォルト値を明示する
 // LedModule.h 内
 struct LedData {
-    bool state;
-    uint8_t brightness;
+    bool state = false;
+    uint8_t brightness = 0;
 };
 
 // TempSensorModule.h 内
 struct TempData {
-    float temperature;
-    bool isValid;
-    bool hasError;
+    float temperature = -999.0f;  // 無効値
+    bool isValid = false;         // まだ読み取っていない
+    bool hasError = false;
 };
 
 // プロジェクト固有: SystemData.h
@@ -233,8 +234,8 @@ struct SpiSensorConfig {
 
 // --- Data構造体 ---
 struct SpiSensorData {
-    uint16_t rawValue;
-    bool hasError;
+    uint16_t rawValue = 0;
+    bool hasError = false;
 };
 
 class SpiSensorModule : public IModule<SystemData> {
@@ -288,8 +289,8 @@ struct I2cSensorConfig {
 
 // --- Data構造体 ---
 struct I2cSensorData {
-    float value;
-    bool hasError;
+    float value = 0.0f;
+    bool hasError = false;
 };
 
 class I2cSensorModule : public IModule<SystemData> {
@@ -402,6 +403,19 @@ extern SPIClass spi;
 const BadSpiConfig BAD_CONFIG = { .spi = &spi, .csPin = 5 };
 \end{lstlisting}
 
+\subsubsection{Data構造体のデフォルト値ルール}
+
+各\texttt{\{Module\}Data}構造体のメンバには、必ずデフォルト値を明示する。
+これにより、\texttt{update()}が1度も呼ばれていない状態でも安全にデータを参照できる。
+
+\begin{funcblock}{デフォルト値の指針}
+\begin{itemize}
+    \item \texttt{bool}型のフラグ: \texttt{false}で初期化（\texttt{isValid = false}, \texttt{hasError = false}）
+    \item 数値型: 正常値と区別できる無効値で初期化（例: \texttt{temperature = -999.0f}）
+    \item ポインタ: \texttt{nullptr}で初期化
+\end{itemize}
+\end{funcblock}
+
 \subsubsection{データアクセスルール}
 
 \texttt{update()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスする。
@@ -499,11 +513,72 @@ void I2cSensorModule::update(SystemData& data) {
 }
 \end{lstlisting}
 
+\subsubsection{init失敗後の復帰パターン}
+
+\texttt{init()}失敗で\texttt{enabled = false}にしたモジュールは、
+ロジックフェーズで定期的に\texttt{init()}を再試行し、成功時に\texttt{enabled = true}に復帰させる。
+
+\begin{lstlisting}[style=cppstyle, caption={ロジックフェーズでのinit復帰パターン}]
+// main.cpp
+ModuleTimer reinitTimer;
+
+void tryReinitModules() {
+    if (reinitTimer.getNowTime() < 5000) return;  // 5秒間隔
+    reinitTimer.setTime();
+
+    for (int i = 0; i < INPUT_COUNT; i++) {
+        if (!inputModules[i]->enabled) {
+            if (inputModules[i]->init()) {
+                Serial.printf("[System] Input Module %d: reinit OK\n", i);
+                inputModules[i]->enabled = true;
+            }
+        }
+    }
+    for (int i = 0; i < OUTPUT_COUNT; i++) {
+        if (!outputModules[i]->enabled) {
+            if (outputModules[i]->init()) {
+                Serial.printf("[System] Output Module %d: reinit OK\n", i);
+                outputModules[i]->enabled = true;
+            }
+        }
+    }
+}
+
+void loop() {
+    // 1. 入力フェーズ ...
+    // 2. ロジックフェーズ
+    applyPattern(systemData);
+    tryReinitModules();  // 無効モジュールの復帰チェック
+    // 3. 出力フェーズ ...
+}
+\end{lstlisting}
+
+\subsubsection{ログ出力フォーマット}
+
+シリアルモニタへのログ出力は、以下のフォーマットに統一する。
+
+\begin{funcblock}{ログフォーマット}
+\texttt{[モジュール名] メッセージ}\\
+例: \texttt{[Camera] init failed: timeout}\\
+例: \texttt{[Temp] センサー読み取りエラー}\\
+例: \texttt{[System] Input Module 0: reinit OK}
+\end{funcblock}
+
+デバッグ用のログは\texttt{\#ifdef DEBUG}等で切り替え可能にし、
+リリースビルドでは不要なログを無効化できるようにする。
+
 \subsubsection{Configの実行時変更}
 
 Config構造体は\textbf{初期値}として扱う。
 コンストラクタでコピーされたメンバ変数\texttt{\_config}は\texttt{const}ではないため、
 実行時に変更が必要な場合は\textbf{モジュールインスタンス内の\_configメンバを直接変更}する。
+
+\begin{cautionbox}[Config変更のタイミング]
+Configの変更（セッター呼び出し）は\textbf{ロジックフェーズでのみ}行う。
+BLE等の外部からの変更要求は\texttt{SystemData}経由でロジックフェーズに渡し、
+ロジックフェーズ内でセッターを呼び出す。
+これにより、\texttt{update()}実行中にConfigが変わるデータ不整合を防ぐ。
+\end{cautionbox}
 
 \begin{lstlisting}[style=cppstyle, caption={Config値の実行時変更例}]
 class TempSensorModule : public IModule<SystemData> {
