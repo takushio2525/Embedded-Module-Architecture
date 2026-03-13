@@ -250,7 +250,7 @@ void loop() {
 割り込みでもマルチタスクでも同じルールを適用する。
 
 \begin{lstlisting}[style=cppstyle, caption={外部データアクセスパターン（volatile フラグ方式）}]
-class BleModule : public IModule<SystemData> {
+class BleModule : public IModule {
 private:
     BleConfig _config;
     // 内部バッファ（BLEコールバックが書き込む）
@@ -317,7 +317,7 @@ struct CameraData {
     bool hasError = false;
 };
 
-class CameraModule : public IModule<SystemData> {
+class CameraModule : public IModule {
 private:
     CameraConfig _config;
     // 内部バッファ
@@ -389,8 +389,8 @@ struct ExampleData {
     bool hasError = false;
 };
 
-// IModule<SystemData> を継承
-class ExampleModule : public IModule<SystemData> {
+// IModule を継承
+class ExampleModule : public IModule {
 private:
     ExampleConfig _config;     // Configをメンバとして保持
     ModuleTimer _updateTimer;  // タイマー

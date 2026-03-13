@@ -34,10 +34,10 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 
 | ファイル | 役割 |
 |---|---|
-| `lib/ModuleCore/IModule.h` | `IModule<T>` テンプレートインターフェース |
+| `lib/ModuleCore/IModule.h` | `IModule` インターフェース |
 | `lib/ModuleCore/ModuleTimer.h` | `millis()` ベースのノンブロッキングタイマー |
 
-`IModule<T>` はテンプレートパラメータ `T` を使うことで `SystemData` など任意の型に依存せず定義される。メソッドは `init()`、`update(T& data)`、`deinit()` の3つ（`deinit()` はデフォルト空実装）。
+`IModule` は `SystemData` の前方宣言のみを使用し、プロジェクト固有の型に依存しない。メソッドは `init()`、`update(SystemData& data)`、`deinit()` の3つ（`deinit()` はデフォルト空実装）。
 
 ### プロジェクト層（プロジェクト固有）
 
@@ -97,7 +97,7 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 
 ### deinit()パターン
 
-- `IModule<T>` に `deinit()` メソッドがある（デフォルト空実装）
+- `IModule` に `deinit()` メソッドがある（デフォルト空実装）
 - リソース解放が必要なモジュールのみオーバーライドする
 - スリープ突入前やモジュール停止時に呼び出す
 

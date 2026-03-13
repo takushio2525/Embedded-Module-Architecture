@@ -19,5 +19,6 @@
 2.0 & 2026-03-13 & Shiozawa & 設計ルール拡充：deinit()追加、Data構造体デフォルト値、外部データアクセスパターン（volatile フラグ方式）、init復帰パターン、ログ出力フォーマット、Config変更タイミング制約、メモリ管理指針を追加 \\
 2.1 & 2026-03-13 & Shiozawa & 実装検証によるフィードバック反映：モジュールの.h/.cpp分離ルール追加（循環依存対策）、PlatformIO設定に-I include追加、コード例を実装準拠に更新 \\
 2.2 & 2026-03-13 & Shiozawa & SystemData.hをProjectConfig.hから分離。モジュールの.cppはSystemData.hのみ参照する設計に変更。仕様書の全コード例・ファイル構成を更新 \\
+2.3 & 2026-03-13 & Shiozawa & IModuleからテンプレートを除去。前方宣言ベースのシンプルなインターフェースに変更 \\
 \bottomrule
 \end{tabularx}

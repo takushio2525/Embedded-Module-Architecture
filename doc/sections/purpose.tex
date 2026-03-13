@@ -7,7 +7,7 @@
 
 \begin{enumerate}
     \item \textbf{プログラムの部品化による汎用性の向上} \\
-    IModule<T>テンプレートインターフェースとModuleTimerクラスを、
+    IModuleインターフェースとModuleTimerクラスを、
     \textbf{どんなプロジェクトにもそのまま流用できる}汎用的なコアコンポーネントとして設計する。
     プロジェクト固有の型に一切依存せず、コアクラスをコピーするだけで
     別のマイコンプラットフォーム・別のプロジェクトでも即座に利用可能な部品化を実現する。\\[6pt]
@@ -18,7 +18,7 @@
     \item \textbf{共同開発における規格の確立} \\
     複数人での組み込み開発において、メンバー全員が同じインターフェース規約に従うことで、
     実装スタイルの統一を実現する。「このモジュールを作って」と依頼する際に、
-    \texttt{IModule<SystemData>}を継承した\texttt{init()}と\texttt{update()}を実装するだけという
+    \texttt{IModule}を継承した\texttt{init()}と\texttt{update()}を実装するだけという
     明確なルールがあれば、初心者でもAIに適切な指示を出しやすく、かつ、
     モジュール単位で機能を分担しやすくなる。
 \end{enumerate}
@@ -47,7 +47,7 @@
 
 本プロジェクトが提供するもの：
 \begin{itemize}
-    \item IModule<T>テンプレートインターフェースの定義と仕様
+    \item IModuleインターフェースの定義と仕様
     \item ModuleTimerクラスの実装
     \item SystemDataパターンの設計指針
     \item ESP32-S3 CAMを用いたサンプルモジュール群

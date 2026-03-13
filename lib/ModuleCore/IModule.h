@@ -1,9 +1,10 @@
-// IModule.h — プロジェクト非依存のコアヘッダー
+// IModule.h — モジュールインターフェース（プロジェクト非依存）
 #pragma once
 
-// <typename T> と書くことで、
-// 「Tという型（構造体）を後から指定する」という宣言になる
-template <typename T>
+// SystemDataの前方宣言
+// 各プロジェクトでSystemData構造体を定義すること
+struct SystemData;
+
 class IModule {
 public:
     // 仮想デストラクタ
@@ -15,7 +16,7 @@ public:
 
     // モジュールの更新（毎ループ呼び出される）
     // 引数: data - プロジェクト共有データへの参照
-    virtual void update(T& data) = 0;
+    virtual void update(SystemData& data) = 0;
 
     // モジュールの終了処理（リソース解放）
     // デフォルトは空実装。解放が必要なモジュールのみオーバーライド

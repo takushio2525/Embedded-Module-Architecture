@@ -14,11 +14,10 @@ struct LedData {
     uint8_t brightness = 0;
 };
 
-// SystemDataの前方宣言（実体はProjectConfig.hで定義）
-struct SystemData;
+// SystemDataの前方宣言はIModule.h内で行われている
 
 // --- モジュール実装 ---
-class LedModule : public IModule<SystemData> {
+class LedModule : public IModule {
 private:
     LedConfig _config;
 

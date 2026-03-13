@@ -10,7 +10,7 @@ SystemData systemData;
 LedModule ledModule(LED_CONFIG);
 
 // 出力モジュール配列
-IModule<SystemData>* outputModules[] = {
+IModule* outputModules[] = {
     &ledModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);

@@ -1,23 +1,23 @@
 % API仕様
 \section{API仕様}
 
-\subsection{IModule<T>テンプレートインターフェース}
+\subsection{IModuleインターフェース}
 
-\begin{apibox}{IModule<T> — モジュールテンプレートインターフェース}
+\begin{apibox}{IModule — モジュールインターフェース}
 \textbf{定義ファイル:} \texttt{lib/ModuleCore/IModule.h}
 
 全ハードウェアモジュールが実装すべき抽象インターフェース。
-C++テンプレートにより、プロジェクト固有の型（\texttt{SystemData}等）に一切依存しない。
-\texttt{T}にはプロジェクトで定義した共有データ構造体の型を指定する。
+\texttt{SystemData}の前方宣言のみを使用し、プロジェクト固有のヘッダーに依存しない。
 \end{apibox}
 
-\begin{lstlisting}[style=cppstyle, caption={IModule<T>テンプレートインターフェース定義}]
-// IModule.h — プロジェクト非依存のコアヘッダー
+\begin{lstlisting}[style=cppstyle, caption={IModuleインターフェース定義}]
+// IModule.h — モジュールインターフェース（プロジェクト非依存）
 #pragma once
 
-// <typename T> と書くことで、
-// 「Tという型（構造体）を後から指定する」という宣言になる
-template <typename T>
+// SystemDataの前方宣言
+// 各プロジェクトでSystemData構造体を定義すること
+struct SystemData;
+
 class IModule {
 public:
     // 仮想デストラクタ
@@ -29,7 +29,7 @@ public:
 
     // モジュールの更新（毎ループ呼び出される）
     // 引数: data - プロジェクト共有データへの参照
-    virtual void update(T& data) = 0;
+    virtual void update(SystemData& data) = 0;
 
     // モジュールの終了処理（リソース解放）
     // デフォルトは空実装。解放が必要なモジュールのみオーバーライド
@@ -41,12 +41,11 @@ public:
 };
 \end{lstlisting}
 
-\begin{notebox}[テンプレートを使う理由]
-テンプレートを使わない場合、\texttt{IModule.h}内で\texttt{SystemData}を\texttt{\#include}する必要がある。
-しかし\texttt{SystemData}はプロジェクト固有の型であるため、コアライブラリがプロジェクトに依存してしまう。\\
-\\
-テンプレートにより、\texttt{IModule.h}は何も\texttt{\#include}せずに済み、
-どんなプロジェクトにもそのままコピーして流用できる。
+\begin{notebox}[前方宣言によるプロジェクト非依存性]
+\texttt{IModule.h}は\texttt{SystemData}を前方宣言のみで参照しているため、
+\texttt{SystemData.h}を\texttt{\#include}する必要がない。\\
+\texttt{update()}の引数は参照型（\texttt{SystemData\&}）であるため、前方宣言だけで十分であり、
+どのプロジェクトにもそのままコピーして流用できる。
 \end{notebox}
 
 \begin{cautionbox}[データアクセスルール]
@@ -54,6 +53,12 @@ public:
 他モジュールのサブ構造体への読み書きは禁止とする。
 モジュール間のデータ連携が必要な場合は、必ずロジックフェーズを経由する。
 \end{cautionbox}
+
+\begin{notebox}[\texttt{SystemData}名の標準化]
+\texttt{IModule.h}は前方宣言で\texttt{SystemData}という型名に依存している。
+この名前は本アーキテクチャの標準命名規則として固定されており、
+すべてのプロジェクトで\texttt{SystemData}という名前の構造体を\texttt{include/SystemData.h}に定義する。
+\end{notebox}
 
 \subsubsection{init()}
 
@@ -68,13 +73,13 @@ public:
 \bottomrule
 \end{tabularx}
 
-\subsubsection{update(T\& data)}
+\subsubsection{update(SystemData\& data)}
 
 \begin{tabularx}{\textwidth}{l X}
 \toprule
 \textbf{項目} & \textbf{内容} \\
 \midrule
-引数 & \texttt{T\&} — プロジェクト共有データへの参照（nullにならない） \\
+引数 & \texttt{SystemData\&} — プロジェクト共有データへの参照（nullにならない） \\
 戻り値 & \texttt{void} \\
 呼び出しタイミング & \texttt{loop()}内で毎ループ呼び出される \\
 責務 & センサー読み取り、出力制御、共有データの更新 \\
@@ -127,11 +132,10 @@ struct LedData {
     uint8_t brightness = 0;
 };
 
-// SystemDataの前方宣言（実体はSystemData.hで定義）
-struct SystemData;
+// SystemDataの前方宣言はIModule.h内で行われている
 
-// テンプレート引数にSystemDataを指定して継承
-class LedModule : public IModule<SystemData> {
+// IModuleを継承
+class LedModule : public IModule {
 private:
     LedConfig _config;  // Configをメンバとして保持
 public:
@@ -279,7 +283,7 @@ void update(SystemData& data) override {
 \textbf{定義ファイル:} \texttt{include/SystemData.h}（プロジェクト固有）
 
 各モジュールの\texttt{Data}構造体を集約した共有データ構造体。
-\texttt{IModule<T>}のテンプレート引数\texttt{T}として指定する。
+\texttt{IModule}の\texttt{update()}メソッドの引数型として使用される。
 モジュールの\texttt{.cpp}ファイルからインクルードされる。
 \end{apibox}
 
@@ -379,7 +383,7 @@ struct TempData {
     bool isValid = false;
 };
 
-class TempSensorModule : public IModule<SystemData> {
+class TempSensorModule : public IModule {
 private:
     TempSensorConfig _config;
     ModuleTimer _readTimer;
@@ -412,7 +416,7 @@ struct SpiSensorConfig {
     unsigned long interval;   // 読み取り間隔(ms)
 };
 
-class SpiSensorModule : public IModule<SystemData> {
+class SpiSensorModule : public IModule {
 private:
     SpiSensorConfig _config;
     SPIClass* _spi;  // バスポインタはメンバ変数として保持
