@@ -43,7 +43,8 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 
 | ファイル | 役割 |
 |---|---|
-| `include/ProjectConfig.h` | 全モジュールのConfigインスタンス（ピンアサイン）+ `SystemData` 構造体 |
+| `include/SystemData.h` | 各モジュールの `Data` 構造体を集約した `SystemData` 構造体 |
+| `include/ProjectConfig.h` | 全モジュールのConfigインスタンス（ピンアサイン） |
 | `src/main.cpp` | モジュール配列の定義・ループ制御 |
 | `lib/{ModuleName}/` | 個別ハードウェアモジュールの実装 |
 
@@ -54,8 +55,8 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 各モジュールは `.h`（宣言）と `.cpp`（実装）に分離する。`SystemData` の循環依存を回避するための必須ルール。
 
 - **`.h`**: `<Arduino.h>` + `"IModule.h"` をインクルード。Config/Data構造体の定義、`struct SystemData;` の前方宣言、クラス宣言（プロトタイプのみ）
-- **`.cpp`**: `"ProjectConfig.h"` をインクルードし、メソッドを実装
-- ヘッダーでは `ProjectConfig.h` をインクルードしない（循環依存を防ぐため）
+- **`.cpp`**: `"SystemData.h"` をインクルードし、メソッドを実装（`ProjectConfig.h` はインクルードしない）
+- ヘッダーでは `SystemData.h` をインクルードしない（循環依存を防ぐため）
 - `platformio.ini` の `build_flags` に `-I include` を追加する（`lib/` 内から `include/` を参照するため）
 
 ### 3フェーズ実行モデル

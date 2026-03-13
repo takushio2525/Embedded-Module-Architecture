@@ -1,6 +1,6 @@
 // LedModule.cpp — LED制御モジュールの実装
 #include "LedModule.h"
-#include "ProjectConfig.h"
+#include "SystemData.h"
 #include <Arduino.h>
 
 LedModule::LedModule(const LedConfig& config) : _config(config) {}

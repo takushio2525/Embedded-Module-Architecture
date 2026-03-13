@@ -39,6 +39,6 @@ build_flags =
 \begin{notebox}[\texttt{-I include}が必要な理由]
 PlatformIOの標準設定では、\texttt{lib/}内のライブラリはプロジェクトの\texttt{include/}ディレクトリを
 インクルードパスに含まない。
-モジュールの\texttt{.cpp}ファイルが\texttt{ProjectConfig.h}を参照するため、
+モジュールの\texttt{.cpp}ファイルが\texttt{SystemData.h}を参照するため、
 \texttt{build\_flags}に\texttt{-I include}を追加してパスを通す必要がある。
 \end{notebox}
