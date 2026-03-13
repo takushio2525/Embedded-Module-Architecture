@@ -386,8 +386,134 @@ public:
 };
 \end{lstlisting}
 
-\subsubsection{エラーハンドリングパターン}
+\subsubsection{データアクセスルール}
+
+\texttt{update()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスする。
+他モジュールのサブ構造体への読み書きは\textbf{禁止}とする。
+モジュール間のデータ連携が必要な場合は、必ず\textbf{ロジックフェーズ}を経由する。
+
+\begin{lstlisting}[style=cppstyle, caption={データアクセスルールの例}]
+// OK: 自モジュールのサブ構造体のみアクセス
+void TempSensorModule::update(SystemData& data) {
+    data.temp.temperature = analogRead(_config.tempPin);
+    data.temp.isValid = true;
+}
+
+// NG: 他モジュールのサブ構造体にアクセスしている
+void TempSensorModule::update(SystemData& data) {
+    data.temp.temperature = analogRead(_config.tempPin);
+    data.led.state = true;  // 禁止：LEDはロジックフェーズで制御する
+}
+\end{lstlisting}
+
+\subsubsection{モジュール統合の原則}
+
+\textbf{モジュール間の依存関係は存在しないものとして設計する。}
+各モジュールは他のモジュールの存在を知らず、独立して動作する。
+依存関係がある場合は、それらを\textbf{1つの大きなモジュールに統合}する。
+
+例：カメラモジュールがSDカードを必要とする場合、「カメラ＋SDカードモジュール」として1つにまとめる。
+
+\subsubsection{enabledフラグによる動的管理}
+
+\texttt{IModule<T>}の\texttt{enabled}フラグにより、実行時のモジュール有効・無効切り替えを実現する。
+
 \begin{itemize}
-    \item \texttt{init()} — 戻り値\texttt{bool}で初期化の成否を返す。規定回数リトライ後、失敗時は\texttt{enabled = false}でモジュールを無効化する
-    \item \texttt{update()} — エラー発生時はData構造体内のエラーフラグ（\texttt{hasError}等）を設定する。次サイクルで再試行し、成功時にモジュール自身がフラグをクリアする
+    \item \texttt{enabled = true}（デフォルト）: 通常通り\texttt{update()}が呼ばれる
+    \item \texttt{enabled = false}: ループ内で\texttt{update()}がスキップされる
+    \item BLE等の外部通信からモジュールの\texttt{enabled}を切り替えることで、動的な制御が可能
 \end{itemize}
+
+\begin{lstlisting}[style=cppstyle, caption={enabledフラグの使用例}]
+void loop() {
+    for (int i = 0; i < INPUT_COUNT; i++) {
+        if (inputModules[i]->enabled) {
+            inputModules[i]->update(systemData);
+        }
+    }
+    applyPattern(systemData);
+    for (int i = 0; i < OUTPUT_COUNT; i++) {
+        if (outputModules[i]->enabled) {
+            outputModules[i]->update(systemData);
+        }
+    }
+}
+\end{lstlisting}
+
+\subsubsection{エラーハンドリングパターン}
+
+\paragraph{init()失敗時}
+規定回数（例：3回）までリトライし、上限を超えた場合は\texttt{enabled = false}に設定してモジュールを無効化する。
+シリアルモニタにエラーログを出力する。
+
+\begin{lstlisting}[style=cppstyle, caption={init()リトライパターンの実装例}]
+// setup() 内
+const int MAX_RETRY = 3;
+for (int i = 0; i < INPUT_COUNT; i++) {
+    bool success = false;
+    for (int retry = 0; retry < MAX_RETRY; retry++) {
+        if (inputModules[i]->init()) {
+            success = true;
+            break;
+        }
+        delay(100);  // init()のリトライ間隔（setup内のみdelay許容）
+    }
+    if (!success) {
+        Serial.printf("Input Module %d: init failed, disabled\n", i);
+        inputModules[i]->enabled = false;
+    }
+}
+\end{lstlisting}
+
+\paragraph{update()エラー時}
+Data構造体内のエラーフラグ（\texttt{hasError}等）を\texttt{true}に設定する。
+モジュールは次の\texttt{update()}サイクルで再試行し、成功時にモジュール自身がエラーフラグを\texttt{false}にクリアする。
+
+\begin{lstlisting}[style=cppstyle, caption={update()エラーフラグの運用例}]
+void I2cSensorModule::update(SystemData& data) {
+    if (_readTimer.getNowTime() >= _config.interval) {
+        _readTimer.setTime();
+        if (readSensor()) {
+            data.i2cSensor.value = _lastValue;
+            data.i2cSensor.hasError = false;  // 成功時にクリア
+        } else {
+            data.i2cSensor.hasError = true;   // 失敗時にセット
+        }
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Configの実行時変更}
+
+Config構造体は\textbf{初期値}として扱う。
+コンストラクタでコピーされたメンバ変数\texttt{\_config}は\texttt{const}ではないため、
+実行時に変更が必要な場合は\textbf{モジュールインスタンス内の\_configメンバを直接変更}する。
+
+\begin{lstlisting}[style=cppstyle, caption={Config値の実行時変更例}]
+class TempSensorModule : public IModule<SystemData> {
+private:
+    TempSensorConfig _config;  // constではない→変更可能
+public:
+    TempSensorModule(const TempSensorConfig& config)
+        : _config(config) {}
+
+    // 実行時にintervalを変更するセッター
+    void setInterval(unsigned long interval) {
+        _config.interval = interval;
+    }
+
+    // update()は変更後の値を使用する
+    void update(SystemData& data) override {
+        if (_readTimer.getNowTime() >= _config.interval) {
+            // ...
+        }
+    }
+};
+
+// ロジックフェーズ等から変更する例
+void applyPattern(SystemData& data) {
+    if (data.ble.newIntervalReceived) {
+        tempModule.setInterval(data.ble.newInterval);
+    }
+}
+\end{lstlisting}

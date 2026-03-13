@@ -1,8 +1,9 @@
-% 既知の制約と設計上の対応
-\section{既知の制約と設計上の対応}
+% 既知の制約
+\section{既知の制約}
 
 本アーキテクチャは小〜中規模（モジュール10個程度まで）のプロジェクトに適した設計である。
-以下に、想定される課題と各課題に対する設計上の対応方針を示す。
+以下に、設計上認識している制約を示す。
+各制約に対する対応方針は、該当するセクションに正式な設計ルールとして記載している。
 
 % ----- 1. SystemDataの肥大化 -----
 \subsection{SystemDataの肥大化}
@@ -10,34 +11,13 @@
 モジュールが増えるたびに\texttt{SystemData}にサブ構造体が追加され、構造体が肥大化する。
 全モジュールが\texttt{SystemData\&}を受け取るため、自身に無関係なデータにもアクセス可能になる。
 
-\begin{funcblock}{対応方針：データアクセスルール}
-コンパイラレベルの制限ではなく、\textbf{設計ルール}として以下を定める：
-\begin{itemize}
-    \item \texttt{update()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスする
-    \item 他モジュールのサブ構造体への読み書きは\textbf{禁止}とする
-    \item モジュール間のデータ連携が必要な場合は、必ず\textbf{ロジックフェーズ}を経由する
-\end{itemize}
-\end{funcblock}
-
-\begin{lstlisting}[style=cppstyle, caption={データアクセスルールの例}]
-// OK: 自モジュールのサブ構造体のみアクセス
-void TempSensorModule::update(SystemData& data) {
-    data.temp.temperature = analogRead(_config.tempPin);
-    data.temp.isValid = true;
-}
-
-// NG: 他モジュールのサブ構造体にアクセスしている
-void TempSensorModule::update(SystemData& data) {
-    data.temp.temperature = analogRead(_config.tempPin);
-    data.led.state = true;  // 禁止：LEDはロジックフェーズで制御する
-}
-\end{lstlisting}
-
 \begin{notebox}[肥大化の許容範囲]
 モジュール数が15〜20を超えると構造体の見通しが悪化するが、
 本アーキテクチャの対象規模（10個程度）では問題にならない。
 モジュール1つの追加で\texttt{ProjectConfig.h}の変更が必要となり全モジュールの再コンパイルが
 発生する点は、小〜中規模プロジェクトでは許容範囲とする。
+
+対応方針は「システムアーキテクチャ」§データアクセスルールを参照。
 \end{notebox}
 
 % ----- 2. モジュール間の依存関係 -----
@@ -46,26 +26,14 @@ void TempSensorModule::update(SystemData& data) {
 現在のアーキテクチャでは、モジュール間の初期化順序や実行順序の依存関係を
 明示的に表現する仕組みがない。
 
-\begin{funcblock}{対応方針：依存関係の排除}
-\textbf{モジュール間の依存関係は存在しないものとして設計する。}
-\begin{itemize}
-    \item 各モジュールは他のモジュールの存在を知らず、独立して動作する
-    \item 依存関係がある場合は、それらを\textbf{1つの大きなモジュールに統合}する
-    \item 例：カメラモジュールがSDカードを必要とする場合、
-          「カメラ＋SDカードモジュール」として1つにまとめる
-\end{itemize}
-\end{funcblock}
+対応方針は「システムアーキテクチャ」§モジュール統合の原則を参照。
 
 % ----- 3. リアルタイム性の限界 -----
 \subsection{リアルタイム性の限界}
 
 3フェーズモデルは処理の流れが明快であるが、1ループ周期分の応答遅延が必ず発生する。
 
-\begin{funcblock}{対応方針：割り込み実行パターン}
-リアルタイム性が求められる複雑なプロジェクトでは、\textbf{タイマー割り込みで3フェーズループを周期実行}する。
-メインループは重い処理（カメラ等）の実行に専念し、割り込み内で軽量モジュールの\texttt{update()}を回す。
-詳細は「実行モデル詳細」セクションの「割り込み実行パターン」を参照。
-\end{funcblock}
+対応方針は「実行モデル詳細」§割り込み実行パターンを参照。
 
 % ----- 4. シングルスレッド制約 -----
 \subsection{シングルスレッド制約}
@@ -73,167 +41,46 @@ void TempSensorModule::update(SystemData& data) {
 本アーキテクチャは協調的なシングルスレッドスケジューリングに基づいており、
 カメラ画像処理等の重い処理がモジュールに含まれると全体が遅延する。
 
-\begin{funcblock}{対応方針：内部バッファパターン}
-重い処理を持つモジュールでは\textbf{内部バッファパターン}を使用する：
-\begin{enumerate}
-    \item メインループで重い処理（カメラ取得等）を継続的に実行する
-    \item 処理完了時にモジュールのクラス内バッファにデータを保存する
-    \item \texttt{update()}呼び出し時にバッファから\texttt{SystemData}へコピーする（軽量処理）
-\end{enumerate}
-詳細は「実行モデル詳細」セクションの「内部バッファパターン」を参照。
-\end{funcblock}
+対応方針は「実行モデル詳細」§内部バッファパターンを参照。
 
 % ----- 5. ロジックフェーズのスケーラビリティ -----
 \subsection{ロジックフェーズのスケーラビリティ}
 
 \texttt{applyPattern()}等の関数でロジックを記述する方式は、モジュール数の増加に伴い複雑化する可能性がある。
-
-\begin{funcblock}{対応方針：SystemData中心管理}
-すべてのモジュール間データ連携は\texttt{SystemData}を介して行うため、
-モジュール同士が直接競合することはない。
-出力データの書き換えはロジックフェーズに集約されるため、競合が発生した場合は
-ロジック関数内で優先度を明示的にコード化すればよい。
-\end{funcblock}
+ただし、すべてのモジュール間データ連携は\texttt{SystemData}を介して行うため、
+モジュール同士が直接競合することはなく、競合が発生した場合はロジック関数内で優先度を明示的にコード化すればよい。
 
 % ----- 6. 動的なモジュール管理 -----
 \subsection{動的なモジュール管理}
 
 モジュール配列は\texttt{setup()}時に静的に確定され、実行中にモジュールを追加・削除する仕組みがない。
 
-\begin{funcblock}{対応方針：enabledフラグ}
-\texttt{IModule<T>}に\texttt{enabled}フラグを追加し、実行時の有効・無効切り替えを可能にする。
-\begin{itemize}
-    \item \texttt{enabled = true}（デフォルト）: 通常通り\texttt{update()}が呼ばれる
-    \item \texttt{enabled = false}: ループ内で\texttt{update()}がスキップされる
-    \item BLE等の外部通信からモジュールの\texttt{enabled}を切り替えることで、動的な制御が可能
-\end{itemize}
-\end{funcblock}
-
-\begin{lstlisting}[style=cppstyle, caption={enabledフラグの使用例}]
-void loop() {
-    for (int i = 0; i < INPUT_COUNT; i++) {
-        if (inputModules[i]->enabled) {
-            inputModules[i]->update(systemData);
-        }
-    }
-    applyPattern(systemData);
-    for (int i = 0; i < OUTPUT_COUNT; i++) {
-        if (outputModules[i]->enabled) {
-            outputModules[i]->update(systemData);
-        }
-    }
-}
-\end{lstlisting}
+対応方針は「システムアーキテクチャ」§enabledフラグによる動的管理を参照。
 
 % ----- 7. エラー復帰パターン -----
 \subsection{エラー復帰パターン}
 
 エラーの検出手段は提供されているが、エラーからの復帰に関するパターンが未定義であった。
 
-\begin{funcblock}{対応方針：標準エラー復帰パターン}
-以下の標準パターンを定義する：
-
-\textbf{init()失敗時：}
-\begin{enumerate}
-    \item 規定回数（例：3回）までリトライする
-    \item リトライ上限を超えた場合、\texttt{enabled = false}に設定してモジュールを無効化する
-    \item シリアルモニタにエラーログを出力する
-\end{enumerate}
-
-\textbf{update()エラー時：}
-\begin{enumerate}
-    \item Data構造体内のエラーフラグ（\texttt{hasError}等）を\texttt{true}に設定する
-    \item モジュールは次の\texttt{update()}サイクルで再試行する
-    \item 成功時にモジュール自身がエラーフラグを\texttt{false}にクリアする
-\end{enumerate}
-\end{funcblock}
-
-\begin{lstlisting}[style=cppstyle, caption={init()リトライパターンの実装例}]
-// setup() 内
-const int MAX_RETRY = 3;
-for (int i = 0; i < INPUT_COUNT; i++) {
-    bool success = false;
-    for (int retry = 0; retry < MAX_RETRY; retry++) {
-        if (inputModules[i]->init()) {
-            success = true;
-            break;
-        }
-        delay(100);  // init()のリトライ間隔（setup内のみdelay許容）
-    }
-    if (!success) {
-        Serial.printf("Input Module %d: init failed, disabled\n", i);
-        inputModules[i]->enabled = false;
-    }
-}
-\end{lstlisting}
-
-\begin{lstlisting}[style=cppstyle, caption={update()エラーフラグの運用例}]
-void I2cSensorModule::update(SystemData& data) {
-    if (_readTimer.getNowTime() >= _config.interval) {
-        _readTimer.setTime();
-        if (readSensor()) {
-            data.i2cSensor.value = _lastValue;
-            data.i2cSensor.hasError = false;  // 成功時にクリア
-        } else {
-            data.i2cSensor.hasError = true;   // 失敗時にセット
-        }
-    }
-}
-\end{lstlisting}
+対応方針は「システムアーキテクチャ」§エラーハンドリングパターンを参照。
 
 % ----- 8. Configの実行時変更 -----
 \subsection{Configの実行時変更}
 
 Config構造体はコンストラクタでコピーされ、以降の変更手段が限られていた。
 
-\begin{funcblock}{対応方針：Configは初期値、実行時はインスタンス内の値を変更}
-Config構造体は\textbf{初期値}として扱う。
-コンストラクタでコピーされたメンバ変数\texttt{\_config}は\texttt{const}ではないため、
-実行時に変更が必要な場合は\textbf{モジュールインスタンス内の\_configメンバを直接変更}する。
-\end{funcblock}
-
-\begin{lstlisting}[style=cppstyle, caption={Config値の実行時変更例}]
-class TempSensorModule : public IModule<SystemData> {
-private:
-    TempSensorConfig _config;  // constではない→変更可能
-public:
-    TempSensorModule(const TempSensorConfig& config)
-        : _config(config) {}
-
-    // 実行時にintervalを変更するセッター
-    void setInterval(unsigned long interval) {
-        _config.interval = interval;
-    }
-
-    // update()は変更後の値を使用する
-    void update(SystemData& data) override {
-        if (_readTimer.getNowTime() >= _config.interval) {
-            // ...
-        }
-    }
-};
-
-// ロジックフェーズ等から変更する例
-void applyPattern(SystemData& data) {
-    if (data.ble.newIntervalReceived) {
-        tempModule.setInterval(data.ble.newInterval);
-    }
-}
-\end{lstlisting}
+対応方針は「システムアーキテクチャ」§Configの実行時変更を参照。
 
 % ----- 9. テスタビリティ -----
 \subsection{テスタビリティ}
 
 ハードウェア依存が強く、PC上でのユニットテストが困難である。
-
-\begin{funcblock}{対応方針：Arduino前提の設計}
-本アーキテクチャは\textbf{Arduinoプラットフォームでのプロジェクトが大前提}であり、
-PC上でのユニットテストは対象外とする。
+本アーキテクチャはArduinoプラットフォームでのプロジェクトが大前提であり、
 テストはハードウェア実機上での動作確認（シリアルモニタ出力等）を基本とする。
-\end{funcblock}
 
 \begin{notebox}[本セクションの位置づけ]
-ここに挙げた課題の多くは、アーキテクチャの設計上の欠陥ではなく、
-\textbf{簡潔さとのトレードオフ}として認識した上で対応方針を定めたものである。
-対応方針はいずれもアーキテクチャの簡潔さを維持しつつ、実用上の問題を解決することを重視している。
+ここに挙げた制約の多くは、アーキテクチャの設計上の欠陥ではなく、
+\textbf{簡潔さとのトレードオフ}として認識したものである。
+各制約に対する対応方針は、アーキテクチャ・実行モデル・API仕様の各セクションに
+正式な設計ルールとして記載している。
 \end{notebox}
