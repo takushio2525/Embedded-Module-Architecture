@@ -131,11 +131,76 @@ void loop() {
 ただし、入力と出力のクロス参照（出力モジュールが入力のSystemDataを読む等）は行わない。
 \end{notebox}
 
+\subsubsection{モジュールのファイル構成}
+
+各モジュールは\textbf{ヘッダー（.h）と実装（.cpp）に分離}する。
+これは\texttt{SystemData}の循環依存を回避するための必須ルールである。
+
+\begin{cautionbox}[循環依存の問題]
+\texttt{ProjectConfig.h}は各モジュールヘッダーをインクルードして\texttt{SystemData}を定義する。
+一方、モジュールクラスは\texttt{IModule<SystemData>}を継承するため\texttt{SystemData}が必要となる。\\
+ヘッダー内にメソッドをインライン実装すると、
+\texttt{LedModule.h} → \texttt{SystemData} → \texttt{ProjectConfig.h} → \texttt{LedModule.h}
+の循環が発生してコンパイルエラーとなる。
+\end{cautionbox}
+
+\begin{funcblock}{モジュールファイル構成のルール}
+\begin{enumerate}
+    \item \textbf{ヘッダー（.h）}: Config構造体、Data構造体、\texttt{SystemData}の前方宣言、クラス宣言（メソッドはプロトタイプのみ）
+    \item \textbf{実装（.cpp）}: \texttt{ProjectConfig.h}をインクルードし、メソッドを実装
+    \item ヘッダーでは\texttt{<Arduino.h>}と\texttt{"IModule.h"}をインクルードする
+    \item ヘッダーでは\texttt{ProjectConfig.h}をインクルードしない（循環依存を防ぐため）
+\end{enumerate}
+\end{funcblock}
+
+\begin{lstlisting}[style=cppstyle, caption={モジュールのファイル構成例}]
+// --- LedModule.h（ヘッダー：宣言のみ） ---
+#pragma once
+#include <Arduino.h>
+#include "IModule.h"
+
+struct LedConfig {
+    uint8_t ledPin;
+};
+
+struct LedData {
+    bool state = false;
+    uint8_t brightness = 0;
+};
+
+struct SystemData;  // 前方宣言（実体はProjectConfig.hで定義）
+
+class LedModule : public IModule<SystemData> {
+private:
+    LedConfig _config;
+public:
+    LedModule(const LedConfig& config);
+    bool init() override;
+    void update(SystemData& data) override;
+};
+
+// --- LedModule.cpp（実装：ここでProjectConfig.hを参照） ---
+#include "LedModule.h"
+#include "ProjectConfig.h"
+
+LedModule::LedModule(const LedConfig& config) : _config(config) {}
+
+bool LedModule::init() {
+    pinMode(_config.ledPin, OUTPUT);
+    Serial.println("[Led] init OK");
+    return true;
+}
+
+void LedModule::update(SystemData& data) {
+    digitalWrite(_config.ledPin, data.led.state ? HIGH : LOW);
+}
+\end{lstlisting}
+
 \subsubsection{SystemDataパターン}
 各モジュールは固有のサブ構造体を定義し、それらをプロジェクト固有の\texttt{SystemData}構造体に集約する。
 
 \begin{lstlisting}[style=cppstyle, caption={SystemDataパターンの構造}]
-// 各モジュールが自身のデータ構造体を定義
+// 各モジュールが自身のデータ構造体を定義（ヘッダー内）
 // メンバには必ずデフォルト値を明示する
 // LedModule.h 内
 struct LedData {
@@ -150,7 +215,7 @@ struct TempData {
     bool hasError = false;
 };
 
-// プロジェクト固有: SystemData.h
+// ProjectConfig.h 内: 各モジュールのData構造体を集約
 struct SystemData {
     LedData led;
     TempData temp;
@@ -173,18 +238,20 @@ struct SystemData {
 \end{funcblock}
 
 \begin{lstlisting}[style=cppstyle, caption={モジュールConfigパターンの例}]
-// LedModule.h 内 — Config構造体を定義
+// LedModule.h 内 — Config構造体とクラス宣言
 struct LedConfig {
     uint8_t ledPin;      // LED出力ピン
 };
 
-// モジュールクラスはコンストラクタでConfigを受け取る
+struct SystemData;  // 前方宣言
+
 class LedModule : public IModule<SystemData> {
 private:
     LedConfig _config;
 public:
-    LedModule(const LedConfig& config) : _config(config) {}
-    // ...
+    LedModule(const LedConfig& config);  // 実装は.cppで
+    bool init() override;
+    void update(SystemData& data) override;
 };
 
 // ProjectConfig.h 内 — プロジェクトのピンアサインを集約

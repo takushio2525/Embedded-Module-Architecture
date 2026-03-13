@@ -49,6 +49,15 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 
 各モジュールのヘッダーファイル内で `{Module}Config` と `{Module}Data` の型を定義し、`ProjectConfig.h` でConfigインスタンスの値を定義する。
 
+### モジュールのファイル構成（.h/.cpp分離）
+
+各モジュールは `.h`（宣言）と `.cpp`（実装）に分離する。`SystemData` の循環依存を回避するための必須ルール。
+
+- **`.h`**: `<Arduino.h>` + `"IModule.h"` をインクルード。Config/Data構造体の定義、`struct SystemData;` の前方宣言、クラス宣言（プロトタイプのみ）
+- **`.cpp`**: `"ProjectConfig.h"` をインクルードし、メソッドを実装
+- ヘッダーでは `ProjectConfig.h` をインクルードしない（循環依存を防ぐため）
+- `platformio.ini` の `build_flags` に `-I include` を追加する（`lib/` 内から `include/` を参照するため）
+
 ### 3フェーズ実行モデル
 
 `loop()` は必ず以下の順序で実行する：

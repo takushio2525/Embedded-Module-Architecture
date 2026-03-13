@@ -26,8 +26,11 @@ Embedded-Module-Architecture/
 |   +-- ProjectConfig.h         ... Config定義 + SystemData構造体
 +-- lib/
 |   +-- ModuleCore/             ... コアライブラリ
-|       +-- IModule.h           ... IModuleインターフェース
-|       +-- ModuleTimer.h       ... ModuleTimerクラス
+|   |   +-- IModule.h           ... IModuleインターフェース
+|   |   +-- ModuleTimer.h       ... ModuleTimerクラス
+|   +-- LedModule/              ... モジュール実装例
+|       +-- LedModule.h         ... 宣言（Config/Data構造体 + クラス宣言）
+|       +-- LedModule.cpp       ... 実装（ProjectConfig.hを参照）
 +-- src/
 |   +-- main.cpp                ... エントリーポイント
 +-- test/                       ... テストコード
@@ -43,6 +46,8 @@ Embedded-Module-Architecture/
 \midrule
 \texttt{lib/ModuleCore/IModule.h} & コア & IModuleインターフェース定義 \\
 \texttt{lib/ModuleCore/ModuleTimer.h} & コア & ModuleTimerクラス定義 \\
+\texttt{lib/\{Module\}/\{Module\}.h} & モジュール & Config/Data構造体 + クラス宣言（前方宣言） \\
+\texttt{lib/\{Module\}/\{Module\}.cpp} & モジュール & メソッド実装（ProjectConfig.hを参照） \\
 \texttt{include/ProjectConfig.h} & プロジェクト固有 & モジュールConfigインスタンス（ピンアサイン等）+ SystemData構造体 \\
 \texttt{src/main.cpp} & プロジェクト固有 & エントリーポイント（モジュール登録・ループ制御） \\
 \bottomrule
@@ -55,6 +60,7 @@ Embedded-Module-Architecture/
     他のプロジェクトにもそのまま流用可能。
     \item \textbf{lib/各モジュール名/} — 個別のハードウェアモジュール実装。
     それぞれが\texttt{IModule}を継承し、モジュール固有のサブ構造体を定義する。
+    \texttt{.h}（宣言 + 前方宣言）と\texttt{.cpp}（実装）に分離する。
     \item \textbf{include/} — プロジェクト固有のヘッダー
     （\texttt{ProjectConfig.h}等、プロジェクトで使用するモジュールの組み合わせ・ピンアサインに依存するファイル）。
 \end{itemize}

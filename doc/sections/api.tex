@@ -110,11 +110,11 @@ public:
 
 \subsubsection{使用例}
 
-\begin{lstlisting}[style=cppstyle, caption={モジュール実装の例}]
+\begin{lstlisting}[style=cppstyle, caption={モジュール実装の例（ヘッダー）}]
 // LedModule.h
 #pragma once
+#include <Arduino.h>
 #include "IModule.h"
-#include "SystemData.h"  // プロジェクト固有
 
 // モジュール固有のConfig構造体
 struct LedConfig {
@@ -127,24 +127,38 @@ struct LedData {
     uint8_t brightness = 0;
 };
 
+// SystemDataの前方宣言（実体はProjectConfig.hで定義）
+struct SystemData;
+
 // テンプレート引数にSystemDataを指定して継承
 class LedModule : public IModule<SystemData> {
 private:
     LedConfig _config;  // Configをメンバとして保持
 public:
     // コンストラクタでConfig構造体を受け取る
-    LedModule(const LedConfig& config) : _config(config) {}
-
-    bool init() override {
-        pinMode(_config.ledPin, OUTPUT);  // Configのピンを使用
-        return true;
-    }
-
-    // data はポインタではなく参照なので、ドット演算子でアクセス
-    void update(SystemData& data) override {
-        digitalWrite(_config.ledPin, data.led.state);
-    }
+    LedModule(const LedConfig& config);
+    bool init() override;
+    void update(SystemData& data) override;
 };
+\end{lstlisting}
+
+\begin{lstlisting}[style=cppstyle, caption={モジュール実装の例（実装ファイル）}]
+// LedModule.cpp
+#include "LedModule.h"
+#include "ProjectConfig.h"  // SystemDataの完全な定義を取得
+
+LedModule::LedModule(const LedConfig& config) : _config(config) {}
+
+bool LedModule::init() {
+    pinMode(_config.ledPin, OUTPUT);  // Configのピンを使用
+    Serial.println("[Led] init OK");
+    return true;
+}
+
+// data はポインタではなく参照なので、ドット演算子でアクセス
+void LedModule::update(SystemData& data) {
+    digitalWrite(_config.ledPin, data.led.state);
+}
 \end{lstlisting}
 
 % -------------------------------------------

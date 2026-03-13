@@ -33,4 +33,12 @@ board_build.arduino.memory_type = qio_opi
 build_flags =
     -D BOARD_HAS_PSRAM
     -D CORE_DEBUG_LEVEL=3
+    -I include  ; lib/内の.cppからinclude/を参照可能にする
 \end{lstlisting}
+
+\begin{notebox}[\texttt{-I include}が必要な理由]
+PlatformIOの標準設定では、\texttt{lib/}内のライブラリはプロジェクトの\texttt{include/}ディレクトリを
+インクルードパスに含まない。
+モジュールの\texttt{.cpp}ファイルが\texttt{ProjectConfig.h}を参照するため、
+\texttt{build\_flags}に\texttt{-I include}を追加してパスを通す必要がある。
+\end{notebox}
