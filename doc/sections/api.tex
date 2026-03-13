@@ -313,7 +313,7 @@ Data構造体の型名 & \texttt{\{Module\}Data} & \texttt{LedData}, \texttt{Cam
     \item 受け取ったConfigは、メンバ変数\texttt{\_config}としてコピー保持する（Configは初期値として扱う）
     \item 実行時に設定値の変更が必要な場合は、\texttt{\_config}メンバを直接変更するか、セッターメソッドを用意する
     \item ピン番号はハードコードせず、必ず\texttt{\_config}経由でアクセスする
-    \item 通信バスを使用するモジュールのConfig構造体には、バスインスタンスへのポインタ（\texttt{SPIClass*}, \texttt{TwoWire*}）を含める
+    \item 通信バスを使用するモジュールは、バスポインタをConfig構造体に含めず、コンストラクタの引数で受け取る（§通信バスパターン参照）
 \end{enumerate}
 
 \begin{lstlisting}[style=cppstyle, caption={Config構造体の定義と使用例}]
@@ -359,31 +359,30 @@ public:
 };
 \end{lstlisting}
 
-\begin{lstlisting}[style=cppstyle, caption={通信バスポインタを含むConfig構造体の例}]
-// SpiSensorModule.h — SPIバスを使用するモジュール
+\begin{lstlisting}[style=cppstyle, caption={通信バスを使用するモジュールのConfig構造体とコンストラクタ例}]
+// SpiSensorModule.h — Config構造体にはバスポインタを含めない
 struct SpiSensorConfig {
-    SPIClass* spi;            // SPIバスへのポインタ
     uint8_t csPin;            // チップセレクトピン
     uint32_t clockSpeed;      // SPIクロック速度(Hz)
     unsigned long interval;   // 読み取り間隔(ms)
 };
 
-// I2cSensorModule.h — I2Cバスを使用するモジュール
-struct I2cSensorConfig {
-    TwoWire* wire;            // I2Cバスへのポインタ
-    uint8_t address;          // I2Cデバイスアドレス
-    unsigned long interval;   // 読み取り間隔(ms)
+class SpiSensorModule : public IModule<SystemData> {
+private:
+    SpiSensorConfig _config;
+    SPIClass* _spi;  // バスポインタはメンバ変数として保持
+public:
+    // Config + バスポインタをコンストラクタで受け取る
+    SpiSensorModule(const SpiSensorConfig& config, SPIClass* spi)
+        : _config(config), _spi(spi) {}
 };
 
-// ProjectConfig.h — バスポインタを含むConfigインスタンス
-// （バスインスタンスはmain.cppのグローバルスコープで生成）
-extern SPIClass spi;
-extern TwoWire wire;
+// ProjectConfig.h — Configは純粋な設定値のみ
 const SpiSensorConfig SPI_SENSOR_CONFIG = {
-    .spi = &spi, .csPin = 5,
-    .clockSpeed = 1000000, .interval = 100
+    .csPin = 5, .clockSpeed = 1000000, .interval = 100
 };
-const I2cSensorConfig I2C_SENSOR_CONFIG = {
-    .wire = &wire, .address = 0x48, .interval = 500
-};
+
+// main.cpp — バスの紐付けはモジュール生成時に行う
+SPIClass spi(HSPI);
+SpiSensorModule spiModule(SPI_SENSOR_CONFIG, &spi);
 \end{lstlisting}
