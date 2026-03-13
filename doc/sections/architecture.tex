@@ -67,16 +67,29 @@ void applyPattern(SystemData& data) {
 void setup() {
     Serial.begin(115200);
 
-    // 全入力モジュールを初期化
+    // 全入力モジュールを初期化（失敗時はリトライ後に無効化）
+    const int MAX_RETRY = 3;
     for (int i = 0; i < INPUT_COUNT; i++) {
-        if (!inputModules[i]->init()) {
-            Serial.printf("Input Module %d: init failed\n", i);
+        bool success = false;
+        for (int r = 0; r < MAX_RETRY; r++) {
+            if (inputModules[i]->init()) { success = true; break; }
+            delay(100);
+        }
+        if (!success) {
+            Serial.printf("Input Module %d: init failed, disabled\n", i);
+            inputModules[i]->enabled = false;
         }
     }
     // 全出力モジュールを初期化
     for (int i = 0; i < OUTPUT_COUNT; i++) {
-        if (!outputModules[i]->init()) {
-            Serial.printf("Output Module %d: init failed\n", i);
+        bool success = false;
+        for (int r = 0; r < MAX_RETRY; r++) {
+            if (outputModules[i]->init()) { success = true; break; }
+            delay(100);
+        }
+        if (!success) {
+            Serial.printf("Output Module %d: init failed, disabled\n", i);
+            outputModules[i]->enabled = false;
         }
     }
 }
@@ -84,13 +97,17 @@ void setup() {
 void loop() {
     // 1. 入力フェーズ：センサー値をSystemDataに書き込む
     for (int i = 0; i < INPUT_COUNT; i++) {
-        inputModules[i]->update(systemData);
+        if (inputModules[i]->enabled) {
+            inputModules[i]->update(systemData);
+        }
     }
     // 2. ロジックフェーズ：入力→出力のSystemData変換
     applyPattern(systemData);
     // 3. 出力フェーズ：SystemDataの値に従いハードウェア制御
     for (int i = 0; i < OUTPUT_COUNT; i++) {
-        outputModules[i]->update(systemData);
+        if (outputModules[i]->enabled) {
+            outputModules[i]->update(systemData);
+        }
     }
 }
 \end{lstlisting}
@@ -371,6 +388,6 @@ public:
 
 \subsubsection{エラーハンドリングパターン}
 \begin{itemize}
-    \item \texttt{init()} — 戻り値\texttt{bool}で初期化の成否を返す。失敗時はモジュールを無効化可能
-    \item \texttt{update()} — エラー発生時は\texttt{SystemData}内のサブ構造体にエラーフラグを設定し、他モジュールから参照可能にする
+    \item \texttt{init()} — 戻り値\texttt{bool}で初期化の成否を返す。規定回数リトライ後、失敗時は\texttt{enabled = false}でモジュールを無効化する
+    \item \texttt{update()} — エラー発生時はData構造体内のエラーフラグ（\texttt{hasError}等）を設定する。次サイクルで再試行し、成功時にモジュール自身がフラグをクリアする
 \end{itemize}

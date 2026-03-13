@@ -68,13 +68,17 @@ void applyPattern(SystemData& data) {
 void loop() {
     // 1. 入力フェーズ
     for (int i = 0; i < INPUT_COUNT; i++) {
-        inputModules[i]->update(systemData);
+        if (inputModules[i]->enabled) {
+            inputModules[i]->update(systemData);
+        }
     }
     // 2. ロジックフェーズ
     applyPattern(systemData);
     // 3. 出力フェーズ
     for (int i = 0; i < OUTPUT_COUNT; i++) {
-        outputModules[i]->update(systemData);
+        if (outputModules[i]->enabled) {
+            outputModules[i]->update(systemData);
+        }
     }
 }
 \end{lstlisting}
@@ -176,6 +180,129 @@ void LedModule::update(SystemData& data) {
     digitalWrite(_config.ledPin, data.led.state);
 }
 \end{lstlisting}
+
+\subsection{割り込み実行パターン}
+
+リアルタイム性が求められるプロジェクトや、カメラ等の重い処理を含むプロジェクトでは、
+3フェーズループをタイマー割り込みで周期実行し、メインループは重い処理に専念する構成をとる。
+
+\begin{lstlisting}[style=cppstyle, caption={タイマー割り込みによる3フェーズ実行}]
+// main.cpp
+hw_timer_t* moduleTimer = NULL;
+volatile bool updateFlag = false;
+
+// タイマー割り込みハンドラ
+void IRAM_ATTR onModuleTimer() {
+    updateFlag = true;
+}
+
+void setup() {
+    Serial.begin(115200);
+
+    // モジュール初期化（省略）
+
+    // タイマー割り込み設定（10ms周期）
+    moduleTimer = timerBegin(0, 80, true);  // 80分周 = 1MHz
+    timerAttachInterrupt(moduleTimer, &onModuleTimer, true);
+    timerAlarmWrite(moduleTimer, 10000, true);  // 10ms
+    timerAlarmEnable(moduleTimer);
+}
+
+void loop() {
+    // メインループ：重い処理（カメラ取得等）を実行
+    cameraModule.capture();  // 時間のかかる処理
+
+    // 割り込みフラグで軽量モジュール更新
+    if (updateFlag) {
+        updateFlag = false;
+        // 1. 入力フェーズ
+        for (int i = 0; i < INPUT_COUNT; i++) {
+            if (inputModules[i]->enabled) {
+                inputModules[i]->update(systemData);
+            }
+        }
+        // 2. ロジックフェーズ
+        applyPattern(systemData);
+        // 3. 出力フェーズ
+        for (int i = 0; i < OUTPUT_COUNT; i++) {
+            if (outputModules[i]->enabled) {
+                outputModules[i]->update(systemData);
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\begin{notebox}[割り込み実行パターンの使い分け]
+シンプルなプロジェクトでは通常の\texttt{loop()}内での3フェーズ実行で十分である。\\
+割り込み実行パターンは、重い処理（カメラ・画像処理・FFT等）と
+軽量な周期処理（センサー読み取り・LED制御等）を共存させる必要がある場合に使用する。
+\end{notebox}
+
+\subsection{内部バッファパターン}
+
+カメラ等の重い処理を持つモジュールでは、メインループで取得したデータを
+クラス内バッファに保存し、\texttt{update()}呼び出し時に\texttt{SystemData}へコピーする。
+これにより、\texttt{update()}自体は軽量な処理に留まる。
+
+\begin{lstlisting}[style=cppstyle, caption={内部バッファパターンの実装例}]
+// CameraModule.h
+struct CameraData {
+    uint8_t* frame;       // フレームデータポインタ
+    size_t frameSize;     // フレームサイズ
+    bool newFrame;        // 新規フレームフラグ
+    bool hasError;
+};
+
+class CameraModule : public IModule<SystemData> {
+private:
+    CameraConfig _config;
+    // 内部バッファ
+    uint8_t* _buffer = nullptr;
+    size_t _bufferSize = 0;
+    volatile bool _bufferReady = false;
+
+public:
+    CameraModule(const CameraConfig& config)
+        : _config(config) {}
+
+    bool init() override {
+        // カメラハードウェア初期化
+        // ...
+        return true;
+    }
+
+    // メインループから直接呼ぶ（重い処理）
+    void capture() {
+        // カメラからフレーム取得（時間がかかる）
+        camera_fb_t* fb = esp_camera_fb_get();
+        if (fb) {
+            _buffer = fb->buf;
+            _bufferSize = fb->len;
+            _bufferReady = true;
+        }
+    }
+
+    // update()は軽量：バッファからSystemDataへコピーするだけ
+    void update(SystemData& data) override {
+        if (_bufferReady) {
+            data.camera.frame = _buffer;
+            data.camera.frameSize = _bufferSize;
+            data.camera.newFrame = true;
+            _bufferReady = false;
+        }
+    }
+};
+\end{lstlisting}
+
+\begin{funcblock}{内部バッファパターンの流れ}
+\begin{enumerate}
+    \item \texttt{loop()}のメイン処理で\texttt{capture()}を呼び、重い処理を実行
+    \item 処理完了時にクラス内バッファにデータを保存し、\texttt{\_bufferReady = true}にセット
+    \item タイマー割り込みの3フェーズループで\texttt{update()}が呼ばれる
+    \item \texttt{update()}はバッファから\texttt{SystemData}へコピーするだけ（軽量）
+\end{enumerate}
+\end{funcblock}
 
 \subsection{モジュール実装テンプレート}
 

@@ -30,6 +30,10 @@ public:
     // モジュールの更新（毎ループ呼び出される）
     // 引数: data - プロジェクト共有データへの参照
     virtual void update(T& data) = 0;
+
+    // 動的有効/無効化フラグ
+    // false の場合、ループ内で update() がスキップされる
+    bool enabled = true;
 };
 \end{lstlisting}
 
@@ -40,6 +44,12 @@ public:
 テンプレートにより、\texttt{IModule.h}は何も\texttt{\#include}せずに済み、
 どんなプロジェクトにもそのままコピーして流用できる。
 \end{notebox}
+
+\begin{cautionbox}[データアクセスルール]
+\texttt{update()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスすること。
+他モジュールのサブ構造体への読み書きは禁止とする。
+モジュール間のデータ連携が必要な場合は、必ずロジックフェーズを経由する。
+\end{cautionbox}
 
 \subsubsection{init()}
 
@@ -65,6 +75,19 @@ public:
 呼び出しタイミング & \texttt{loop()}内で毎ループ呼び出される \\
 責務 & センサー読み取り、出力制御、共有データの更新 \\
 エラー時 & 共有データ内のサブ構造体にエラーフラグを設定 \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{enabled}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+型 & \texttt{bool} — デフォルト値\texttt{true} \\
+用途 & 実行時にモジュールを動的に有効化・無効化する \\
+動作 & \texttt{false}の場合、ループ内で\texttt{update()}がスキップされる \\
+設定タイミング & \texttt{init()}失敗時の無効化、BLE等の外部通信からの切り替え、ロジックフェーズでの制御 \\
 \bottomrule
 \end{tabularx}
 
@@ -228,7 +251,7 @@ void update(SystemData& data) override {
     \item 各モジュールは、自身の\texttt{Config}構造体（型定義）と\texttt{Data}構造体（型定義）をモジュールのヘッダーファイル内に定義する
     \item \texttt{ProjectConfig.h}には、Configの\textbf{インスタンス}（実際のピン番号等の値）を定義する
     \item \texttt{SystemData}構造体は、プロジェクトで使用するモジュールのData構造体をメンバとして持つ
-    \item モジュールは\texttt{update()}内で、自身のData構造体に書き込み、必要に応じて他モジュールのData構造体を読み取る
+    \item モジュールは\texttt{update()}内で、\textbf{自身のData構造体のみ}にアクセスする（他モジュールのData構造体への読み書きは禁止）
 \end{enumerate}
 
 \begin{lstlisting}[style=cppstyle, caption={ProjectConfig構成例}]
@@ -287,7 +310,8 @@ Data構造体の型名 & \texttt{\{Module\}Data} & \texttt{LedData}, \texttt{Cam
     \item Config構造体の\textbf{型定義}は、各モジュールのヘッダーファイル内に記述する
     \item Config構造体の\textbf{インスタンス}（実際のピン番号等）は\texttt{ProjectConfig.h}に集約する
     \item モジュールのコンストラクタは\texttt{const \{Module\}Config\&}（const参照）でConfigを受け取る
-    \item 受け取ったConfigは、メンバ変数\texttt{\_config}としてコピー保持する
+    \item 受け取ったConfigは、メンバ変数\texttt{\_config}としてコピー保持する（Configは初期値として扱う）
+    \item 実行時に設定値の変更が必要な場合は、\texttt{\_config}メンバを直接変更するか、セッターメソッドを用意する
     \item ピン番号はハードコードせず、必ず\texttt{\_config}経由でアクセスする
     \item 通信バスを使用するモジュールのConfig構造体には、バスインスタンスへのポインタ（\texttt{SPIClass*}, \texttt{TwoWire*}）を含める
 \end{enumerate}
