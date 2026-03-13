@@ -1,80 +1,170 @@
+%% ============================================================
+%% Embedded Module Architecture 設計仕様書
+%% ============================================================
+%% ビルド: latexmk main.tex (.latexmkrc で uplatex + dvipdfmx)
+%% ============================================================
 \documentclass[a4paper,11pt,dvipdfmx]{jsarticle}
 
-%% パッケージ
-\usepackage[utf8]{inputenc}
-\usepackage{graphicx}
+%% ─── パッケージ ───────────────────────────────
+\usepackage[dvipdfmx]{graphicx}
+\usepackage[dvipdfmx]{xcolor}
+\usepackage[dvipdfmx,
+  bookmarks=true,
+  bookmarksnumbered=true,
+  colorlinks=true,
+  linkcolor={blue!70!black},
+  citecolor={green!50!black},
+  urlcolor={blue!60!black},
+  pdfauthor={Shiozawa},
+  pdftitle={Embedded Module Architecture 設計仕様書},
+  pdfsubject={組み込みシステム向けModuleインターフェース設計パターン},
+]{hyperref}
+\usepackage{pxjahyper}           % hyperref 日本語しおり対応
+\usepackage[top=25mm,bottom=25mm,left=20mm,right=20mm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
 \usepackage{tabularx}
 \usepackage{booktabs}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage{hyperref}
-\usepackage{tcolorbox}
-\usepackage{geometry}
-\usepackage{fancyhdr}
+\usepackage{longtable}
 \usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{needspace}
+\usepackage{placeins}
 
-%% ページ設定
-\geometry{margin=25mm}
+%% ─── 色定義 ──────────────────────────────────
+\definecolor{headerblue}{HTML}{1B3A5C}
+\definecolor{accentblue}{HTML}{2E86C1}
+\definecolor{lightgray}{HTML}{F2F3F4}
+\definecolor{codebg}{HTML}{F7F9FB}
+\definecolor{warnred}{HTML}{E74C3C}
+\definecolor{noteyellow}{HTML}{F39C12}
+\definecolor{okgreen}{HTML}{27AE60}
 
-%% ハイパーリンク設定
-\hypersetup{
-    colorlinks=true,
-    linkcolor=blue,
-    urlcolor=blue
+%% ─── ヘッダー・フッター ───────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{headerblue}\textbf{Embedded Module Architecture} 設計仕様書}
+\fancyhead[R]{\small\color{headerblue}Rev.\,1.6}
+\fancyfoot[C]{\small\thepage\,/\,\pageref{LastPage}}
+\fancyfoot[R]{\small\color{gray}2026-03-13}
+\renewcommand{\headrulewidth}{0.8pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+%% ─── セクション見出しスタイル ─────────────────
+\titleformat{\section}
+  {\Large\bfseries\color{headerblue}}
+  {\thesection}{1em}{}
+  [\vspace{-0.5em}\textcolor{accentblue}{\rule{\textwidth}{1.2pt}}]
+\titleformat{\subsection}
+  {\large\bfseries\color{headerblue}}
+  {\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{accentblue}}
+  {\thesubsubsection}{1em}{}
+\titleformat{\paragraph}[runin]
+  {\normalsize\bfseries\color{headerblue}}
+  {}{}{}[　]
+
+%% ─── listings 設定 (C++) ──────────────────────
+\lstdefinestyle{cppstyle}{
+  language=C++,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{accentblue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{okgreen},
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=8pt,
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{accentblue!40},
+  backgroundcolor=\color{codebg},
+  breaklines=true,
+  breakatwhitespace=false,
+  tabsize=4,
+  showstringspaces=false,
+  captionpos=b,
+  xleftmargin=15pt,
+  framexleftmargin=15pt,
+  morekeywords={override,nullptr,uint8_t,uint16_t,uint32_t,bool},
 }
+\lstset{style=cppstyle}
 
-%% コードリスティング設定
-\definecolor{codebg}{RGB}{245,245,245}
-\definecolor{codeframe}{RGB}{200,200,200}
-\definecolor{keyword}{RGB}{0,0,180}
-\definecolor{comment}{RGB}{0,128,0}
-\definecolor{string}{RGB}{163,21,21}
-
-\lstset{
-    basicstyle=\ttfamily\small,
-    backgroundcolor=\color{codebg},
-    frame=single,
-    rulecolor=\color{codeframe},
-    keywordstyle=\color{keyword}\bfseries,
-    commentstyle=\color{comment},
-    stringstyle=\color{string},
-    breaklines=true,
-    numbers=left,
-    numberstyle=\tiny\color{gray},
-    tabsize=4,
-    showstringspaces=false
-}
-
-%% C++用のリスティング設定
-\lstdefinestyle{cpp}{
-    language=C++,
-    morekeywords={override, nullptr, uint8\_t, uint16\_t, uint32\_t, bool}
-}
-
-%% API仕様ボックス
+%% ─── tcolorbox スタイル ──────────────────────
+% API仕様ボックス
 \newtcolorbox{apibox}[1]{
-    colback=blue!5,
-    colframe=blue!50!black,
-    title=#1,
-    fonttitle=\bfseries
+  enhanced,
+  colback=white,
+  colframe=accentblue,
+  coltitle=white,
+  fonttitle=\bfseries\large,
+  title=#1,
+  top=4mm,
+  arc=2mm,
+  breakable,
+  before upper={\parindent0pt},
+  attach boxed title to top left={yshift=-3mm,xshift=5mm},
+  boxed title style={colback=accentblue,arc=1.5mm},
 }
 
-%% 機能ブロック
+% 注意ボックス
+\newtcolorbox{cautionbox}[1][注意]{
+  enhanced,
+  colback=warnred!5,
+  colframe=warnred!70,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title={! #1},
+  arc=1.5mm,
+  breakable,
+  attach boxed title to top left={yshift=-2mm,xshift=5mm},
+  boxed title style={colback=warnred!70,arc=1mm},
+}
+
+% ノートボックス
+\newtcolorbox{notebox}[1][補足]{
+  enhanced,
+  colback=accentblue!5,
+  colframe=accentblue!50,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title={$\triangleright$ #1},
+  arc=1.5mm,
+  breakable,
+  attach boxed title to top left={yshift=-2mm,xshift=5mm},
+  boxed title style={colback=accentblue!50,arc=1mm},
+}
+
+% 機能ブロック
 \newtcolorbox{funcblock}[1]{
-    colback=green!5,
-    colframe=green!50!black,
-    title=#1,
-    fonttitle=\bfseries
+  enhanced,
+  colback=white,
+  colframe=accentblue!25,
+  coltitle=headerblue,
+  fonttitle=\bfseries\ttfamily\small,
+  title={◆ #1},
+  arc=1mm,
+  boxrule=0.4pt,
+  breakable,
+  left=3mm, right=3mm, top=2mm, bottom=2mm,
+  before skip=3mm, after skip=3mm,
+  before upper={\parindent0pt},
 }
 
-%% 注意ボックス
-\newtcolorbox{notebox}[1]{
-    colback=yellow!5,
-    colframe=orange!50!black,
-    title=#1,
-    fonttitle=\bfseries
-}
+%% ─── ドキュメント情報 ─────────────────────────
+\newcommand{\doctitle}{Embedded Module Architecture\\設計仕様書}
+\newcommand{\docsubtitle}{ESP32-S3 CAM モジュールインターフェース設計パターン}
+\newcommand{\docauthor}{Shiozawa}
+\newcommand{\docversion}{1.6}
+\newcommand{\docdate}{2026年3月13日}
 
+%% ============================================================
 \begin{document}
 
 \input{sections/cover}
@@ -90,5 +180,6 @@
 \input{sections/techstack}
 \input{sections/api}
 \input{sections/execution}
+\input{sections/limitations}
 
 \end{document}

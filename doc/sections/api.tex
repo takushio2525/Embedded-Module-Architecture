@@ -11,7 +11,7 @@ C++テンプレートにより、プロジェクト固有の型（\texttt{System
 \texttt{T}にはプロジェクトで定義した共有データ構造体の型を指定する。
 \end{apibox}
 
-\begin{lstlisting}[style=cpp, caption={IModule<T>テンプレートインターフェース定義}]
+\begin{lstlisting}[style=cppstyle, caption={IModule<T>テンプレートインターフェース定義}]
 // IModule.h — プロジェクト非依存のコアヘッダー
 #pragma once
 
@@ -33,7 +33,7 @@ public:
 };
 \end{lstlisting}
 
-\begin{notebox}{テンプレートを使う理由}
+\begin{notebox}[テンプレートを使う理由]
 テンプレートを使わない場合、\texttt{IModule.h}内で\texttt{SystemData}を\texttt{\#include}する必要がある。
 しかし\texttt{SystemData}はプロジェクト固有の型であるため、コアライブラリがプロジェクトに依存してしまう。\\
 \\
@@ -70,7 +70,7 @@ public:
 
 \subsubsection{使用例}
 
-\begin{lstlisting}[style=cpp, caption={モジュール実装の例}]
+\begin{lstlisting}[style=cppstyle, caption={モジュール実装の例}]
 // LedModule.h
 #pragma once
 #include "IModule.h"
@@ -120,7 +120,7 @@ public:
 IModuleと同様にプロジェクト非依存であり、そのまま流用可能。
 \end{apibox}
 
-\begin{lstlisting}[style=cpp, caption={ModuleTimerクラス定義}]
+\begin{lstlisting}[style=cppstyle, caption={ModuleTimerクラス定義}]
 // ModuleTimer.h — プロジェクト非依存のコアヘッダー
 #pragma once
 #include <Arduino.h>
@@ -177,7 +177,7 @@ public:
 
 \subsubsection{使用パターン}
 
-\begin{lstlisting}[style=cpp, caption={周期実行パターン}]
+\begin{lstlisting}[style=cppstyle, caption={周期実行パターン}]
 ModuleTimer readTimer;
 
 bool init() override {
@@ -193,7 +193,7 @@ void update(SystemData& data) override {
 }
 \end{lstlisting}
 
-\begin{lstlisting}[style=cpp, caption={デバウンスパターン}]
+\begin{lstlisting}[style=cppstyle, caption={デバウンスパターン}]
 ModuleTimer debounce;
 
 void update(SystemData& data) override {
@@ -231,7 +231,7 @@ void update(SystemData& data) override {
     \item モジュールは\texttt{update()}内で、自身のData構造体に書き込み、必要に応じて他モジュールのData構造体を読み取る
 \end{enumerate}
 
-\begin{lstlisting}[style=cpp, caption={ProjectConfig構成例}]
+\begin{lstlisting}[style=cppstyle, caption={ProjectConfig構成例}]
 // ProjectConfig.h
 #pragma once
 #include "LedModule.h"
@@ -251,7 +251,7 @@ struct SystemData {
 };
 \end{lstlisting}
 
-\begin{notebox}{ProjectConfig.hの構成}
+\begin{notebox}[ProjectConfig.hの構成]
 \texttt{ProjectConfig.h}は2つのセクションで構成される：\\
 \textbf{モジュールConfigセクション} — 各モジュールのConfigインスタンス（ピン番号等の具体的な値）。
 回路設計担当者はこのセクションだけを参照すればよい。\\
@@ -289,9 +289,10 @@ Data構造体の型名 & \texttt{\{Module\}Data} & \texttt{LedData}, \texttt{Cam
     \item モジュールのコンストラクタは\texttt{const \{Module\}Config\&}（const参照）でConfigを受け取る
     \item 受け取ったConfigは、メンバ変数\texttt{\_config}としてコピー保持する
     \item ピン番号はハードコードせず、必ず\texttt{\_config}経由でアクセスする
+    \item 通信バスを使用するモジュールのConfig構造体には、バスインスタンスへのポインタ（\texttt{SPIClass*}, \texttt{TwoWire*}）を含める
 \end{enumerate}
 
-\begin{lstlisting}[style=cpp, caption={Config構造体の定義と使用例}]
+\begin{lstlisting}[style=cppstyle, caption={Config構造体の定義と使用例}]
 // TempSensorModule.h
 #pragma once
 #include "IModule.h"
@@ -331,5 +332,34 @@ public:
             data.temp.isValid = true;
         }
     }
+};
+\end{lstlisting}
+
+\begin{lstlisting}[style=cppstyle, caption={通信バスポインタを含むConfig構造体の例}]
+// SpiSensorModule.h — SPIバスを使用するモジュール
+struct SpiSensorConfig {
+    SPIClass* spi;            // SPIバスへのポインタ
+    uint8_t csPin;            // チップセレクトピン
+    uint32_t clockSpeed;      // SPIクロック速度(Hz)
+    unsigned long interval;   // 読み取り間隔(ms)
+};
+
+// I2cSensorModule.h — I2Cバスを使用するモジュール
+struct I2cSensorConfig {
+    TwoWire* wire;            // I2Cバスへのポインタ
+    uint8_t address;          // I2Cデバイスアドレス
+    unsigned long interval;   // 読み取り間隔(ms)
+};
+
+// ProjectConfig.h — バスポインタを含むConfigインスタンス
+// （バスインスタンスはmain.cppのグローバルスコープで生成）
+extern SPIClass spi;
+extern TwoWire wire;
+const SpiSensorConfig SPI_SENSOR_CONFIG = {
+    .spi = &spi, .csPin = 5,
+    .clockSpeed = 1000000, .interval = 100
+};
+const I2cSensorConfig I2C_SENSOR_CONFIG = {
+    .wire = &wire, .address = 0x48, .interval = 500
 };
 \end{lstlisting}

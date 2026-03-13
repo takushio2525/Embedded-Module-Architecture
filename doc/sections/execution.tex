@@ -11,6 +11,11 @@
     メンバ変数\texttt{\_config}にコピーされる。ModuleTimerの\texttt{\_startTime = 0}で初期化される。
     この時点では\texttt{millis()}は信頼できないため、タイマーの実質的な初期化は行わない。
 
+    \item \textbf{バス初期化}（\texttt{setup()}内の最初） \\
+    SPI・I2C等の通信バスを使用する場合、\texttt{SPI.begin()}や\texttt{Wire.begin()}等のバス初期化を
+    全モジュールの\texttt{init()}より前に実行する。
+    バスインスタンスは\texttt{main.cpp}のグローバルスコープで生成し、Config構造体のポインタ経由でモジュールに渡す。
+
     \item \textbf{init()呼び出し}（\texttt{setup()}内） \\
     ハードウェアの初期化、ピンモード設定、ModuleTimerの\texttt{setTime()}呼び出しを行う。
     失敗時は\texttt{false}を返し、呼び出し側でエラーハンドリングを行う。
@@ -34,7 +39,7 @@
     自身の\texttt{SystemData}サブ構造体の値に従ってハードウェアを制御する。
 \end{enumerate}
 
-\begin{notebox}{3フェーズの原則}
+\begin{notebox}[3フェーズの原則]
 各モジュールは「それ単体で動作する道具」である。\\
 入力モジュールは「値を読んでSystemDataに書く」だけ、出力モジュールは「SystemDataの値に従って動作する」だけ。\\
 モジュールのupdate()内で他モジュールのSystemDataを参照してはならない。\\
@@ -45,7 +50,7 @@
 
 ロジックフェーズの具体的な実装方法は開発者に委ねるが、標準的には関数として実装する。
 
-\begin{lstlisting}[style=cpp, caption={ロジックフェーズの標準的な実装}]
+\begin{lstlisting}[style=cppstyle, caption={ロジックフェーズの標準的な実装}]
 // main.cpp
 void applyPattern(SystemData& data) {
     // 入力SystemDataを読み、出力SystemDataを書き換える
@@ -93,7 +98,7 @@ void loop() {
 
 出力モジュール内で入力系の\texttt{SystemData}を読み取ってロジックを書く行為は\textbf{禁止}とする。
 
-\begin{lstlisting}[style=cpp, caption={アンチパターン：出力モジュール内でロジックを持つ（禁止）}]
+\begin{lstlisting}[style=cppstyle, caption={アンチパターン：出力モジュール内でロジックを持つ（禁止）}]
 // NG: LEDモジュール内で温度を判断している
 void LedModule::update(SystemData& data) {
     // 他モジュールのSystemDataを読んではならない
@@ -104,7 +109,7 @@ void LedModule::update(SystemData& data) {
 }
 \end{lstlisting}
 
-\begin{lstlisting}[style=cpp, caption={正しい実装：出力モジュールは自身のSystemDataのみ参照}]
+\begin{lstlisting}[style=cppstyle, caption={正しい実装：出力モジュールは自身のSystemDataのみ参照}]
 // OK: LEDモジュールは自身のデータだけを見る
 void LedModule::update(SystemData& data) {
     // 自身のサブ構造体の値に従って動作するだけ
@@ -144,7 +149,7 @@ WiFi接続のタイムアウト \\
 
 3フェーズモデルにおける\texttt{SystemData}を介したデータフローの例：
 
-\begin{lstlisting}[style=cpp, caption={3フェーズモデルによるデータフロー}]
+\begin{lstlisting}[style=cppstyle, caption={3フェーズモデルによるデータフロー}]
 // --- 入力フェーズ ---
 // 温度センサーモジュール：ハードウェアから値を読み、自身のデータに書く
 void TempSensorModule::update(SystemData& data) {
@@ -176,7 +181,7 @@ void LedModule::update(SystemData& data) {
 
 新規モジュールを追加する際の標準テンプレート：
 
-\begin{lstlisting}[style=cpp, caption={モジュール実装テンプレート}]
+\begin{lstlisting}[style=cppstyle, caption={モジュール実装テンプレート}]
 // ExampleModule.h
 #pragma once
 #include "IModule.h"

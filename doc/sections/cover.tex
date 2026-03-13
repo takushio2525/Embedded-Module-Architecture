@@ -1,29 +1,45 @@
 % 表紙
 \begin{titlepage}
+\begin{center}
+\vspace*{30mm}
+
+{\color{accentblue}\rule{\textwidth}{2pt}}
+\vspace{8mm}
+
+{\Huge\bfseries\color{headerblue} \doctitle}
+
+\vspace{6mm}
+
+{\Large\color{accentblue} \docsubtitle}
+
+\vspace{4mm}
+{\color{accentblue}\rule{\textwidth}{2pt}}
+
+\vspace{20mm}
+
+\begin{tabular}{ll}
+    \textbf{バージョン} & \docversion \\[4pt]
+    \textbf{作成日} & \docdate \\[4pt]
+    \textbf{著者} & \docauthor \\[4pt]
+    \textbf{ステータス} & 改訂中 \\
+\end{tabular}
+
+\vspace{30mm}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=accentblue!5,
+  colframe=accentblue,
+  arc=2mm,
+  width=14cm,
+  breakable,
+]
     \centering
-    \vspace*{3cm}
+    本ドキュメントは、ESP32-S3 N16R8 CAM開発ボードを題材に、\\
+    組み込みシステム向けModuleインターフェースの\\
+    設計思想とAPIを定義する仕様書です。
+\end{tcolorbox}
 
-    {\Huge\bfseries Embedded Module Architecture}\\[0.5cm]
-    {\Large ESP32-S3 CAM サンプルプロジェクト}\\[0.3cm]
-    {\large モジュールインターフェース設計思想}
-
-    \vspace{2cm}
-
-    \begin{tabular}{ll}
-        \textbf{バージョン} & 1.0 \\
-        \textbf{作成日} & 2026-03-11 \\
-        \textbf{著者} & Shiozawa \\
-        \textbf{ステータス} & 初版 \\
-    \end{tabular}
-
-    \vspace{2cm}
-
-    \begin{tcolorbox}[colback=blue!5, colframe=blue!50!black, width=12cm]
-        \centering
-        本ドキュメントは、ESP32-S3 N16R8 CAM開発ボードを題材に、\\
-        組み込みシステム向けModuleインターフェースの\\
-        設計思想とAPIを定義する仕様書です。
-    \end{tcolorbox}
-
-    \vfill
+\vfill
+\end{center}
 \end{titlepage}

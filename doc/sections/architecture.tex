@@ -3,7 +3,7 @@
 
 \subsection{全体構造}
 
-本アーキテクチャは、以下の4つのコア要素で構成される：
+本アーキテクチャは、以下のコア要素で構成される：
 
 \begin{enumerate}
     \item \textbf{IModule<T>}（テンプレートインターフェース） — モジュールのライフサイクルを定義。プロジェクト非依存
@@ -12,7 +12,7 @@
     \item \textbf{モジュールConfig}（設定構造体） — 各モジュールのピンアサインや設定を構造体で定義。プロジェクト固有
 \end{enumerate}
 
-\begin{notebox}{コア層とプロジェクト層の分離}
+\begin{notebox}[コア層とプロジェクト層の分離]
 \texttt{IModule<T>}と\texttt{ModuleTimer}は\textbf{コア層}に属し、プロジェクト固有の型を一切知らない。\\
 \texttt{SystemData}とモジュールConfigは\textbf{プロジェクト層}に属し、
 前者は使用するモジュールのサブ構造体を集約し、後者はハードウェア構成（ピンアサイン等）を定義する。\\
@@ -23,7 +23,7 @@
 
 プログラムの実行フローは、ゲームループパターンに基づき、3フェーズモデルで構成される：
 
-\begin{lstlisting}[style=cpp, caption={3フェーズモデルによる実行フロー}]
+\begin{lstlisting}[style=cppstyle, caption={3フェーズモデルによる実行フロー}]
 // main.cpp
 #include "IModule.h"
 #include "ProjectConfig.h"  // SystemData + Config定義
@@ -108,7 +108,7 @@ void loop() {
     \item 各モジュールが独立した「道具」として機能する
 \end{itemize}
 
-\begin{notebox}{重要：処理順序}
+\begin{notebox}[重要：処理順序]
 各フェーズ内での配列順序はデータフローの順序を意味する。\\
 例：温度センサーの値を補正センサーで校正する場合、温度センサーを補正センサーより前に配置する。\\
 ただし、入力と出力のクロス参照（出力モジュールが入力のSystemDataを読む等）は行わない。
@@ -117,7 +117,7 @@ void loop() {
 \subsubsection{SystemDataパターン}
 各モジュールは固有のサブ構造体を定義し、それらをプロジェクト固有の\texttt{SystemData}構造体に集約する。
 
-\begin{lstlisting}[style=cpp, caption={SystemDataパターンの構造}]
+\begin{lstlisting}[style=cppstyle, caption={SystemDataパターンの構造}]
 // 各モジュールが自身のデータ構造体を定義
 // LedModule.h 内
 struct LedData {
@@ -154,7 +154,7 @@ struct SystemData {
 \end{itemize}
 \end{funcblock}
 
-\begin{lstlisting}[style=cpp, caption={モジュールConfigパターンの例}]
+\begin{lstlisting}[style=cppstyle, caption={モジュールConfigパターンの例}]
 // LedModule.h 内 — Config構造体を定義
 struct LedConfig {
     uint8_t ledPin;      // LED出力ピン
@@ -174,6 +174,199 @@ const LedConfig LED_CONFIG = { .ledPin = 13 };
 
 // main.cpp — Config定数を渡してインスタンス生成
 LedModule ledModule(LED_CONFIG);
+\end{lstlisting}
+
+\subsubsection{通信バスパターン}
+SPI・I2C等の通信バスは複数モジュールで共有されるリソースであり、
+個々のモジュールが所有・初期化すべきではない。
+バスインスタンスを\texttt{main.cpp}で生成し、Config構造体のポインタ経由でモジュールに渡す。
+
+\begin{funcblock}{通信バスを共有リソースとして管理する理由}
+\begin{itemize}
+    \item 複数モジュールが同じバスを使う場合、各モジュールが\texttt{begin()}すると競合・二重初期化が発生する
+    \item バスのピンアサインやインスタンスがモジュール内にハードコードされると、モジュールの再利用性が損なわれる
+    \item バスの生成と初期化を\texttt{main.cpp}に集約することで、共有リソースの管理が明確になる
+\end{itemize}
+\end{funcblock}
+
+\paragraph{SPIバスの例}
+
+\begin{lstlisting}[style=cppstyle, caption={SPIバスを使用するモジュールのConfig構造体と実装例}]
+// SpiSensorModule.h
+#pragma once
+#include <SPI.h>
+#include "IModule.h"
+#include "ModuleTimer.h"
+
+// --- Config構造体（バスポインタ + デバイス固有設定） ---
+struct SpiSensorConfig {
+    SPIClass* spi;            // SPIバスへのポインタ
+    uint8_t csPin;            // チップセレクトピン
+    uint32_t clockSpeed;      // SPIクロック速度(Hz)
+    unsigned long interval;   // 読み取り間隔(ms)
+};
+
+// --- Data構造体 ---
+struct SpiSensorData {
+    uint16_t rawValue;
+    bool hasError;
+};
+
+class SpiSensorModule : public IModule<SystemData> {
+private:
+    SpiSensorConfig _config;
+    ModuleTimer _readTimer;
+public:
+    SpiSensorModule(const SpiSensorConfig& config)
+        : _config(config) {}
+
+    bool init() override {
+        // CSピンの設定のみ行う（bus.begin()は呼ばない）
+        pinMode(_config.csPin, OUTPUT);
+        digitalWrite(_config.csPin, HIGH);
+        _readTimer.setTime();
+        return true;
+    }
+
+    void update(SystemData& data) override {
+        if (_readTimer.getNowTime() >= _config.interval) {
+            _readTimer.setTime();
+            // beginTransaction/endTransactionで排他制御
+            _config.spi->beginTransaction(
+                SPISettings(_config.clockSpeed, MSBFIRST, SPI_MODE0)
+            );
+            digitalWrite(_config.csPin, LOW);
+            data.spiSensor.rawValue =
+                _config.spi->transfer16(0x00);
+            digitalWrite(_config.csPin, HIGH);
+            _config.spi->endTransaction();
+        }
+    }
+};
+\end{lstlisting}
+
+\paragraph{I2Cバスの例}
+
+\begin{lstlisting}[style=cppstyle, caption={I2Cバスを使用するモジュールのConfig構造体と実装例}]
+// I2cSensorModule.h
+#pragma once
+#include <Wire.h>
+#include "IModule.h"
+#include "ModuleTimer.h"
+
+// --- Config構造体（バスポインタ + デバイスアドレス） ---
+struct I2cSensorConfig {
+    TwoWire* wire;            // I2Cバスへのポインタ
+    uint8_t address;          // I2Cデバイスアドレス
+    unsigned long interval;   // 読み取り間隔(ms)
+};
+
+// --- Data構造体 ---
+struct I2cSensorData {
+    float value;
+    bool hasError;
+};
+
+class I2cSensorModule : public IModule<SystemData> {
+private:
+    I2cSensorConfig _config;
+    ModuleTimer _readTimer;
+public:
+    I2cSensorModule(const I2cSensorConfig& config)
+        : _config(config) {}
+
+    bool init() override {
+        // バスの初期化は行わない（main.cppで実施済み）
+        _readTimer.setTime();
+        return true;
+    }
+
+    void update(SystemData& data) override {
+        if (_readTimer.getNowTime() >= _config.interval) {
+            _readTimer.setTime();
+            _config.wire->beginTransmission(_config.address);
+            _config.wire->write(0x00);  // レジスタアドレス
+            if (_config.wire->endTransmission() != 0) {
+                data.i2cSensor.hasError = true;
+                return;
+            }
+            _config.wire->requestFrom(_config.address,
+                                      (uint8_t)2);
+            if (_config.wire->available() >= 2) {
+                uint8_t high = _config.wire->read();
+                uint8_t low = _config.wire->read();
+                data.i2cSensor.value =
+                    (float)((high << 8) | low) / 100.0;
+                data.i2cSensor.hasError = false;
+            }
+        }
+    }
+};
+\end{lstlisting}
+
+\paragraph{main.cppでのバス生成・初期化}
+
+\begin{lstlisting}[style=cppstyle, caption={main.cppでの通信バス生成と初期化}]
+// main.cpp
+#include <SPI.h>
+#include <Wire.h>
+#include "ProjectConfig.h"
+#include "SpiSensorModule.h"
+#include "I2cSensorModule.h"
+
+// バスインスタンスの生成（グローバルスコープ）
+SPIClass spi(HSPI);
+TwoWire wire(0);
+
+// Configにバスポインタを含めて定義（ProjectConfig.h内）
+// const SpiSensorConfig SPI_SENSOR_CONFIG = {
+//     .spi = &spi, .csPin = 5,
+//     .clockSpeed = 1000000, .interval = 100
+// };
+// const I2cSensorConfig I2C_SENSOR_CONFIG = {
+//     .wire = &wire, .address = 0x48, .interval = 500
+// };
+
+SpiSensorModule spiModule(SPI_SENSOR_CONFIG);
+I2cSensorModule i2cModule(I2C_SENSOR_CONFIG);
+
+void setup() {
+    Serial.begin(115200);
+
+    // バス初期化（全モジュールのinit()より前）
+    spi.begin(SCK_PIN, MISO_PIN, MOSI_PIN);
+    wire.begin(SDA_PIN, SCL_PIN);
+
+    // モジュール初期化
+    spiModule.init();
+    i2cModule.init();
+}
+\end{lstlisting}
+
+\begin{notebox}[通信バスパターンのルール]
+\begin{enumerate}
+    \item バスインスタンスは\texttt{main.cpp}のグローバルスコープで生成する
+    \item \texttt{bus.begin()}は\texttt{setup()}内で、全モジュールの\texttt{init()}より前に呼ぶ
+    \item Config構造体にバスポインタ（\texttt{SPIClass*}, \texttt{TwoWire*}）を含める
+    \item モジュールの\texttt{init()}で\texttt{bus.begin()}を呼ばない（CSピン設定等のみ行う）
+    \item SPI使用時は\texttt{beginTransaction()}/\texttt{endTransaction()}で排他制御する
+\end{enumerate}
+\end{notebox}
+
+\paragraph{アンチパターン：モジュール内でバスを生成・初期化する}
+
+\begin{lstlisting}[style=cppstyle, caption={アンチパターン：モジュール内でバスを生成（禁止）}]
+// NG: モジュール内でバスインスタンスを生成・初期化している
+class BadSpiModule : public IModule<SystemData> {
+private:
+    SPIClass _spi(HSPI);  // モジュールがバスを所有
+public:
+    bool init() override {
+        _spi.begin(18, 19, 23);  // ピンがハードコード
+        return true;
+    }
+    // 別のモジュールも同じバスをbegin()すると競合する
+};
 \end{lstlisting}
 
 \subsubsection{エラーハンドリングパターン}
