@@ -8,6 +8,10 @@ const LedConfig LED_CONFIG = {
     .ledPin = 2,  // GPIO2: オンボードLED
 };
 
+// ===== タッチパネル (XPT2046, TFT_eSPI統合) =====
+// タッチピン(TOUCH_CS)はplatformio.iniのbuild_flagsで設定
+const TouchConfig TOUCH_CONFIG = {};
+
 // ===== TFT LCD (2.8インチ, SPI, ST7789) =====
 // SPIピン (MOSI/MISO/SCK/CS/DC/RST/TouchCS) は platformio.ini の build_flags で設定
 const TftConfig TFT_CONFIG = {

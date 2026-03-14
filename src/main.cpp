@@ -2,12 +2,13 @@
 // 3フェーズ実行モデル: 入力 → ロジック → 出力
 #include <Arduino.h>
 #include <Wire.h>
+#include <TFT_eSPI.h>
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
 // バスインスタンス（グローバルスコープで生成）
-// TFT_eSPIはライブラリ内部でSPIを管理するため、SPIClassは不要
-static TwoWire   mpuWire = TwoWire(0);        // MPU6500用I2C
+static TwoWire  mpuWire  = TwoWire(0);   // MPU6500用I2C
+static TFT_eSPI tftDriver;               // TFT LCD + タッチ共有ドライバ
 
 // システムデータ
 SystemData systemData;
@@ -15,15 +16,17 @@ SystemData systemData;
 // ===== モジュールインスタンス =====
 
 // 入力モジュール
+TouchModule   touchModule(TOUCH_CONFIG, &tftDriver);
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
-// 出力モジュール（TftModuleはタッチ読み込みも担う）
+// 出力モジュール
 LedModule  ledModule(LED_CONFIG);
-TftModule  tftModule(TFT_CONFIG);
+TftModule  tftModule(TFT_CONFIG, &tftDriver);
 
 // モジュール配列
 IModule* inputModules[] = {
+    &touchModule,
     &mpu6500Module,
     &cameraModule,
 };
@@ -71,10 +74,10 @@ void applyPattern(SystemData& data) {
 
     // タッチ入力のデバッグ出力（タッチ開始時のみ）
     static bool lastTouched = false;
-    if (data.tft.touchPressed && !lastTouched) {
-        Serial.printf("[Logic] Touch: (%d, %d)\n", data.tft.touchX, data.tft.touchY);
+    if (data.touch.touchPressed && !lastTouched) {
+        Serial.printf("[Logic] Touch: (%d, %d)\n", data.touch.touchX, data.touch.touchY);
     }
-    lastTouched = data.tft.touchPressed;
+    lastTouched = data.touch.touchPressed;
 }
 
 // ===== セットアップ =====
@@ -99,12 +102,12 @@ void setup() {
     Serial.println("[System] 起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
-    // TFT_eSPIはライブラリ内部でSPIを初期化する
+    // TFT_eSPIはTftModule::init()内で tft->init() を呼ぶことで初期化される
     mpuWire.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
 
-    // モジュール初期化
-    initModuleArray(inputModules,  INPUT_COUNT,  "Input");
+    // モジュール初期化（TftModuleのinit()でTFT_eSPIが初期化されるため先に実行）
     initModuleArray(outputModules, OUTPUT_COUNT, "Output");
+    initModuleArray(inputModules,  INPUT_COUNT,  "Input");
 
     blinkTimer.setTime();
     Serial.println("[System] 起動完了");
