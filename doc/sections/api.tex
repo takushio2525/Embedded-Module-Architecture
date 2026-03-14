@@ -435,3 +435,122 @@ const SpiSensorConfig SPI_SENSOR_CONFIG = {
 SPIClass spi(HSPI);
 SpiSensorModule spiModule(SPI_SENSOR_CONFIG, &spi);
 \end{lstlisting}
+
+% -------------------------------------------
+
+\subsection{実装モジュール一覧}
+
+本プロジェクトで実装しているモジュールの仕様を以下に示す。
+
+% ---- TftModule ----
+\needspace{5\baselineskip}
+\subsubsection{TftModule — 2.8インチSPI TFT LCD + タッチ}
+
+\begin{apibox}{TftModule}
+\textbf{定義ファイル:} \texttt{lib/TftModule/TftModule.h/.cpp}\\
+\textbf{ライブラリ:} TFT\_eSPI（ピン設定はplatformio.iniのbuild\_flagsで管理）\\
+\textbf{ドライバ:} ST7789（240×320）/ XPT2046タッチコントローラ内蔵対応\\
+\textbf{役割:} 出力（画面描画）+ 入力（タッチ読み込み）の複合モジュール
+\end{apibox}
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{構造体} & \textbf{メンバ} & \textbf{説明} \\
+\midrule
+\texttt{TftConfig} & \texttt{rotation} & 画面回転 0--3（1=横向き） \\
+ & \texttt{blPin} & バックライトピン（-1で常時ON） \\
+ & \texttt{updateIntervalMs} & 画面更新周期 [ms] \\
+\midrule
+\texttt{TftData} & \texttt{touchPressed} & タッチ押下中フラグ \\
+ & \texttt{touchX / touchY} & タッチ座標（ピクセル） \\
+ & \texttt{line1--line4} & 表示テキスト（char[48]、logicフェーズで設定） \\
+\bottomrule
+\end{tabularx}
+
+\begin{notebox}[タッチと描画の実行タイミング]
+\texttt{update()}内でタッチ読み込みと画面描画を順番に実行する。
+タッチデータは\textbf{outputフェーズ}で更新され、次ループの\textbf{logicフェーズ}で参照される（1ループ分の遅延）。
+SPI/タッチのピン番号は\texttt{platformio.ini}のbuild\_flagsで静的に設定する。
+\end{notebox}
+
+% ---- Mpu6500Module ----
+\needspace{5\baselineskip}
+\subsubsection{Mpu6500Module — MPU-6500 IMUセンサー}
+
+\begin{apibox}{Mpu6500Module}
+\textbf{定義ファイル:} \texttt{lib/Mpu6500Module/Mpu6500Module.h/.cpp}\\
+\textbf{外部ライブラリ:} なし（Wireによる直接I2Cレジスタアクセス）\\
+\textbf{役割:} 入力モジュール — 加速度・角速度・温度を読み取る
+\end{apibox}
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{構造体} & \textbf{メンバ} & \textbf{説明} \\
+\midrule
+\texttt{Mpu6500Config} & \texttt{address} & I2Cアドレス（AD0=LOW: 0x68 / HIGH: 0x69） \\
+ & \texttt{sdaPin / sclPin} & I2CピンID \\
+ & \texttt{sampleIntervalMs} & サンプリング周期 [ms] \\
+\midrule
+\texttt{Mpu6500Data} & \texttt{accelX/Y/Z} & 加速度 [g]（±2g, 16384 LSB/g） \\
+ & \texttt{gyroX/Y/Z} & 角速度 [deg/s]（±250°/s, 131 LSB/°/s） \\
+ & \texttt{temperature} & 温度 [°C]（デフォルト: -999.0f） \\
+ & \texttt{isValid} & データ有効フラグ（デフォルト: false） \\
+\bottomrule
+\end{tabularx}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{レジスタ} & \textbf{説明} \\
+\midrule
+\texttt{0x75} WHO\_AM\_I & 0x70を期待（MPU-6500識別子） \\
+\texttt{0x6B} PWR\_MGMT\_1 & 0x01: スリープ解除 + PLLクロック選択 \\
+\texttt{0x19} SMPLRT\_DIV & 0x04: 200Hzサンプリング \\
+\texttt{0x1A} CONFIG & 0x02: DLPFフィルタ（92Hz帯域幅） \\
+\texttt{0x3B} ACCEL\_XOUT\_H & 加速度から角速度まで14バイト一括読み込み \\
+\bottomrule
+\end{tabularx}
+
+% ---- CameraModule ----
+\needspace{5\baselineskip}
+\subsubsection{CameraModule — OV5640カメラ}
+
+\begin{apibox}{CameraModule}
+\textbf{定義ファイル:} \texttt{lib/CameraModule/CameraModule.h/.cpp}\\
+\textbf{ライブラリ:} esp\_camera（ESP32 Arduino platform内蔵）\\
+\textbf{役割:} 入力モジュール — OV5640からDVPバス経由でフレームを取得する
+\end{apibox}
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{構造体} & \textbf{メンバ} & \textbf{説明} \\
+\midrule
+\texttt{CameraConfig} & \texttt{pwdnPin / resetPin} & 電源/リセットピン（-1で未使用） \\
+ & \texttt{xclkPin / siodPin / siocPin} & XCLKとSCCB（カメラ設定用I2C）ピン \\
+ & \texttt{d0--d7Pin} & DVPデータバスピン \\
+ & \texttt{vsyncPin / hrefPin / pclkPin} & 同期クロックピン \\
+ & \texttt{xclkFreqHz} & XCLKクロック周波数（通常20MHz） \\
+ & \texttt{frameSize} & フレームサイズ（framesize\_t の整数値） \\
+ & \texttt{pixFormat} & ピクセルフォーマット（pixformat\_t の整数値） \\
+ & \texttt{jpegQuality} & JPEG品質 0--63（低いほど高画質） \\
+ & \texttt{fbCount} & フレームバッファ数（PSRAM使用時は2以上） \\
+\midrule
+\texttt{CameraData} & \texttt{isValid} & init成功フラグ \\
+ & \texttt{frameReady} & 新フレーム取得済みフラグ \\
+ & \texttt{width / height} & フレーム解像度 \\
+ & \texttt{frameSize} & フレームバイトサイズ \\
+\bottomrule
+\end{tabularx}
+
+\begin{cautionbox}[フレームバッファのライフサイクル]
+フレームの生データ（\texttt{camera\_fb\_t*}）は\texttt{SystemData}に格納しない。
+\texttt{CameraModule::getFrameBuffer()}でアクセスし、
+使用後は\texttt{releaseFrame()}を呼ぶか、logicフェーズ末尾で\texttt{cameraModule.releaseFrame()}を呼ぶこと。
+\textbf{次の\texttt{update()}呼び出しまでにリリースしなければ自動的に解放される。}\\
+\texttt{CameraData}にはメタデータのみ格納し、\texttt{esp\_camera.h}のヘッダー依存をコア層に持ち込まない。
+\end{cautionbox}
+
+\begin{notebox}[PSRAM使用について]
+\texttt{fbCount >= 2}かつPSRAMが検出された場合（\texttt{psramFound()} = true）、
+フレームバッファは自動的にPSRAMに配置される。
+OV5640でJPEGを使用する場合は必ずPSRAMを有効にすること（\texttt{-D BOARD\_HAS\_PSRAM}）。
+\end{notebox}

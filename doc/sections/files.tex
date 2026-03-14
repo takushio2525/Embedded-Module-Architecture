@@ -29,9 +29,18 @@ Embedded-Module-Architecture/
 |   +-- ModuleCore/             ... コアライブラリ
 |   |   +-- IModule.h           ... IModuleインターフェース
 |   |   +-- ModuleTimer.h       ... ModuleTimerクラス
-|   +-- LedModule/              ... モジュール実装例
-|       +-- LedModule.h         ... 宣言（Config/Data構造体 + クラス宣言）
-|       +-- LedModule.cpp       ... 実装（SystemData.hを参照）
+|   +-- LedModule/              ... モジュール実装例（出力）
+|   |   +-- LedModule.h
+|   |   +-- LedModule.cpp
+|   +-- TftModule/              ... TFT LCDモジュール（出力+タッチ入力）
+|   |   +-- TftModule.h
+|   |   +-- TftModule.cpp
+|   +-- Mpu6500Module/          ... MPU-6500 IMUセンサーモジュール（入力）
+|   |   +-- Mpu6500Module.h
+|   |   +-- Mpu6500Module.cpp
+|   +-- CameraModule/           ... OV5640カメラモジュール（入力）
+|       +-- CameraModule.h
+|       +-- CameraModule.cpp
 +-- src/
 |   +-- main.cpp                ... エントリーポイント
 +-- test/                       ... テストコード
@@ -47,8 +56,10 @@ Embedded-Module-Architecture/
 \midrule
 \texttt{lib/ModuleCore/IModule.h} & コア & IModuleインターフェース定義 \\
 \texttt{lib/ModuleCore/ModuleTimer.h} & コア & ModuleTimerクラス定義 \\
-\texttt{lib/\{Module\}/\{Module\}.h} & モジュール & Config/Data構造体 + クラス宣言（前方宣言） \\
-\texttt{lib/\{Module\}/\{Module\}.cpp} & モジュール & メソッド実装（SystemData.hを参照） \\
+\texttt{lib/LedModule/LedModule.h/.cpp} & 出力モジュール & GPIO LED制御（リファレンス実装） \\
+\texttt{lib/TftModule/TftModule.h/.cpp} & 出力+入力 & 2.8インチSPI TFT LCD表示 + XPT2046タッチ入力 \\
+\texttt{lib/Mpu6500Module/Mpu6500Module.h/.cpp} & 入力モジュール & MPU-6500 IMUセンサー（I2C直接アクセス） \\
+\texttt{lib/CameraModule/CameraModule.h/.cpp} & 入力モジュール & OV5640カメラ（DVP / esp\_camera） \\
 \texttt{include/SystemData.h} & プロジェクト固有 & 各モジュールのData構造体を集約したSystemData構造体 \\
 \texttt{include/ProjectConfig.h} & プロジェクト固有 & モジュールConfigインスタンス（ピンアサイン等） \\
 \texttt{src/main.cpp} & プロジェクト固有 & エントリーポイント（モジュール登録・ループ制御） \\
