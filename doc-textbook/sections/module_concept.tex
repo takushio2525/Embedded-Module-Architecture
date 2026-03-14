@@ -1,0 +1,159 @@
+% 第2章: モジュールという考え方
+\section{モジュールという考え方}
+
+%% ── Q1: モジュールとは ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{モジュールって何？}
+
+モジュールとは、「1つのハードウェア部品の制御を、1つのクラスにまとめたもの」です。
+
+ルールはシンプルです。
+
+\begin{center}
+\begin{tcolorbox}[
+  enhanced, colback=accentblue!8, colframe=accentblue,
+  arc=2mm, width=10cm, breakable,
+]
+  \centering\large\bfseries
+  1ハードウェア = 1クラス（1モジュール）
+\end{tcolorbox}
+\end{center}
+
+第1章のベタ書きコードから、LED部分だけを抜き出してクラスにしてみましょう。
+
+\begin{goodexample}{LedModuleを抽出}
+\begin{lstlisting}
+// LedModule.h
+class LedModule {
+private:
+    uint8_t _pin;
+    bool _state;
+
+public:
+    LedModule(uint8_t pin) : _pin(pin), _state(false) {}
+
+    bool init() {
+        pinMode(_pin, OUTPUT);
+        return true;
+    }
+
+    void turnOn() {
+        _state = true;
+        digitalWrite(_pin, HIGH);
+    }
+
+    void turnOff() {
+        _state = false;
+        digitalWrite(_pin, LOW);
+    }
+
+    void toggle() {
+        _state ? turnOff() : turnOn();
+    }
+};
+\end{lstlisting}
+\end{goodexample}
+
+これで main.cpp は次のようにすっきりします。
+
+\begin{lstlisting}
+LedModule led1(2);   // ピン2のLED
+LedModule led2(4);   // ピン4のLED
+
+void setup() {
+    led1.init();
+    led2.init();
+}
+\end{lstlisting}
+
+LEDの制御に関するコードは \texttt{LedModule} の中に閉じ込められました。main.cppを見ても「LEDが2つあって、initしている」ということが一目で分かります。
+
+\end{qabox}
+
+%% ── Q2: Config構造体 ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{なんでConfig構造体が必要なの？}
+
+先ほどの例では、コンストラクタにピン番号だけ渡しました。でも設定項目が増えるとどうなるでしょう？
+
+\begin{badexample}{引数が増えすぎる}
+\begin{lstlisting}
+// ピン番号、初期状態、PWMチャンネル、PWM周波数...
+LedModule led(2, false, 0, 5000);
+// どの引数が何を意味するか分からない！
+\end{lstlisting}
+\end{badexample}
+
+\begin{goodexample}{Config構造体にまとめる}
+\begin{lstlisting}
+// 設定をまとめた構造体
+struct LedConfig {
+    uint8_t pin;
+};
+
+class LedModule {
+private:
+    LedConfig _config;  // 設定を丸ごと保持
+
+public:
+    LedModule(const LedConfig& config) : _config(config) {}
+
+    bool init() {
+        pinMode(_config.pin, OUTPUT);
+        return true;
+    }
+};
+
+// 使う側 — 何の設定か一目瞭然
+const LedConfig LED1_CONFIG = { .pin = 2 };
+LedModule led1(LED1_CONFIG);
+\end{lstlisting}
+\end{goodexample}
+
+Config構造体を使うメリットは3つです。
+
+\begin{enumerate}
+  \item 設定項目が増えても、構造体にフィールドを追加するだけ
+  \item 設定値を1か所（\texttt{ProjectConfig.h}）にまとめて管理できる
+  \item コンストラクタの引数の意味が明確
+\end{enumerate}
+
+\end{qabox}
+
+%% ── Q3: ConfigとDataの違い ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{ConfigとDataの違いは？}
+
+モジュールが扱う情報は、大きく2種類に分かれます。
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l X X}
+\toprule
+& \textbf{Config} & \textbf{Data} \\
+\midrule
+意味 & 起動時の設定 & 実行中に変化するデータ \\
+いつ決まる？ & プログラム開始前（コンパイル時） & プログラム実行中 \\
+変わる？ & 基本的に変わらない & 常に変わる \\
+例 & ピン番号、I2Cアドレス & LED状態、センサー値 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{lstlisting}
+// Config — 起動時に決まる設定
+struct LedConfig {
+    uint8_t pin;       // ピン番号（変わらない）
+};
+
+// Data — 実行中に変わるデータ
+struct LedData {
+    bool state = false;        // ON/OFF状態
+    uint8_t brightness = 0;    // 明るさ
+};
+\end{lstlisting}
+
+\begin{notebox}[なぜ分けるの？]
+ConfigとDataを分けることで、「この値は実行中に変わるのか？」が型レベルで明確になります。Configは \texttt{const} にできるので、うっかり書き換えてしまうバグも防げます。
+\end{notebox}
+
+\end{qabox}

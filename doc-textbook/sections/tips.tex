@@ -1,0 +1,200 @@
+% 第7章: 設計のコツ集
+\section{設計のコツ集}
+
+この章では、実装でよくある疑問に短いQ\&A形式で答えます。
+
+%% ── エラー処理 ──────────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{エラーが起きたらどうする？}
+
+\texttt{init()}は\texttt{bool}を返します。失敗したら\texttt{false}を返しましょう。
+
+\begin{lstlisting}
+bool TempSensorModule::init() {
+    if (!checkSensor()) {
+        Serial.println("[TempSensor] init failed: sensor not found");
+        return false;  // 失敗を通知
+    }
+    return true;
+}
+\end{lstlisting}
+
+\texttt{update()}でエラーが起きた場合は、Dataのフラグで通知します。
+
+\begin{lstlisting}
+void TempSensorModule::update(SystemData& data) {
+    int raw = analogRead(_config.analogPin);
+    if (raw < 0) {
+        data.temp.isValid = false;  // エラーフラグ
+        return;
+    }
+    data.temp.temperature = raw * _config.conversionFactor;
+    data.temp.isValid = true;
+}
+\end{lstlisting}
+
+\end{qabox}
+
+%% ── バス共有 ──────────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{SPIやI2Cを複数モジュールで共有するには？}
+
+バス（SPI、I2C）のインスタンスは \texttt{main.cpp} で作り、コンストラクタの引数でモジュールに渡します。
+
+\begin{lstlisting}
+// main.cpp
+static TwoWire i2cBus = TwoWire(0);
+
+void setup() {
+    i2cBus.begin(SDA_PIN, SCL_PIN);  // バス初期化は先に！
+
+    // モジュール初期化は後
+    tempSensor.init();
+    display.init();
+}
+\end{lstlisting}
+
+\begin{lstlisting}
+// モジュール側 — ポインタで受け取る
+class TempSensorModule : public IModule {
+private:
+    TwoWire* _wire;
+
+public:
+    TempSensorModule(const TempSensorConfig& config,
+                     TwoWire* wire)
+        : _config(config), _wire(wire) {}
+};
+\end{lstlisting}
+
+\begin{cautionbox}[バス初期化の順番]
+\texttt{bus.begin()}は必ず\texttt{setup()}内で、全モジュールの\texttt{init()}より前に呼んでください。モジュールの\texttt{init()}内で\texttt{bus.begin()}を呼ぶと、2つ目のモジュールが初期化するときにバスがリセットされる可能性があります。
+\end{cautionbox}
+
+SPI使用時は排他制御を忘れないでください。
+
+\begin{lstlisting}
+void update(SystemData& data) {
+    _spi->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+    // SPI通信
+    _spi->endTransaction();
+}
+\end{lstlisting}
+
+\end{qabox}
+
+%% ── init失敗後の復帰 ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{init失敗したモジュールは復帰できる？}
+
+できます。ロジックフェーズで定期的にinit()を再試行します。
+
+\begin{lstlisting}
+// ロジックフェーズ内
+void applyLogic(SystemData& data) {
+    // 無効化されたモジュールの再init（10秒ごと）
+    static ModuleTimer retryTimer;
+    if (retryTimer.getNowTime() >= 10000) {
+        retryTimer.setTime();
+        for (int i = 0; i < INPUT_COUNT; i++) {
+            if (!inputModules[i]->enabled) {
+                if (inputModules[i]->init()) {
+                    inputModules[i]->enabled = true;
+                    Serial.println("[System] module recovered");
+                }
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+接触不良で一時的に通信が切れたセンサーが、再接続後に自動復帰します。
+
+\end{qabox}
+
+%% ── ログ出力 ──────────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{ログはどう書くのがいい？}
+
+統一フォーマットを使いましょう。
+
+\begin{lstlisting}
+// フォーマット: [モジュール名] メッセージ
+Serial.println("[TempSensor] init OK");
+Serial.println("[TempSensor] read failed: timeout");
+Serial.println("[LED] state changed: ON");
+\end{lstlisting}
+
+角括弧でモジュール名を付けると、シリアルモニターでどのモジュールの出力か一目で分かります。
+
+\end{qabox}
+
+%% ── Config変更 ──────────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{実行中にConfigを変更したいときは？}
+
+Config変更はロジックフェーズでのみ行います。
+
+\begin{badexample}{入力フェーズでConfig変更}
+\begin{lstlisting}
+// BLEモジュールのupdate()内で直接変更 → 危険！
+void BleModule::update(SystemData& data) {
+    if (newConfigReceived) {
+        ledModule._config.pin = newPin;  // 他モジュールを直接操作
+    }
+}
+\end{lstlisting}
+\end{badexample}
+
+\begin{goodexample}{SystemData経由でロジックフェーズに渡す}
+\begin{lstlisting}
+// BLEモジュール — 受信データをSystemDataに書くだけ
+void BleModule::update(SystemData& data) {
+    if (newConfigReceived) {
+        data.ble.requestedLedPin = newPin;
+        data.ble.configUpdateRequested = true;
+    }
+}
+
+// ロジックフェーズ — ここでConfig変更を実行
+void applyLogic(SystemData& data) {
+    if (data.ble.configUpdateRequested) {
+        // 安全にConfig変更を適用
+        data.ble.configUpdateRequested = false;
+    }
+}
+\end{lstlisting}
+\end{goodexample}
+
+\end{qabox}
+
+%% ── deinit ──────────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{deinit()はいつ使うの？}
+
+\texttt{deinit()}は、モジュールが確保したリソースを解放するためのメソッドです。IModuleにデフォルトの空実装があるので、必要なモジュールだけオーバーライドします。
+
+\begin{lstlisting}
+class CameraModule : public IModule {
+public:
+    void deinit() override {
+        // フレームバッファを解放
+        if (_fb) {
+            esp_camera_fb_return(_fb);
+            _fb = nullptr;
+        }
+        esp_camera_deinit();
+        Serial.println("[Camera] deinit done");
+    }
+};
+\end{lstlisting}
+
+主な用途は以下の通りです。
+
+\begin{itemize}
+  \item ディープスリープに入る前のリソース解放
+  \item モジュールの動的な停止・再起動
+  \item テスト時の後片付け
+\end{itemize}
+
+\end{qabox}

@@ -1,0 +1,99 @@
+% 第1章: 全部main.cppに書くとどうなる？
+\section{全部main.cppに書くとどうなる？}
+
+\begin{notebox}[クラスがわからない方へ]
+この教科書ではC++のクラスを使います。「クラスって何？」という方は、先に付録A（\pageref{sec:appendix_class}ページ）を読んでから戻ってきてください。構造体・クラス・コンストラクタの基礎を解説しています。
+\end{notebox}
+
+%% ── Q1: ベタ書きの問題 ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{全部main.cppに書くの、何がまずいの？}
+
+まずは「よくある書き方」を見てみましょう。LED2個と温度センサー1個を制御するプログラムです。
+
+\begin{badexample}{全部main.cppにベタ書き}
+\begin{lstlisting}
+#include <Arduino.h>
+
+// ピン番号（マジックナンバー）
+#define LED1_PIN 2
+#define LED2_PIN 4
+#define TEMP_PIN 34
+
+// グローバル変数がバラバラに並ぶ
+bool led1State = false;
+bool led2State = false;
+float temperature = 0.0;
+unsigned long lastBlink = 0;
+unsigned long lastRead = 0;
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(LED1_PIN, OUTPUT);
+    pinMode(LED2_PIN, OUTPUT);
+    // 温度センサーはアナログなのでpinMode不要
+}
+
+void loop() {
+    unsigned long now = millis();
+
+    // LED1: 500msごとに点滅
+    if (now - lastBlink >= 500) {
+        lastBlink = now;
+        led1State = !led1State;
+        digitalWrite(LED1_PIN, led1State ? HIGH : LOW);
+    }
+
+    // LED2: 常時点灯
+    digitalWrite(LED2_PIN, HIGH);
+
+    // 温度センサー: 1秒ごとに読み取り
+    if (now - lastRead >= 1000) {
+        lastRead = now;
+        int raw = analogRead(TEMP_PIN);
+        temperature = raw * 3.3 / 4095.0 * 100.0;
+        Serial.print("Temp: ");
+        Serial.println(temperature);
+    }
+
+    // ここにモーター制御を追加したら？
+    // さらにディスプレイ表示を追加したら？
+    // ...どんどん膨れ上がる
+}
+\end{lstlisting}
+\end{badexample}
+
+動くことは動きます。でも、この書き方には3つの大きな問題があります。
+
+\subsection{問題1: 肥大化}
+
+今は約40行ですが、モーター制御、ディスプレイ表示、通信機能……と追加していくと、あっという間に数百行になります。「LED1の点滅ロジックはどこだっけ？」と探すだけで一苦労です。
+
+\subsection{問題2: マジックナンバー}
+
+\texttt{LED1\_PIN}、\texttt{500}（点滅間隔）、\texttt{3.3 / 4095.0 * 100.0}（変換式）といった数値がコード中に散らばっています。後から見て「この数字は何？」となりがちです。
+
+\subsection{問題3: 再利用できない}
+
+別のプロジェクトでもLED点滅が必要になったとき、このコードからLED関連の部分だけを抜き出すのは大変です。変数名が被ったり、依存関係が絡み合っていたりします。
+
+\end{qabox}
+
+%% ── Q2: 教科書の構成 ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{この教科書で何を学ぶの？}
+
+この教科書では、上のような「ベタ書きコード」を段階的に改善していきます。
+
+\begin{enumerate}
+  \item \textbf{第2章: モジュールという考え方} — 1つのハードウェアを1つのクラスに分離する
+  \item \textbf{第3章: インターフェースで統一する} — 異なるモジュールを同じ方法で扱う
+  \item \textbf{第4章: データの流れを整理する} — モジュール間のデータ受け渡しを安全にする
+  \item \textbf{第5章: 3フェーズモデル} — loop()の処理を「入力→ロジック→出力」に整理する
+  \item \textbf{第6章: 実践} — 温度センサーモジュールを一から作る
+  \item \textbf{第7章: 設計のコツ集} — 実務で役立つTips
+\end{enumerate}
+
+最終的に、先ほどのベタ書きコードがどう変わるか？ それは第5章で明らかになります。
+
+\end{qabox}

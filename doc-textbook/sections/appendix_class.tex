@@ -1,0 +1,188 @@
+% 付録A: クラスとは
+\section*{付録A: C++クラスの基礎}
+\label{sec:appendix_class}
+\addcontentsline{toc}{section}{付録A: C++クラスの基礎}
+
+この付録では、本編を読むために必要なC++クラスの基礎知識を解説します。
+すでにクラスを理解している方は読み飛ばしてください。
+
+%% ── Q1: 構造体 ──────────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{構造体（struct）って何？}
+
+プログラムを書いていると、「関連する変数をセットで扱いたい」場面がよくあります。
+
+たとえば、LEDの状態を管理する変数が2つあるとします。
+
+\begin{badexample}{バラバラの変数で管理}
+\begin{lstlisting}
+bool ledState = false;
+uint8_t ledBrightness = 0;
+
+bool led2State = false;
+uint8_t led2Brightness = 0;
+// LED が増えるたびに変数が倍増...
+\end{lstlisting}
+\end{badexample}
+
+LEDが増えるたびに変数名を考えなくてはいけませんし、「どの変数がどのLEDのものか」が分かりにくくなります。
+
+そこで「構造体」の出番です。関連する変数を1つの型としてまとめられます。
+
+\begin{goodexample}{構造体でまとめる}
+\begin{lstlisting}
+struct LedData {
+    bool state = false;
+    uint8_t brightness = 0;
+};
+
+LedData led1;  // LED1のデータ一式
+LedData led2;  // LED2のデータ一式
+
+led1.state = true;       // ドット(.)でアクセス
+led2.brightness = 128;
+\end{lstlisting}
+\end{goodexample}
+
+構造体を使えば、「LEDに必要なデータは何か」が型として明確になり、LEDが何個増えても変数の定義は1行で済みます。
+\end{qabox}
+
+%% ── Q2: クラス ──────────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{構造体とクラスって何が違うの？}
+
+構造体は「データをまとめる」ものでした。クラスはさらに「そのデータを操作する関数」も一緒にまとめます。
+
+\begin{goodexample}{クラス = データ + 関数}
+\begin{lstlisting}
+class LedModule {
+private:
+    uint8_t _pin;       // データ（メンバ変数）
+    bool _state;
+
+public:
+    // コンストラクタ（後述）
+    LedModule(uint8_t pin) : _pin(pin), _state(false) {}
+
+    // メンバ関数
+    void turnOn() {
+        _state = true;
+        digitalWrite(_pin, HIGH);
+    }
+
+    void turnOff() {
+        _state = false;
+        digitalWrite(_pin, LOW);
+    }
+};
+\end{lstlisting}
+\end{goodexample}
+
+構造体でもメンバ関数を持てますが、C++の慣習として次のように使い分けます。
+
+\begin{itemize}
+  \item \textbf{struct} — データの入れ物（Config、Dataなど）
+  \item \textbf{class} — データ＋操作をセットにしたもの（モジュールなど）
+\end{itemize}
+
+\begin{notebox}[structとclassの技術的な違い]
+C++ではstructとclassの唯一の違いは「デフォルトのアクセス修飾子」です。structはデフォルトpublic、classはデフォルトprivateです。本書ではデータの入れ物にstruct、操作を持つものにclassを使います。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q3: コンストラクタ ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{コンストラクタって何？}
+
+コンストラクタは「オブジェクトが作られるときに自動で呼ばれる関数」です。初期化忘れを防げます。
+
+\begin{badexample}{初期化忘れの危険}
+\begin{lstlisting}
+LedModule led;         // ピン番号が未設定！
+led.turnOn();          // どのピンが光る？→バグ
+\end{lstlisting}
+\end{badexample}
+
+\begin{goodexample}{コンストラクタで確実に初期化}
+\begin{lstlisting}
+class LedModule {
+private:
+    uint8_t _pin;
+    bool _state;
+
+public:
+    // コンストラクタ — 初期化子リストで初期化
+    LedModule(uint8_t pin) : _pin(pin), _state(false) {
+        // ピンを指定しないと作れない
+    }
+};
+
+LedModule led(13);   // OK: ピン13で作成
+// LedModule led2;   // コンパイルエラー！ピン未指定
+\end{lstlisting}
+\end{goodexample}
+
+コロン（\texttt{:}）の後に書く \texttt{\_pin(pin), \_state(false)} の部分を「初期化子リスト」と呼びます。メンバ変数を効率よく初期化する書き方です。
+\end{qabox}
+
+%% ── Q4: private/public ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{private/publicって何？}
+
+クラスの中身を「外から触れる部分」と「触れない部分」に分けるしくみです。
+
+\vspace{2mm}
+イメージとしては、銀行の窓口を思い浮かべてください。
+
+\begin{itemize}
+  \item \textbf{public}（窓口） — お客さん（外部のコード）がアクセスできる
+  \item \textbf{private}（金庫） — 銀行員（クラス内部）だけがアクセスできる
+\end{itemize}
+
+\begin{lstlisting}
+class LedModule {
+private:
+    uint8_t _pin;    // 外から直接変更させない
+
+public:
+    LedModule(uint8_t pin) : _pin(pin) {}
+    void turnOn();   // 外から呼べる
+};
+
+LedModule led(13);
+led.turnOn();      // OK: publicなので呼べる
+// led._pin = 99;  // コンパイルエラー！privateには触れない
+\end{lstlisting}
+
+なぜわざわざ隠すのか？ 外部から \texttt{\_pin} を勝手に変更されると、LEDモジュールの動作が壊れる可能性があるからです。「触ってほしくないものはprivateにする」のが安全設計の基本です。
+
+\begin{notebox}[命名の慣習]
+privateメンバ変数には先頭にアンダースコア（\texttt{\_}）を付ける慣習があります。\texttt{\_pin}、\texttt{\_state}のように書くと、「これは内部変数だな」と一目で分かります。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q5: virtualの予告 ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{virtualって何？（予告）}
+
+\texttt{virtual}は「クラスの継承」という仕組みで使うキーワードです。これを使うと、異なるクラスを同じ型として扱えるようになります。
+
+……と言われてもピンと来ないと思います。
+
+大丈夫です。\texttt{virtual}の詳しい説明は本編の第3章「インターフェースで統一する」で、具体例を交えて解説します。ここでは「そういうキーワードがあるんだな」とだけ覚えておいてください。
+
+\begin{notebox}[ここまでのまとめ]
+\begin{itemize}
+  \item \textbf{構造体} — 関連する変数をまとめる箱
+  \item \textbf{クラス} — データ＋操作をセットにしたもの
+  \item \textbf{コンストラクタ} — オブジェクト生成時に自動実行される初期化関数
+  \item \textbf{private/public} — アクセス範囲を制限して安全性を確保
+  \item \textbf{virtual} — 第3章で詳しく！
+\end{itemize}
+\end{notebox}
+
+これだけ分かっていれば、本編を読み進められます。さあ、第1章に進みましょう！
+
+\end{qabox}

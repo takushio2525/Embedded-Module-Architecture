@@ -1,0 +1,145 @@
+% 第5章: 3フェーズモデル
+\section{3フェーズモデル}
+
+%% ── Q1: loop()の整理 ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{loop()の中身はどう整理するの？}
+
+ここまでで、モジュール・インターフェース・SystemDataの3つの道具が揃いました。最後のピースは「loop()の実行順序」です。
+
+loop()の中身を3つのフェーズに分けます。これを「3フェーズモデル」と呼びます。
+
+\begin{center}
+\begin{tikzpicture}[
+  phase/.style={rectangle, draw=#1, fill=#1!8, minimum width=50mm,
+    minimum height=12mm, font=\bfseries, rounded corners=2mm},
+  arr/.style={-{Stealth[length=4mm]}, very thick, headerblue},
+]
+  \node[phase=accentblue] (input) {1. 入力フェーズ};
+  \node[phase=noteyellow, below=10mm of input] (logic) {2. ロジックフェーズ};
+  \node[phase=okgreen, below=10mm of logic] (output) {3. 出力フェーズ};
+
+  \draw[arr] (input) -- node[right, font=\small]{センサー値を読む} (logic);
+  \draw[arr] (logic) -- node[right, font=\small]{判断・加工する} (output);
+\end{tikzpicture}
+\end{center}
+
+工場の流れ作業に例えると分かりやすいです。
+
+\begin{enumerate}
+  \item \textbf{入力フェーズ}（検品係） — センサーからデータを読み取り、SystemDataに書き込む
+  \item \textbf{ロジックフェーズ}（判断係） — SystemDataを見て、どう動くか判断する
+  \item \textbf{出力フェーズ}（作業係） — SystemDataの指示に従い、LEDやモーターを制御する
+\end{enumerate}
+
+\begin{goodexample}{3フェーズのloop()}
+\begin{lstlisting}
+// モジュール配列
+IModule* inputModules[] = { &tempSensor };
+IModule* outputModules[] = { &led };
+const int INPUT_COUNT = 1;
+const int OUTPUT_COUNT = 1;
+
+void loop() {
+    // 1. 入力フェーズ — センサー値をSystemDataに書き込む
+    for (int i = 0; i < INPUT_COUNT; i++) {
+        if (inputModules[i]->enabled) {
+            inputModules[i]->update(systemData);
+        }
+    }
+
+    // 2. ロジックフェーズ — データを見て判断する
+    applyLogic(systemData);
+
+    // 3. 出力フェーズ — 判断結果に従い制御する
+    for (int i = 0; i < OUTPUT_COUNT; i++) {
+        if (outputModules[i]->enabled) {
+            outputModules[i]->update(systemData);
+        }
+    }
+}
+\end{lstlisting}
+\end{goodexample}
+
+\end{qabox}
+
+%% ── Q2: 順番が大事な理由 ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{なんで順番が大事なの？}
+
+「入力→ロジック→出力」の順番を守らないと、思わぬバグが発生します。
+
+\begin{badexample}{出力が先に実行される場合}
+\begin{lstlisting}
+void loop() {
+    // 出力が先！
+    led.update(systemData);   // 前回のデータで光ってしまう
+
+    // 入力が後
+    tempSensor.update(systemData);  // 今回のデータを読む
+
+    applyLogic(systemData);  // 今回のデータで判断するが...
+    // → LEDにはもう反映されない（次のloopまで待つ）
+}
+\end{lstlisting}
+\end{badexample}
+
+出力が先だと、LEDは常に「1ループ前のデータ」で動作します。温度が急上昇しても、LEDの反応が1ループ分遅れます。通常は気にならない程度ですが、リアルタイム性が求められるシステムでは致命的です。
+
+また、ロジックフェーズをスキップして入力モジュールが出力モジュールのデータを直接書き換えると、「なぜこのLEDが光っているのか」の理由がコード上で追えなくなります。
+
+\begin{cautionbox}[クロス参照の禁止]
+入力モジュールが出力モジュールのデータを読み書きしたり、その逆をしたりすることを「クロス参照」と呼びます。これは禁止です。
+
+\begin{itemize}
+  \item 入力モジュール → 自分のDataに書き込むだけ
+  \item 出力モジュール → 自分のDataを読み取るだけ
+  \item データの受け渡し → ロジックフェーズが担当
+\end{itemize}
+\end{cautionbox}
+
+\end{qabox}
+
+%% ── Q3: ロジックフェーズ ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{ロジックフェーズでは何を書くの？}
+
+ロジックフェーズは「入力データを見て、出力データを決める」場所です。
+
+\begin{goodexample}{applyLogic()の例}
+\begin{lstlisting}
+void applyLogic(SystemData& data) {
+    // 温度が30度を超えたらLEDを点灯
+    if (data.temp.temperature > 30.0) {
+        data.led.state = true;
+    } else {
+        data.led.state = false;
+    }
+}
+\end{lstlisting}
+\end{goodexample}
+
+ポイントは以下の通りです。
+
+\begin{itemize}
+  \item ハードウェアを直接操作しない（\texttt{digitalWrite}等を呼ばない）
+  \item SystemDataの値を読んで、SystemDataの値を書き換えるだけ
+  \item 「なぜLEDが光るのか」のルールがこの関数に集約される
+\end{itemize}
+
+ロジックが複雑になっても、この関数を読めば動作の全体像が分かります。
+
+\begin{notebox}[第1章のコードがこう変わった]
+第1章では60行のベタ書きでしたが、3フェーズモデルで整理すると次のような構成になります。
+
+\begin{itemize}
+  \item \texttt{LedModule} — LEDの制御（約20行）
+  \item \texttt{TempSensorModule} — 温度の読み取り（約20行）
+  \item \texttt{applyLogic()} — ルール（約5行）
+  \item \texttt{main.cpp} — 配列定義 + 3フェーズループ（約30行）
+\end{itemize}
+
+合計行数は増えますが、各ファイルが短く、役割が明確です。
+\end{notebox}
+
+\end{qabox}

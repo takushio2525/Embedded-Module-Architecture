@@ -1,0 +1,160 @@
+% 第4章: データの流れを整理する
+\section{データの流れを整理する}
+
+%% ── Q1: 直接アクセスの問題 ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{モジュール同士が直接話すとなぜダメ？}
+
+「温度が30度を超えたらLEDを点灯」したいとき、こんなコードを書きたくなるかもしれません。
+
+\begin{badexample}{モジュール同士が直接参照}
+\begin{lstlisting}
+class TempSensorModule {
+private:
+    LedModule* _led;  // LEDモジュールを直接持っている！
+
+public:
+    void update() {
+        float temp = readSensor();
+        if (temp > 30.0) {
+            _led->turnOn();  // 直接操作
+        }
+    }
+};
+\end{lstlisting}
+\end{badexample}
+
+一見うまく動きそうですが、以下の問題が起きます。
+
+\begin{itemize}
+  \item 温度センサーモジュールがLEDモジュールに依存 → LEDなしでは使えない
+  \item 「温度でモーターも回したい」→ MotorModule*も追加？ → 依存がどんどん増える
+  \item モジュール間の依存が複雑に絡み合い、変更が困難に（スパゲッティ化）
+\end{itemize}
+
+\begin{center}
+\begin{tikzpicture}[
+  module/.style={rectangle, draw=warnred!70, fill=warnred!5,
+    minimum width=28mm, minimum height=10mm, font=\small\bfseries},
+  arr/.style={-{Stealth[length=3mm]}, thick, warnred!70},
+]
+  \node[module] (temp) {TempSensor};
+  \node[module, right=25mm of temp] (led) {LED};
+  \node[module, below=12mm of led] (motor) {Motor};
+  \node[module, left=25mm of motor] (disp) {Display};
+
+  \draw[arr] (temp) -- (led);
+  \draw[arr] (temp) -- (motor);
+  \draw[arr] (led) -- (disp);
+  \draw[arr] (motor) -- (disp);
+  \draw[arr] (disp) to[bend right=20] (temp);
+\end{tikzpicture}
+\end{center}
+
+矢印（依存関係）が蜘蛛の巣のように広がっています。これでは1つのモジュールを変更すると、他のモジュールにも影響が波及します。
+
+\end{qabox}
+
+%% ── Q2: SystemDataとは ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{SystemDataって何？}
+
+\texttt{SystemData}は、すべてのモジュールのデータを1か所にまとめた「伝言板」です。
+
+\begin{goodexample}{SystemData — モジュールの伝言板}
+\begin{lstlisting}
+#include "LedModule.h"
+#include "TempSensorModule.h"
+
+struct SystemData {
+    LedData led;             // LEDの状態
+    TempSensorData temp;     // 温度センサーの値
+};
+\end{lstlisting}
+\end{goodexample}
+
+モジュール同士は直接会話しません。代わりにSystemDataを介してデータをやり取りします。
+
+\begin{center}
+\begin{tikzpicture}[
+  module/.style={rectangle, draw=accentblue, fill=accentblue!8,
+    minimum width=28mm, minimum height=10mm, font=\small\bfseries},
+  sysdata/.style={rectangle, draw=okgreen!70, fill=okgreen!8,
+    minimum width=35mm, minimum height=14mm, font=\bfseries},
+  arr/.style={-{Stealth[length=3mm]}, thick, accentblue},
+]
+  \node[sysdata] (sd) {SystemData};
+
+  \node[module, above left=14mm and 15mm of sd] (temp) {TempSensor};
+  \node[module, above right=14mm and 15mm of sd] (camera) {Camera};
+  \node[module, below left=14mm and 15mm of sd] (led) {LED};
+  \node[module, below right=14mm and 15mm of sd] (tft) {TFT};
+
+  \draw[arr] (temp) -- node[left, font=\scriptsize]{書き込み} (sd);
+  \draw[arr] (camera) -- node[right, font=\scriptsize]{書き込み} (sd);
+  \draw[arr] (sd) -- node[left, font=\scriptsize]{読み取り} (led);
+  \draw[arr] (sd) -- node[right, font=\scriptsize]{読み取り} (tft);
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+  \item 入力モジュール（TempSensor等）はSystemDataにデータを書き込む
+  \item 出力モジュール（LED等）はSystemDataからデータを読み取る
+  \item モジュール同士は直接参照しない → 依存関係がシンプル
+\end{itemize}
+
+温度センサーはLEDの存在を知りません。ただSystemDataの \texttt{temp} に値を書くだけです。LEDをモーターに差し替えても、温度センサーのコードは1行も変わりません。
+
+\end{qabox}
+
+%% ── Q3: 前方宣言 ──────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{前方宣言って何？}
+
+IModule.hの中にこんな1行がありました。
+
+\begin{lstlisting}
+struct SystemData;  // 前方宣言
+\end{lstlisting}
+
+これは「SystemDataという型がどこかで定義されてますよ」とコンパイラに教える宣言です。
+
+\subsection{なぜ必要なの？}
+
+IModule.hは \texttt{update(SystemData\& data)} を宣言していますが、SystemDataの中身を知る必要はありません（ポインタや参照で受け取るだけなので）。
+
+もしIModule.hが \texttt{SystemData.h} をインクルードすると、こんな問題が起きます。
+
+\begin{badexample}{循環依存}
+\begin{lstlisting}
+// IModule.h が SystemData.h をインクルード
+// SystemData.h が LedModule.h をインクルード
+// LedModule.h が IModule.h をインクルード
+// → IModule.h が SystemData.h をインクルード → 無限ループ！
+\end{lstlisting}
+\end{badexample}
+
+前方宣言を使えば、この循環を断ち切れます。
+
+\begin{goodexample}{前方宣言で循環を回避}
+\begin{lstlisting}
+// IModule.h — SystemData.hをインクルードしない
+struct SystemData;  // 「こういう型がある」とだけ宣言
+
+class IModule {
+public:
+    virtual void update(SystemData& data) = 0;
+    // 参照で受け取るだけなので、中身を知らなくてOK
+};
+\end{lstlisting}
+\end{goodexample}
+
+\begin{notebox}[ヘッダーとcppの使い分け]
+\begin{itemize}
+  \item \textbf{.hファイル} — \texttt{struct SystemData;} の前方宣言のみ
+  \item \textbf{.cppファイル} — \texttt{\#include "SystemData.h"} でフル定義を使う
+\end{itemize}
+.cppでは実際にSystemDataのメンバにアクセスするので、フル定義が必要です。このルールを守れば循環依存は起きません。
+\end{notebox}
+
+\end{qabox}

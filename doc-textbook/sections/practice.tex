@@ -1,0 +1,211 @@
+% 第6章: 実践・センサーモジュールを作る
+\section{実践 — センサーモジュールを作る}
+
+この章では、温度センサーモジュールを一から作ります。第2章〜第5章で学んだ知識の総まとめです。
+
+%% ── Q1: 新モジュールの作り方 ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{新しいモジュールはどう作るの？}
+
+新しいモジュールを作る手順は、いつも同じ7ステップです。
+
+\begin{enumerate}
+  \item Config構造体を定義する
+  \item Data構造体を定義する
+  \item クラスを宣言する（.hファイル）
+  \item メソッドを実装する（.cppファイル）
+  \item SystemDataにDataを追加する
+  \item ProjectConfig.hにConfigインスタンスを追加する
+  \item main.cppのモジュール配列に追加する
+\end{enumerate}
+
+順番に見ていきましょう。analogRead()で温度を読む簡易センサーを題材にします。
+
+\subsection{ステップ1: Config構造体}
+
+起動時に決まる設定をまとめます。
+
+\begin{lstlisting}
+// TempSensorModule.h 内で定義
+struct TempSensorConfig {
+    uint8_t analogPin;         // アナログ入力ピン
+    float conversionFactor;    // ADC値→温度の変換係数
+};
+\end{lstlisting}
+
+\subsection{ステップ2: Data構造体}
+
+実行中に変化するデータをまとめます。デフォルト値を必ず設定します。
+
+\begin{lstlisting}
+// TempSensorModule.h 内で定義
+struct TempSensorData {
+    float temperature = -999.0f;  // 温度（未取得時は異常値）
+    bool isValid = false;         // データが有効か
+};
+\end{lstlisting}
+
+\begin{notebox}[なぜデフォルト値を設定するの？]
+init()前やセンサー故障時でも、SystemDataの値は参照される可能性があります。デフォルト値がないと、不定値（ゴミデータ）が入ったまま使われてしまいます。\texttt{-999.0f}のような明らかにおかしい値を入れておけば、「まだ読めていない」ことが一目で分かります。
+\end{notebox}
+
+\subsection{ステップ3: クラス宣言（.hファイル）}
+
+\begin{lstlisting}
+// TempSensorModule.h
+#pragma once
+#include <Arduino.h>
+#include "IModule.h"
+#include "ModuleTimer.h"
+
+struct TempSensorConfig { /* (上で定義済み) */ };
+struct TempSensorData   { /* (上で定義済み) */ };
+
+struct SystemData;  // 前方宣言
+
+class TempSensorModule : public IModule {
+private:
+    TempSensorConfig _config;
+    ModuleTimer _readTimer;
+
+public:
+    TempSensorModule(const TempSensorConfig& config);
+    bool init() override;
+    void update(SystemData& data) override;
+};
+\end{lstlisting}
+
+ポイント:
+\begin{itemize}
+  \item \texttt{\#pragma once} — 二重インクルード防止
+  \item \texttt{struct SystemData;} — 前方宣言（SystemData.hはインクルードしない）
+  \item \texttt{: public IModule} — IModuleを継承
+  \item \texttt{override} — 親クラスの仮想関数を上書きすることを明示
+\end{itemize}
+
+\subsection{ステップ4: メソッド実装（.cppファイル）}
+
+\begin{lstlisting}
+// TempSensorModule.cpp
+#include "TempSensorModule.h"
+#include "SystemData.h"  // ここでフル定義をインクルード
+
+TempSensorModule::TempSensorModule(const TempSensorConfig& config)
+    : _config(config) {}
+
+bool TempSensorModule::init() {
+    // アナログピンはpinMode不要（ESP32）
+    _readTimer.setTime();
+    Serial.println("[TempSensor] init OK");
+    return true;
+}
+
+void TempSensorModule::update(SystemData& data) {
+    // 1秒ごとに温度を読み取る
+    if (_readTimer.getNowTime() < 1000) return;
+    _readTimer.setTime();
+
+    int raw = analogRead(_config.analogPin);
+    data.temp.temperature = raw * _config.conversionFactor;
+    data.temp.isValid = true;
+}
+\end{lstlisting}
+
+\subsection{ステップ5: SystemDataに追加}
+
+\begin{lstlisting}
+// SystemData.h
+#include "LedModule.h"
+#include "TempSensorModule.h"
+
+struct SystemData {
+    LedData led;
+    TempSensorData temp;   // 追加！
+};
+\end{lstlisting}
+
+\subsection{ステップ6: ProjectConfig.hに追加}
+
+\begin{lstlisting}
+// ProjectConfig.h
+#include "TempSensorModule.h"
+
+const TempSensorConfig TEMP_CONFIG = {
+    .analogPin = 34,
+    .conversionFactor = 3.3f / 4095.0f * 100.0f,
+};
+\end{lstlisting}
+
+\subsection{ステップ7: main.cppに追加}
+
+\begin{lstlisting}
+// main.cpp
+TempSensorModule tempSensor(TEMP_CONFIG);
+
+IModule* inputModules[] = {
+    &tempSensor,   // 入力モジュール配列に追加
+};
+\end{lstlisting}
+
+以上で完成です。新しいモジュールを追加するときも、同じ7ステップを繰り返すだけです。
+
+\end{qabox}
+
+%% ── Q2: ModuleTimer ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{ModuleTimerはどう使うの？}
+
+組み込みプログラムでありがちなのが、\texttt{delay()}を使った待ち時間の実装です。
+
+\begin{badexample}{delay()で待つ}
+\begin{lstlisting}
+void update(SystemData& data) {
+    int raw = analogRead(_config.analogPin);
+    data.temp.temperature = raw * _config.conversionFactor;
+    delay(1000);  // ここで1秒間、何もできない！
+}
+\end{lstlisting}
+\end{badexample}
+
+\texttt{delay(1000)}を呼ぶと、プログラム全体が1秒間停止します。その間、他のモジュールも動けません。LEDの点滅もディスプレイの更新もすべて止まります。
+
+\begin{goodexample}{ModuleTimerで周期実行}
+\begin{lstlisting}
+class TempSensorModule : public IModule {
+private:
+    ModuleTimer _readTimer;  // タイマーをメンバ変数に
+
+public:
+    bool init() override {
+        _readTimer.setTime();  // 現在時刻を記録
+        return true;
+    }
+
+    void update(SystemData& data) override {
+        // 前回から1秒経っていなければ即リターン
+        if (_readTimer.getNowTime() < 1000) return;
+        _readTimer.setTime();  // 時刻をリセット
+
+        // 1秒経ったときだけ実行
+        int raw = analogRead(_config.analogPin);
+        data.temp.temperature = raw * _config.conversionFactor;
+        data.temp.isValid = true;
+    }
+};
+\end{lstlisting}
+\end{goodexample}
+
+ModuleTimerは \texttt{millis()} をラップした軽量なタイマーです。
+
+\begin{itemize}
+  \item \texttt{setTime()} — 現在時刻を記録する
+  \item \texttt{getNowTime()} — 前回のsetTime()からの経過ミリ秒を返す
+\end{itemize}
+
+delay()と違い、プログラムをブロックしません。経過時間が足りなければ即座にreturnし、他のモジュールに処理を譲ります。
+
+\begin{cautionbox}[delay()は原則禁止]
+3フェーズモデルでは、各モジュールのupdate()はできるだけ速く返る必要があります。delay()を使うと他のすべてのモジュールが影響を受けるため、ModuleTimerを使ったノンブロッキング方式を徹底してください。
+\end{cautionbox}
+
+\end{qabox}

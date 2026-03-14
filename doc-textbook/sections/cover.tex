@@ -1,0 +1,61 @@
+% 表紙
+\begin{titlepage}
+\begin{center}
+\vspace*{30mm}
+
+{\color{accentblue}\rule{\textwidth}{2pt}}
+\vspace{8mm}
+
+{\Huge\bfseries\color{headerblue} \doctitle}
+
+\vspace{6mm}
+
+{\Large\color{accentblue} \docsubtitle}
+
+\vspace{4mm}
+{\color{accentblue}\rule{\textwidth}{2pt}}
+
+\vspace{20mm}
+
+\begin{tabular}{ll}
+    \textbf{バージョン} & \docversion \\[4pt]
+    \textbf{作成日} & \docdate \\[4pt]
+    \textbf{著者} & \docauthor \\
+\end{tabular}
+
+\vspace{30mm}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=accentblue!5,
+  colframe=accentblue,
+  arc=2mm,
+  width=14cm,
+  breakable,
+]
+    \centering
+    本書は、ESP32を題材にした組み込みシステム向け\\
+    「モジュール設計パターン」をQ\&A形式で解説する教科書です。\\[4pt]
+    クラスの基礎から3フェーズ実行モデルまで、\\
+    段階的に学べる構成になっています。
+\end{tcolorbox}
+
+\vspace{10mm}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=noteyellow!5,
+  colframe=noteyellow!70,
+  arc=2mm,
+  width=14cm,
+  breakable,
+]
+    \centering
+    {\bfseries 対象読者}\\[4pt]
+    「C++のクラスはなんとなく知ってるけど、\\部品化の経験がない」方を主な対象としています。\\[2pt]
+    クラスを全く知らない方は、まず付録Aをお読みください。
+\end{tcolorbox}
+
+\vfill
+\end{center}
+\end{titlepage}
