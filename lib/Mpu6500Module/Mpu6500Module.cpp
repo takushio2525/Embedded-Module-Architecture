@@ -1,5 +1,6 @@
 // Mpu6500Module.cpp — MPU-6500 IMUセンサーモジュール実装
 #include "Mpu6500Module.h"
+#include <Wire.h>
 #include "SystemData.h"
 
 // MPU-6500 レジスタアドレス
@@ -24,8 +25,6 @@ Mpu6500Module::Mpu6500Module(const Mpu6500Config& config, TwoWire* wire)
     : _config(config), _wire(wire) {}
 
 bool Mpu6500Module::init() {
-    _wire->begin(_config.sdaPin, _config.sclPin);
-
     // デバイス確認
     uint8_t whoAmI = readReg(REG_WHO_AM_I);
     if (whoAmI != WHO_AM_I_MPU6500) {

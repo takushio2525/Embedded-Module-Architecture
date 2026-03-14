@@ -2,7 +2,6 @@
 // タッチ読み込み（入力）と画面描画（出力）を1モジュールで担う
 #pragma once
 #include <Arduino.h>
-#include <SPI.h>
 #include "IModule.h"
 #include "ModuleTimer.h"
 
@@ -32,16 +31,16 @@ struct TftData {
 // SystemDataの前方宣言はIModule.hで行われている
 
 // --- モジュール実装 ---
+// 注意: TFT_eSPIはライブラリ内部でSPIを管理するため、SPIClassの引数は不要
 class TftModule : public IModule {
 public:
-    TftModule(const TftConfig& config, SPIClass* spi);
+    explicit TftModule(const TftConfig& config);
     bool init()                    override;
     void update(SystemData& data)  override;
     void deinit()                  override;
 
 private:
     TftConfig  _config;
-    SPIClass*  _spi;
     ModuleTimer _updateTimer;
     bool _initialized = false;
 

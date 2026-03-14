@@ -1,13 +1,12 @@
 // main.cpp — エントリーポイント
 // 3フェーズ実行モデル: 入力 → ロジック → 出力
 #include <Arduino.h>
-#include <SPI.h>
 #include <Wire.h>
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
 // バスインスタンス（グローバルスコープで生成）
-static SPIClass  tftSpi  = SPIClass(HSPI);   // TFT用SPI
+// TFT_eSPIはライブラリ内部でSPIを管理するため、SPIClassは不要
 static TwoWire   mpuWire = TwoWire(0);        // MPU6500用I2C
 
 // システムデータ
@@ -21,7 +20,7 @@ CameraModule  cameraModule(CAMERA_CONFIG);
 
 // 出力モジュール（TftModuleはタッチ読み込みも担う）
 LedModule  ledModule(LED_CONFIG);
-TftModule  tftModule(TFT_CONFIG, &tftSpi);
+TftModule  tftModule(TFT_CONFIG);
 
 // モジュール配列
 IModule* inputModules[] = {
@@ -100,8 +99,8 @@ void setup() {
     Serial.println("[System] 起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
-    // TFT_eSPIがSPI初期化を内部で行うため、ここではHSPIを準備のみ
-    // MPU6500用I2CはMpu6500Module::init()内でwire->begin()を呼ぶ
+    // TFT_eSPIはライブラリ内部でSPIを初期化する
+    mpuWire.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
 
     // モジュール初期化
     initModuleArray(inputModules,  INPUT_COUNT,  "Input");

@@ -7,8 +7,8 @@
 // TFT_eSPIインスタンス（ライブラリ内部でグローバル管理されるため静的に確保）
 static TFT_eSPI _tft;
 
-TftModule::TftModule(const TftConfig& config, SPIClass* spi)
-    : _config(config), _spi(spi) {}
+TftModule::TftModule(const TftConfig& config)
+    : _config(config) {}
 
 bool TftModule::init() {
     _tft.init();

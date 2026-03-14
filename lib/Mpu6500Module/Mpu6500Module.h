@@ -2,9 +2,11 @@
 // ライブラリ非依存：Wireによる直接レジスタアクセス
 #pragma once
 #include <Arduino.h>
-#include <Wire.h>
 #include "IModule.h"
 #include "ModuleTimer.h"
+
+// TwoWireはポインタのみ使用するため前方宣言で十分（<Wire.h>はcppでインクルード）
+class TwoWire;
 
 // --- Config構造体 ---
 struct Mpu6500Config {
