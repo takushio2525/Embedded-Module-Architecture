@@ -23,6 +23,7 @@ struct TftData {
     char line2[48] = "";
     char line3[48] = "";
     char line4[48] = "";
+    char line5[48] = "";  // タッチ座標など（logicフェーズで設定）
 };
 
 // --- モジュール実装 ---

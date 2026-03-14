@@ -3,7 +3,6 @@
 #pragma once
 #include <Arduino.h>
 #include "IModule.h"
-#include "ModuleTimer.h"
 
 // --- Config構造体 ---
 // 注意: ピン番号はボードの配線に合わせて変更すること

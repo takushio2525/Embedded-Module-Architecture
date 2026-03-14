@@ -138,12 +138,14 @@ void FooModule::update(SystemData& data) {
 // include/SystemData.h
 #pragma once
 #include "LedModule.h"
+#include "TouchModule.h"
 #include "TftModule.h"
 #include "Mpu6500Module.h"
 #include "CameraModule.h"
 
 struct SystemData {
     LedData     led;
+    TouchData   touch;
     TftData     tft;
     Mpu6500Data mpu;
     CameraData  camera;
@@ -173,18 +175,22 @@ const Mpu6500Config MPU6500_CONFIG = { .address = 0x68, .sdaPin = 41, ... };
 
 ```cpp
 // main.cpp
-static TwoWire mpuWire = TwoWire(0); // グローバルスコープで生成
+static TwoWire  mpuWire   = TwoWire(0); // グローバルスコープで生成
+static TFT_eSPI tftDriver;              // ライブラリ提供ドライバも同様
 
 void setup() {
-    mpuWire.begin(SDA, SCL); // bus.begin() は全 init() より前
+    mpuWire.begin(SDA, SCL);  // bus.begin() は全 init() より前
+    tftDriver.init();          // ライブラリ提供ドライバの初期化も同じタイミング
     initModules(...);
 }
 
 // モジュール側
 Mpu6500Module::Mpu6500Module(const Mpu6500Config& cfg, TwoWire* wire)
     : _config(cfg), _wire(wire) {}
-// init() 内で bus.begin() は呼ばない（CSピン設定等のみ）
+// init() 内で bus.begin() / tftDriver.init() は呼ばない（設定・表示処理のみ）
 ```
+
+ライブラリが提供するドライバオブジェクト（`TFT_eSPI` 等）も `bus.begin()` と同様に `setup()` で初期化し、ポインタをコンストラクタ引数でモジュールに渡す。
 
 SPI使用時は `beginTransaction()` / `endTransaction()` で排他制御する。
 

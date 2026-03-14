@@ -8,7 +8,7 @@ TftModule::TftModule(const TftConfig& config, TFT_eSPI* tft)
     : _config(config), _tft(tft) {}
 
 bool TftModule::init() {
-    _tft->init();
+    // _tft->init() はsetup()でtftDriver.init()として呼び済み
     _tft->setRotation(_config.rotation);
     _tft->fillScreen(TFT_BLACK);
 
@@ -58,12 +58,10 @@ void TftModule::renderDisplay(const SystemData& data) {
     _tft->drawString(data.tft.line3, startX, y, 2); y += lineHeight;
     _tft->drawString(data.tft.line4, startX, y, 2); y += lineHeight;
 
-    // タッチ座標表示（タッチ中のみ）
-    if (data.touch.touchPressed) {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "Touch: %3d, %3d", data.touch.touchX, data.touch.touchY);
+    // line5（タッチ座標など、logicフェーズで設定済み）
+    if (data.tft.line5[0] != '\0') {
         _tft->setTextColor(TFT_YELLOW, TFT_BLACK);
-        _tft->drawString(buf, startX, y, 2);
+        _tft->drawString(data.tft.line5, startX, y, 2);
     } else {
         _tft->fillRect(startX, y, 240, lineHeight, TFT_BLACK);
     }

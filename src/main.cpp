@@ -72,10 +72,16 @@ void applyPattern(SystemData& data) {
         strncpy(data.tft.line4, "CAM: No frame", sizeof(data.tft.line4));
     }
 
-    // タッチ入力のデバッグ出力（タッチ開始時のみ）
+    // タッチ座標をTFT表示用にフォーマット（タッチ中のみ）
     static bool lastTouched = false;
-    if (data.touch.touchPressed && !lastTouched) {
-        Serial.printf("[Logic] Touch: (%d, %d)\n", data.touch.touchX, data.touch.touchY);
+    if (data.touch.touchPressed) {
+        snprintf(data.tft.line5, sizeof(data.tft.line5),
+                 "Touch: %3d, %3d", data.touch.touchX, data.touch.touchY);
+        if (!lastTouched) {
+            Serial.printf("[Logic] Touch: (%d, %d)\n", data.touch.touchX, data.touch.touchY);
+        }
+    } else {
+        data.tft.line5[0] = '\0';
     }
     lastTouched = data.touch.touchPressed;
 }
@@ -102,12 +108,12 @@ void setup() {
     Serial.println("[System] 起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
-    // TFT_eSPIはTftModule::init()内で tft->init() を呼ぶことで初期化される
     mpuWire.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
+    tftDriver.init();  // TFT_eSPIドライバ初期化（TouchModuleも共有するため先に実行）
 
-    // モジュール初期化（TftModuleのinit()でTFT_eSPIが初期化されるため先に実行）
-    initModuleArray(outputModules, OUTPUT_COUNT, "Output");
+    // モジュール初期化
     initModuleArray(inputModules,  INPUT_COUNT,  "Input");
+    initModuleArray(outputModules, OUTPUT_COUNT, "Output");
 
     blinkTimer.setTime();
     Serial.println("[System] 起動完了");
