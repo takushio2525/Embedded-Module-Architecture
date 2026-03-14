@@ -1,0 +1,22 @@
+\contentsline {section}{\numberline {1}全部main.cppに書くとどうなる？}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}問題1: 肥大化}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}問題2: マジックナンバー}{4}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}問題3: 再利用できない}{4}{subsection.1.3}%
+\contentsline {section}{\numberline {2}モジュールという考え方}{4}{section.2}%
+\contentsline {section}{\numberline {3}インターフェースで統一する}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}virtualとは}{8}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}= 0（純粋仮想関数）とは}{8}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}配列で回せるメリット}{8}{subsection.3.3}%
+\contentsline {section}{\numberline {4}データの流れを整理する}{10}{section.4}%
+\contentsline {subsection}{\numberline {4.1}なぜ必要なの？}{12}{subsection.4.1}%
+\contentsline {section}{\numberline {5}3フェーズモデル}{12}{section.5}%
+\contentsline {section}{\numberline {6}実践 — センサーモジュールを作る}{15}{section.6}%
+\contentsline {subsection}{\numberline {6.1}ステップ1: Config構造体}{15}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}ステップ2: Data構造体}{15}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}ステップ3: クラス宣言（.hファイル）}{16}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}ステップ4: メソッド実装（.cppファイル）}{16}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}ステップ5: SystemDataに追加}{17}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}ステップ6: ProjectConfig.hに追加}{17}{subsection.6.6}%
+\contentsline {subsection}{\numberline {6.7}ステップ7: main.cppに追加}{17}{subsection.6.7}%
+\contentsline {section}{\numberline {7}設計のコツ集}{19}{section.7}%
+\contentsline {section}{付録A: C++クラスの基礎}{22}{lstnumber.-38.12}%
