@@ -61,7 +61,7 @@
 
 %% ─── セクション見出しスタイル ─────────────────
 \titleformat{\section}
-  {\Large\bfseries\color{headerblue}}
+  {\needspace{5\baselineskip}\Large\bfseries\color{headerblue}}
   {\thesection}{1em}{}
   [\vspace{-0.5em}\textcolor{accentblue}{\rule{\textwidth}{1.2pt}}]
 \titleformat{\subsection}
@@ -220,24 +220,15 @@
 \input{sections/cover}
 \newpage
 \tableofcontents
-\newpage
 \input{sections/prerequisite}
-\newpage
 \input{sections/introduction}
-\newpage
 \input{sections/module_concept}
-\newpage
 \input{sections/interface}
-\newpage
 \input{sections/systemdata}
-\newpage
 \input{sections/three_phase}
-\newpage
 \input{sections/practice}
-\newpage
 \input{sections/tips}
 \appendix
-\newpage
 \input{sections/appendix_platformio}
 
 \end{document}

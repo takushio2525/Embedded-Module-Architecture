@@ -59,7 +59,7 @@
 
 %% ─── セクション見出しスタイル ─────────────────
 \titleformat{\section}
-  {\Large\bfseries\color{headerblue}}
+  {\needspace{5\baselineskip}\Large\bfseries\color{headerblue}}
   {\thesection}{1em}{}
   [\vspace{-0.5em}\textcolor{accentblue}{\rule{\textwidth}{1.2pt}}]
 \titleformat{\subsection}
@@ -174,21 +174,13 @@
 \tableofcontents
 \newpage
 \input{sections/overview}
-\newpage
 \input{sections/background}
-\newpage
 \input{sections/purpose}
-\newpage
 \input{sections/architecture}
-\newpage
 \input{sections/files}
-\newpage
 \input{sections/techstack}
-\newpage
 \input{sections/api}
-\newpage
 \input{sections/execution}
-\newpage
 \input{sections/limitations}
 
 \end{document}
