@@ -4,7 +4,6 @@
 ここまでで設計パターンの理論は一通り学びました。この章では、実際のリポジトリがどんなフォルダ構成になっているのかを見ていきます。
 
 %% ── Q1: フォルダ構成 ──────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{リポジトリのフォルダ構成はどうなってるの？}
 
 本リポジトリはPlatformIOプロジェクトとして構成されています。ツリー構造を見てみましょう。
@@ -52,7 +51,6 @@ PlatformIOの標準ルールとして、\texttt{src/} にメインコード、\t
 \end{qabox}
 
 %% ── Q2: lib/の中身 ──────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{lib/ の中はどうなってるの？}
 
 \texttt{lib/} には2種類のフォルダがあります。
@@ -86,7 +84,6 @@ PlatformIOの\texttt{lib/}は、フォルダ単位で独立したライブラリ
 \end{qabox}
 
 %% ── Q3: include/の役割 ──────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{include/ には何を置くの？}
 
 \texttt{include/} には、プロジェクト全体で共有するヘッダーを置きます。本リポジトリでは2つだけです。
@@ -117,7 +114,6 @@ PlatformIOの\texttt{lib/}は、フォルダ単位で独立したライブラリ
 \end{qabox}
 
 %% ── Q4: PlatformIO ──────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{なぜPlatformIOを使うの？}
 
 本リポジトリでは開発環境にPlatformIOを使っています。Arduino IDEではなくPlatformIOを選ぶ理由は、主に3つあります。
@@ -140,7 +136,6 @@ PlatformIOはArduinoフレームワーク互換です。\texttt{setup()}、\text
 \end{qabox}
 
 %% ── Q5: platformio.ini ──────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{platformio.ini には何が書いてあるの？}
 
 \texttt{platformio.ini} は、プロジェクトのビルド設定を記述するファイルです。本リポジトリの設定を抜粋して解説します。
@@ -180,7 +175,6 @@ pio device monitor               # シリアルモニター
 \end{qabox}
 
 %% ── Q6: ファイル間の依存関係 ──────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{ファイル同士の依存関係はどうなってるの？}
 
 ファイル間のインクルード関係を整理します。循環依存を防ぐためのルールがあります。

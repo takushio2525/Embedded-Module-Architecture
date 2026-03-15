@@ -4,7 +4,6 @@
 この章では、実装でよくある疑問に短いQ\&A形式で答えます。
 
 %% ── エラー処理 ──────────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{エラーが起きたらどうする？}
 
 \texttt{init()}は\texttt{bool}を返します。失敗したら\texttt{false}を返しましょう。
@@ -36,7 +35,6 @@ void TempSensorModule::update(SystemData& data) {
 \end{qabox}
 
 %% ── バス共有 ──────────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{SPIやI2Cを複数モジュールで共有するには？}
 
 バス（SPI、I2C）のインスタンスは \texttt{main.cpp} で作り、コンストラクタの引数でモジュールに渡します。
@@ -84,7 +82,6 @@ void update(SystemData& data) {
 \end{qabox}
 
 %% ── init失敗後の復帰 ──────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{init失敗したモジュールは復帰できる？}
 
 できます。ロジックフェーズで定期的にinit()を再試行します。
@@ -113,7 +110,6 @@ void applyLogic(SystemData& data) {
 \end{qabox}
 
 %% ── ログ出力 ──────────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{ログはどう書くのがいい？}
 
 統一フォーマットを使いましょう。
@@ -130,7 +126,6 @@ Serial.println("[LED] state changed: ON");
 \end{qabox}
 
 %% ── Config変更 ──────────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{実行中にConfigを変更したいときは？}
 
 Config変更はロジックフェーズでのみ行います。
@@ -169,7 +164,6 @@ void applyLogic(SystemData& data) {
 \end{qabox}
 
 %% ── deinit ──────────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{deinit()はいつ使うの？}
 
 \texttt{deinit()}は、モジュールが確保したリソースを解放するためのメソッドです。IModuleにデフォルトの空実装があるので、必要なモジュールだけオーバーライドします。

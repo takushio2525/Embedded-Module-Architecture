@@ -2,7 +2,6 @@
 \section{3フェーズモデル}
 
 %% ── Q1: loop()の整理 ──────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{loop()の中身はどう整理するの？}
 
 ここまでで、モジュール・インターフェース・SystemDataの3つの道具が揃いました。最後のピースは「loop()の実行順序」です。
@@ -64,7 +63,6 @@ void loop() {
 \end{qabox}
 
 %% ── Q2: 順番が大事な理由 ──────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{なんで順番が大事なの？}
 
 「入力→ロジック→出力」の順番を守らないと、思わぬバグが発生します。
@@ -101,7 +99,6 @@ void loop() {
 \end{qabox}
 
 %% ── Q3: ロジックフェーズ ──────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{ロジックフェーズでは何を書くの？}
 
 ロジックフェーズは「入力データを見て、出力データを決める」場所です。

@@ -2,7 +2,6 @@
 \section{インターフェースで統一する}
 
 %% ── Q1: モジュールが増えたら ──────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{モジュールが増えたらどうするの？}
 
 LED、温度センサー、モーター……とモジュールが増えていくと、こんなコードになりがちです。
@@ -32,7 +31,6 @@ void loop() {
 \end{qabox}
 
 %% ── Q2: IModuleの役割 ──────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{IModuleって何をしてくれるの？}
 
 \texttt{IModule}は「すべてのモジュールが守るべきルール」を定めたインターフェースです。
@@ -111,7 +109,6 @@ public:
 \end{qabox}
 
 %% ── Q3: enabledの意味 ──────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{なんでenabledがあるの？}
 
 ハードウェアは壊れることがあります。センサーが接触不良で応答しない、ディスプレイの初期化に失敗した……そんなとき、プログラム全体を止めたくはありません。

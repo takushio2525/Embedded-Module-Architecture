@@ -2,7 +2,6 @@
 \section{データの流れを整理する}
 
 %% ── Q1: 直接アクセスの問題 ──────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{モジュール同士が直接話すとなぜダメ？}
 
 「温度が30度を超えたらLEDを点灯」したいとき、こんなコードを書きたくなるかもしれません。
@@ -56,7 +55,6 @@ public:
 \end{qabox}
 
 %% ── Q2: SystemDataとは ──────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{SystemDataって何？}
 
 \texttt{SystemData}は、すべてのモジュールのデータを1か所にまとめた「伝言板」です。
@@ -108,7 +106,6 @@ struct SystemData {
 \end{qabox}
 
 %% ── Q3: 前方宣言 ──────────────────────────
-\needspace{5\baselineskip}
 \begin{qabox}{前方宣言って何？}
 
 IModule.hの中にこんな1行がありました。
