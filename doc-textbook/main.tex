@@ -64,8 +64,6 @@
   {\Large\bfseries\color{headerblue}}
   {\thesection}{1em}{}
   [\vspace{-0.5em}\textcolor{accentblue}{\rule{\textwidth}{1.2pt}}]
-\titleclass{\section}{top}          % 章の先頭で自動改ページ
-\titlespacing*{\section}{0pt}{0pt}{1em} % 改ページ後の上余白をリセット
 \titleformat{\subsection}
   {\large\bfseries\color{headerblue}}
   {\thesubsection}{1em}{}
@@ -224,14 +222,22 @@
 \tableofcontents
 \newpage
 \input{sections/prerequisite}
+\newpage
 \input{sections/introduction}
+\newpage
 \input{sections/module_concept}
+\newpage
 \input{sections/interface}
+\newpage
 \input{sections/systemdata}
+\newpage
 \input{sections/three_phase}
+\newpage
 \input{sections/practice}
+\newpage
 \input{sections/tips}
 \appendix
+\newpage
 \input{sections/appendix_platformio}
 
 \end{document}
