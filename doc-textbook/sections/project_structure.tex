@@ -1,0 +1,205 @@
+% 第7章: プロジェクト構成を理解する
+\section{プロジェクト構成を理解する}
+
+ここまでで設計パターンの理論は一通り学びました。この章では、実際のリポジトリがどんなフォルダ構成になっているのかを見ていきます。
+
+%% ── Q1: フォルダ構成 ──────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{リポジトリのフォルダ構成はどうなってるの？}
+
+本リポジトリはPlatformIOプロジェクトとして構成されています。ツリー構造を見てみましょう。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle={},stringstyle={},numbers=none,frame=none,backgroundcolor=\color{lightgray},xleftmargin=5pt,framexleftmargin=5pt]
+project-root/
+  |-- platformio.ini       ... ビルド設定（ボード・ライブラリ等）
+  |-- src/
+  |     `-- main.cpp       ... エントリーポイント（setup / loop）
+  |-- include/
+  |     |-- SystemData.h   ... 全モジュールのDataを集約する構造体
+  |     `-- ProjectConfig.h... 全モジュールのConfigインスタンス
+  |-- lib/
+  |     |-- ModuleCore/    ... コア層（プロジェクト非依存）
+  |     |     |-- IModule.h
+  |     |     `-- ModuleTimer.h
+  |     |-- LedModule/     ... 個別モジュール
+  |     |     |-- LedModule.h
+  |     |     `-- LedModule.cpp
+  |     |-- BuzzerModule/
+  |     |     |-- BuzzerModule.h
+  |     |     `-- BuzzerModule.cpp
+  |     `-- ...             ... 他のモジュールも同じ構成
+  `-- test/                 ... テストコード置き場
+\end{lstlisting}
+
+大きく分けると4つのエリアがあります。
+
+\vspace{2mm}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{場所} & \textbf{役割} \\
+\midrule
+\texttt{src/} & エントリーポイント。\texttt{main.cpp} のみ置く \\
+\texttt{include/} & プロジェクト固有のヘッダー（\texttt{SystemData.h}、\texttt{ProjectConfig.h}） \\
+\texttt{lib/} & モジュール本体。1モジュール = 1フォルダ（\texttt{.h} + \texttt{.cpp}） \\
+\texttt{platformio.ini} & ビルド設定ファイル（次のQ\&Aで詳しく解説） \\
+\bottomrule
+\end{tabularx}
+
+\begin{notebox}[なぜこの構成なの？]
+PlatformIOの標準ルールとして、\texttt{src/} にメインコード、\texttt{lib/} にライブラリ（再利用可能なコード）、\texttt{include/} にプロジェクト固有のヘッダーを置きます。Arduino IDEでは全ファイルが1フォルダに並びますが、PlatformIOでは役割ごとにフォルダが分かれているため、規模が大きくなっても見通しがよいままです。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q2: lib/の中身 ──────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{lib/ の中はどうなってるの？}
+
+\texttt{lib/} には2種類のフォルダがあります。
+
+\subsection{コア層: ModuleCore/}
+
+\texttt{IModule.h} と \texttt{ModuleTimer.h} の2ファイルだけです。この2つはプロジェクト固有の型に一切依存していないので、別のプロジェクトにそのままコピーして使えます。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle={},stringstyle={},numbers=none,frame=none,backgroundcolor=\color{lightgray},xleftmargin=5pt,framexleftmargin=5pt]
+lib/ModuleCore/
+  |-- IModule.h       ... インターフェース定義
+  `-- ModuleTimer.h   ... ノンブロッキングタイマー
+\end{lstlisting}
+
+\subsection{個別モジュール: XxxModule/}
+
+各ハードウェアに対応するモジュールが、それぞれ独立したフォルダに入っています。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle={},stringstyle={},numbers=none,frame=none,backgroundcolor=\color{lightgray},xleftmargin=5pt,framexleftmargin=5pt]
+lib/LedModule/
+  |-- LedModule.h     ... Config/Data構造体 + クラス宣言
+  `-- LedModule.cpp   ... メソッド実装
+\end{lstlisting}
+
+すべてのモジュールがこの「\texttt{.h} + \texttt{.cpp}」のペアで構成されています。新しいモジュールを追加するときも、同じ形式でフォルダを作るだけです。
+
+\begin{cautionbox}[1モジュール = 1フォルダを守る]
+PlatformIOの\texttt{lib/}は、フォルダ単位で独立したライブラリとして扱われます。1つのフォルダに複数の無関係なモジュールを入れると、依存関係の管理が崩れます。必ず「1モジュール = 1フォルダ」を守ってください。
+\end{cautionbox}
+
+\end{qabox}
+
+%% ── Q3: include/の役割 ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{include/ には何を置くの？}
+
+\texttt{include/} には、プロジェクト全体で共有するヘッダーを置きます。本リポジトリでは2つだけです。
+
+\vspace{2mm}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ファイル} & \textbf{役割} \\
+\midrule
+\texttt{SystemData.h} & 全モジュールのData構造体を集約した\texttt{SystemData}構造体を定義する \\
+\texttt{ProjectConfig.h} & 全モジュールのConfigインスタンス（ピンアサイン等）をまとめて定義する \\
+\bottomrule
+\end{tabularx}
+
+\vspace{2mm}
+この2ファイルが、個別モジュール（\texttt{lib/}）とメインコード（\texttt{src/main.cpp}）をつなぐ「接続点」です。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle={},stringstyle={},numbers=none,frame=none,backgroundcolor=\color{lightgray},xleftmargin=5pt,framexleftmargin=5pt]
+   lib/XxxModule/         include/           src/
+  +---------------+    +--------------+    +----------+
+  | XxxModule.h   |--->| SystemData.h |<---| main.cpp |
+  | XxxModule.cpp |    | ProjectConf  |    |          |
+  +---------------+    +--------------+    +----------+
+\end{lstlisting}
+
+モジュールを追加するときは、\texttt{lib/}にフォルダを作った後、この2ファイルにも追記するのを忘れないでください（第8章の実践で詳しく手順を示します）。
+
+\end{qabox}
+
+%% ── Q4: PlatformIO ──────────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{なぜPlatformIOを使うの？}
+
+本リポジトリでは開発環境にPlatformIOを使っています。Arduino IDEではなくPlatformIOを選ぶ理由は、主に3つあります。
+
+\begin{enumerate}
+  \item \textbf{環境の再現性} \\
+        ボード設定・ライブラリバージョン・ビルドオプションがすべて \texttt{platformio.ini} に記述されるため、\texttt{git clone} するだけで誰でも同じ環境でビルドできます。
+
+  \item \textbf{ライブラリの分離管理} \\
+        \texttt{lib/} に置いたモジュールは、PlatformIOが自動でライブラリとして認識します。Arduino IDEのようにグローバルなライブラリフォルダを汚しません。
+
+  \item \textbf{VSCodeの強力なエディタ機能} \\
+        補完・定義ジャンプ・リファクタリングなど、大規模なコードを扱うときに欠かせない機能が使えます。
+\end{enumerate}
+
+\begin{notebox}[Arduino IDEのコードはそのまま動く]
+PlatformIOはArduinoフレームワーク互換です。\texttt{setup()}、\texttt{loop()}、\texttt{digitalWrite()}など、Arduino IDEで書いたコードはほぼそのまま動きます。学習コストは「フォルダ構成の違いに慣れる」程度です。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q5: platformio.ini ──────────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{platformio.ini には何が書いてあるの？}
+
+\texttt{platformio.ini} は、プロジェクトのビルド設定を記述するファイルです。本リポジトリの設定を抜粋して解説します。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle=\color{gray}\itshape,morecomment={[l]{;}}]
+[env:esp32-s3-cam-n16r8]       ; 環境名（pio runで使う）
+platform = espressif32          ; マイコンプラットフォーム
+board = esp32-s3-devkitc-1      ; ボード種別
+framework = arduino             ; Arduino互換フレームワーク
+monitor_speed = 115200          ; シリアルモニターのボーレート
+
+lib_deps =
+    bodmer/TFT_eSPI @ ^2.5.43  ; 外部ライブラリ（バージョン指定）
+
+build_flags =
+    -D BOARD_HAS_PSRAM          ; コンパイルマクロ定義
+    -I include                  ; include/ をインクルードパスに追加
+    -I lib/ModuleCore           ; 各モジュールのパスも追加
+    -I lib/LedModule
+    ...
+\end{lstlisting}
+
+重要なポイントは \texttt{build\_flags} の \texttt{-I} オプションです。
+
+\begin{notebox}[なぜ -I でパスを追加するの？]
+PlatformIOの\texttt{lib/}内のコードから\texttt{include/}フォルダのヘッダーを使うには、インクルードパスの追加が必要です。\texttt{-I include} がないと、\texttt{lib/LedModule/LedModule.cpp} で \texttt{\#include "SystemData.h"} と書いてもファイルが見つかりません。
+\end{notebox}
+
+ビルドと書き込みはターミナルから以下のコマンドで行います。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle={},stringstyle={},numbers=none]
+pio run                          # ビルド
+pio run -t upload                # ビルド + ボードに書き込み
+pio device monitor               # シリアルモニター
+\end{lstlisting}
+
+\end{qabox}
+
+%% ── Q6: ファイル間の依存関係 ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{ファイル同士の依存関係はどうなってるの？}
+
+ファイル間のインクルード関係を整理します。循環依存を防ぐためのルールがあります。
+
+\vspace{2mm}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{ファイル} & \textbf{インクルードするもの} & \textbf{ポイント} \\
+\midrule
+\texttt{XxxModule.h} & \texttt{IModule.h} & \texttt{SystemData}は前方宣言のみ \\
+\texttt{XxxModule.cpp} & \texttt{XxxModule.h}, \texttt{SystemData.h} & ここで初めて\texttt{SystemData}の中身を使う \\
+\texttt{SystemData.h} & 各\texttt{XxxModule.h} & Config/Data構造体の定義を取得 \\
+\texttt{ProjectConfig.h} & 各\texttt{XxxModule.h} & Configインスタンスを定義 \\
+\texttt{main.cpp} & \texttt{SystemData.h}, \texttt{ProjectConfig.h} & すべてを組み合わせる \\
+\bottomrule
+\end{tabularx}
+
+\begin{cautionbox}[ヘッダーでSystemData.hをインクルードしない]
+\texttt{XxxModule.h} で \texttt{SystemData.h} をインクルードすると、循環依存が発生します。\texttt{SystemData.h}が各モジュールの\texttt{.h}をインクルードしているため、お互いがお互いをインクルードする無限ループになってしまいます。ヘッダーでは必ず \texttt{struct SystemData;} の前方宣言だけにしてください。
+\end{cautionbox}
+
+\end{qabox}
