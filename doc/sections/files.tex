@@ -1,77 +1,37 @@
 % ファイル構成
 \section{ファイル構成}
 
-\subsection{ディレクトリ構造}
+\subsection{標準ディレクトリ構造}
+
+本アーキテクチャに準拠するプロジェクトは、以下のディレクトリ構造に従う。
 
 \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
-Embedded-Module-Architecture/
-+-- .devcontainer/
-|   +-- Dockerfile              ... LaTeX環境用コンテナ定義
-|   +-- devcontainer.json       ... DevContainer設定
-+-- doc/
-|   +-- .latexmkrc              ... latexmk設定
-|   +-- main.tex                ... 仕様書本体
-|   +-- sections/               ... 仕様書の各セクション
-|       +-- cover.tex
-|       +-- revision.tex
-|       +-- overview.tex
-|       +-- background.tex
-|       +-- purpose.tex
-|       +-- architecture.tex
-|       +-- files.tex
-|       +-- techstack.tex
-|       +-- api.tex
-|       +-- execution.tex
+ProjectRoot/
 +-- include/                    ... プロジェクト固有ヘッダー
 |   +-- SystemData.h            ... SystemData構造体（モジュール間共有データ）
 |   +-- ProjectConfig.h         ... Configインスタンス定義（ピンアサイン等）
 +-- lib/
-|   +-- ModuleCore/             ... コアライブラリ
+|   +-- ModuleCore/             ... コアライブラリ（プロジェクト非依存）
 |   |   +-- IModule.h           ... IModuleインターフェース
 |   |   +-- ModuleTimer.h       ... ModuleTimerクラス
-|   +-- LedModule/              ... モジュール実装例（出力）
-|   |   +-- LedModule.h
-|   |   +-- LedModule.cpp
-|   +-- TftModule/              ... TFT LCDモジュール（出力+タッチ入力）
-|   |   +-- TftModule.h
-|   |   +-- TftModule.cpp
-|   +-- Mpu6500Module/          ... MPU-6500 IMUセンサーモジュール（入力）
-|   |   +-- Mpu6500Module.h
-|   |   +-- Mpu6500Module.cpp
-|   +-- CameraModule/           ... OV5640カメラモジュール（入力）
-|   |   +-- CameraModule.h
-|   |   +-- CameraModule.cpp
-|   +-- ServoModule/            ... サーボモーター制御モジュール（出力）
-|   |   +-- ServoModule.h
-|   |   +-- ServoModule.cpp
-|   +-- DriveMotorModule/       ... DCモーター単体制御モジュール（出力）
-|   |   +-- DriveMotorModule.h
-|   |   +-- DriveMotorModule.cpp
-|   +-- ChassisModule/          ... 4輪統合足回り制御モジュール（出力）
-|       +-- ChassisModule.h
-|       +-- ChassisModule.cpp
+|   +-- {ModuleName}/           ... 各モジュール実装（1モジュール1ディレクトリ）
+|       +-- {ModuleName}.h      ... Config/Data構造体 + クラス宣言
+|       +-- {ModuleName}.cpp    ... メソッド実装
 +-- src/
-|   +-- main.cpp                ... エントリーポイント
-+-- test/                       ... テストコード
-+-- platformio.ini              ... PlatformIO設定
-+-- README.md                   ... プロジェクト概要
+|   +-- main.cpp                ... エントリーポイント（モジュール登録・ループ制御）
++-- platformio.ini              ... PlatformIO設定（-I include を含む）
 \end{lstlisting}
 
-\subsection{ファイル一覧と機能対応}
+\subsection{ファイル役割一覧}
 
 \begin{tabularx}{\textwidth}{l l X}
 \toprule
 \textbf{ファイル} & \textbf{種別} & \textbf{説明} \\
 \midrule
-\texttt{lib/ModuleCore/IModule.h} & コア & IModuleインターフェース定義 \\
-\texttt{lib/ModuleCore/ModuleTimer.h} & コア & ModuleTimerクラス定義 \\
-\texttt{lib/LedModule/LedModule.h/.cpp} & 出力モジュール & GPIO LED制御（リファレンス実装） \\
-\texttt{lib/TftModule/TftModule.h/.cpp} & 出力+入力 & 2.8インチSPI TFT LCD表示 + XPT2046タッチ入力 \\
-\texttt{lib/Mpu6500Module/Mpu6500Module.h/.cpp} & 入力モジュール & MPU-6500 IMUセンサー（I2C直接アクセス） \\
-\texttt{lib/CameraModule/CameraModule.h/.cpp} & 入力モジュール & OV5640カメラ（DVP / esp\_camera） \\
-\texttt{lib/ServoModule/ServoModule.h/.cpp} & 出力モジュール & サーボモーター制御（LEDC PWM） \\
-\texttt{lib/DriveMotorModule/DriveMotorModule.h/.cpp} & 出力モジュール & DCモーター単体制御（Hブリッジ） \\
-\texttt{lib/ChassisModule/ChassisModule.h/.cpp} & 出力モジュール & 4輪統合足回り制御（機能統合系） \\
+\texttt{lib/ModuleCore/IModule.h} & コア & IModuleインターフェース定義（プロジェクト非依存） \\
+\texttt{lib/ModuleCore/ModuleTimer.h} & コア & ModuleTimerクラス定義（プロジェクト非依存） \\
+\texttt{lib/\{ModuleName\}/\{ModuleName\}.h} & モジュール & Config/Data構造体の型定義、SystemData前方宣言、クラス宣言 \\
+\texttt{lib/\{ModuleName\}/\{ModuleName\}.cpp} & モジュール & メソッド実装（SystemData.hをインクルード） \\
 \texttt{include/SystemData.h} & プロジェクト固有 & 各モジュールのData構造体を集約したSystemData構造体 \\
 \texttt{include/ProjectConfig.h} & プロジェクト固有 & モジュールConfigインスタンス（ピンアサイン等） \\
 \texttt{src/main.cpp} & プロジェクト固有 & エントリーポイント（モジュール登録・ループ制御） \\
@@ -83,9 +43,11 @@ Embedded-Module-Architecture/
 \begin{itemize}
     \item \textbf{lib/ModuleCore/} — プロジェクト非依存のコアコンポーネント（IModule、ModuleTimer）。
     他のプロジェクトにもそのまま流用可能。
-    \item \textbf{lib/各モジュール名/} — 個別のハードウェアモジュール実装。
-    それぞれが\texttt{IModule}を継承し、モジュール固有のサブ構造体を定義する。
+    \item \textbf{lib/\{ModuleName\}/} — 個別のハードウェアモジュール実装。
+    それぞれが\texttt{IModule}を継承し、モジュール固有のConfig/Data構造体を定義する。
     \texttt{.h}（宣言 + 前方宣言）と\texttt{.cpp}（実装）に分離する。
-    \item \textbf{include/} — プロジェクト固有のヘッダー
-    （\texttt{ProjectConfig.h}等、プロジェクトで使用するモジュールの組み合わせ・ピンアサインに依存するファイル）。
+    1モジュール1ディレクトリの原則に従う。
+    \item \textbf{include/} — プロジェクト固有のヘッダー。
+    \texttt{SystemData.h}は使用するモジュールのData構造体を集約し、
+    \texttt{ProjectConfig.h}はConfigインスタンス（ピン番号等の具体的な値）を定義する。
 \end{itemize}
