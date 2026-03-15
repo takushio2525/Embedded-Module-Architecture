@@ -7,6 +7,12 @@
 #include "CameraModule.h"
 #include "ServoModule.h"
 #include "ChassisModule.h"
+#include "ButtonModule.h"
+#include "BleModule.h"
+#include "BatteryModule.h"
+#include "BuzzerModule.h"
+#include "WifiModule.h"
+#include "EncoderModule.h"
 
 // ===== システムデータ =====
 struct SystemData {
@@ -17,4 +23,10 @@ struct SystemData {
     CameraData     camera;
     ServoData      servo;
     ChassisData    chassis;
+    ButtonData     button;
+    BleData        ble;
+    BatteryData    battery;
+    BuzzerData     buzzer;
+    WifiData       wifi;
+    EncoderData    encoder;
 };

@@ -16,21 +16,34 @@ SystemData systemData;
 // ===== モジュールインスタンス =====
 
 // 入力モジュール
-TouchModule   touchModule(TOUCH_CONFIG, &tftDriver);
-Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
-CameraModule  cameraModule(CAMERA_CONFIG);
+TouchModule    touchModule(TOUCH_CONFIG, &tftDriver);
+Mpu6500Module  mpu6500Module(MPU6500_CONFIG, &mpuWire);
+CameraModule   cameraModule(CAMERA_CONFIG);
+ButtonModule   buttonModule(BUTTON_CONFIG);
+BatteryModule  batteryModule(BATTERY_CONFIG);
+EncoderModule  encoderModule(ENCODER_CONFIG);
+
+// 入出力モジュール（BLE/WiFiは入力フェーズで受信、出力フェーズで送信）
+BleModule      bleModule(BLE_CONFIG);
+WifiModule     wifiModule(WIFI_CONFIG);
 
 // 出力モジュール
-LedModule        ledModule(LED_CONFIG);
-TftModule        tftModule(TFT_CONFIG, &tftDriver);
-ServoModule      servoModule(SERVO_CONFIG);
-ChassisModule    chassisModule(CHASSIS_CONFIG);
+LedModule      ledModule(LED_CONFIG);
+TftModule      tftModule(TFT_CONFIG, &tftDriver);
+ServoModule    servoModule(SERVO_CONFIG);
+ChassisModule  chassisModule(CHASSIS_CONFIG);
+BuzzerModule   buzzerModule(BUZZER_CONFIG);
 
 // モジュール配列
 IModule* inputModules[] = {
     &touchModule,
     &mpu6500Module,
     &cameraModule,
+    &buttonModule,
+    &batteryModule,
+    &encoderModule,
+    &bleModule,
+    &wifiModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
@@ -39,6 +52,7 @@ IModule* outputModules[] = {
     &tftModule,
     &servoModule,
     &chassisModule,
+    &buzzerModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 

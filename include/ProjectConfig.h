@@ -79,3 +79,51 @@ const ChassisConfig CHASSIS_CONFIG = {
     .wheelPattern     = WheelPattern::OMNI,
     .maxOutputPercent = 90.0f,
 };
+
+// ===== ボタン（プルアップ接続） =====
+const ButtonConfig BUTTON_CONFIG = {
+    .pin        = 0,     // GPIO0: BOOTボタン（多くのESP32ボードに搭載）
+    .activeLow  = true,  // LOW=押下（内蔵プルアップ使用）
+    .debounceMs = 30,    // デバウンス30ms
+};
+
+// ===== BLE =====
+const BleConfig BLE_CONFIG = {
+    .deviceName  = "ESP32-Module",
+    .serviceUuid = "12345678-1234-1234-1234-123456789abc",
+    .rxCharUuid  = "12345678-1234-1234-1234-123456789abd",
+    .txCharUuid  = "12345678-1234-1234-1234-123456789abe",
+};
+
+// ===== バッテリー電圧監視（ADC） =====
+const BatteryConfig BATTERY_CONFIG = {
+    .adcPin             = 3,      // GPIO3: ADC1_CH2
+    .voltageDivider     = 2.0f,   // 1/2分圧回路
+    .adcRefVoltage      = 3.3f,   // ESP32 ADC基準電圧
+    .adcResolution      = 4095,   // 12bit ADC
+    .sampleIntervalMs   = 500,    // 500msごとにサンプリング
+    .lowVoltageThreshold = 3.3f,  // 3.3V以下で低電圧警告
+};
+
+// ===== ブザー（LEDCチャネル6） =====
+const BuzzerConfig BUZZER_CONFIG = {
+    .pin        = 47,  // GPIO47: ブザー出力
+    .pwmChannel = 6,   // LEDCチャネル6（サーボch0, モーターch2-5と重複しない）
+};
+
+// ===== WiFi =====
+const WifiConfig WIFI_CONFIG = {
+    .ssid                = "YourSSID",
+    .password            = "YourPassword",
+    .connectTimeoutMs    = 10000,  // 10秒タイムアウト
+    .reconnectIntervalMs = 5000,   // 5秒後に再接続
+    .maxRetries          = 5,      // 最大5回リトライ
+};
+
+// ===== ロータリーエンコーダ =====
+const EncoderConfig ENCODER_CONFIG = {
+    .pinA             = 39,  // GPIO39: A相
+    .pinB             = 40,  // GPIO40: B相
+    .pulsesPerRev     = 20,  // 1回転20パルス
+    .sampleIntervalMs = 50,  // 50msごとに速度計算
+};
