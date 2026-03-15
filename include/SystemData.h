@@ -5,12 +5,18 @@
 #include "TftModule.h"
 #include "Mpu6500Module.h"
 #include "CameraModule.h"
+#include "ServoModule.h"
+#include "DriveMotorModule.h"
+#include "ChassisModule.h"
 
 // ===== システムデータ =====
 struct SystemData {
-    LedData     led;
-    TouchData   touch;
-    TftData     tft;
-    Mpu6500Data mpu;
-    CameraData  camera;
+    LedData        led;
+    TouchData      touch;
+    TftData        tft;
+    Mpu6500Data    mpu;
+    CameraData     camera;
+    ServoData      servo;
+    DriveMotorData driveMotor;
+    ChassisData    chassis;
 };

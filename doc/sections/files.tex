@@ -39,8 +39,17 @@ Embedded-Module-Architecture/
 |   |   +-- Mpu6500Module.h
 |   |   +-- Mpu6500Module.cpp
 |   +-- CameraModule/           ... OV5640カメラモジュール（入力）
-|       +-- CameraModule.h
-|       +-- CameraModule.cpp
+|   |   +-- CameraModule.h
+|   |   +-- CameraModule.cpp
+|   +-- ServoModule/            ... サーボモーター制御モジュール（出力）
+|   |   +-- ServoModule.h
+|   |   +-- ServoModule.cpp
+|   +-- DriveMotorModule/       ... DCモーター単体制御モジュール（出力）
+|   |   +-- DriveMotorModule.h
+|   |   +-- DriveMotorModule.cpp
+|   +-- ChassisModule/          ... 4輪統合足回り制御モジュール（出力）
+|       +-- ChassisModule.h
+|       +-- ChassisModule.cpp
 +-- src/
 |   +-- main.cpp                ... エントリーポイント
 +-- test/                       ... テストコード
@@ -60,6 +69,9 @@ Embedded-Module-Architecture/
 \texttt{lib/TftModule/TftModule.h/.cpp} & 出力+入力 & 2.8インチSPI TFT LCD表示 + XPT2046タッチ入力 \\
 \texttt{lib/Mpu6500Module/Mpu6500Module.h/.cpp} & 入力モジュール & MPU-6500 IMUセンサー（I2C直接アクセス） \\
 \texttt{lib/CameraModule/CameraModule.h/.cpp} & 入力モジュール & OV5640カメラ（DVP / esp\_camera） \\
+\texttt{lib/ServoModule/ServoModule.h/.cpp} & 出力モジュール & サーボモーター制御（LEDC PWM） \\
+\texttt{lib/DriveMotorModule/DriveMotorModule.h/.cpp} & 出力モジュール & DCモーター単体制御（Hブリッジ） \\
+\texttt{lib/ChassisModule/ChassisModule.h/.cpp} & 出力モジュール & 4輪統合足回り制御（機能統合系） \\
 \texttt{include/SystemData.h} & プロジェクト固有 & 各モジュールのData構造体を集約したSystemData構造体 \\
 \texttt{include/ProjectConfig.h} & プロジェクト固有 & モジュールConfigインスタンス（ピンアサイン等） \\
 \texttt{src/main.cpp} & プロジェクト固有 & エントリーポイント（モジュール登録・ループ制御） \\

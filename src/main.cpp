@@ -21,8 +21,11 @@ Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
 // 出力モジュール
-LedModule  ledModule(LED_CONFIG);
-TftModule  tftModule(TFT_CONFIG, &tftDriver);
+LedModule        ledModule(LED_CONFIG);
+TftModule        tftModule(TFT_CONFIG, &tftDriver);
+ServoModule      servoModule(SERVO_CONFIG);
+DriveMotorModule driveMotorModule(DRIVE_MOTOR_CONFIG);
+ChassisModule    chassisModule(CHASSIS_CONFIG);
 
 // モジュール配列
 IModule* inputModules[] = {
@@ -35,6 +38,9 @@ const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 IModule* outputModules[] = {
     &ledModule,
     &tftModule,
+    &servoModule,
+    &driveMotorModule,
+    &chassisModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 

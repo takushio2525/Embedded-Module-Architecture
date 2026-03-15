@@ -54,3 +54,38 @@ const CameraConfig CAMERA_CONFIG = {
     .jpegQuality = 12,         // 画質 (低い値=高画質)
     .fbCount     = 2,          // PSRAMへのダブルバッファ
 };
+
+// ===== サーボ (ESP32 PWM) =====
+const ServoConfig SERVO_CONFIG = {
+    .pin          = 1,     // GPIO1: サーボ信号
+    .pwmChannel   = 0,     // LEDCチャネル0
+    .minPulseUs   = 500,   // SG90: 500μs
+    .maxPulseUs   = 2500,  // SG90: 2500μs
+    .defaultAngle = 90,    // 初期角度 90度（中央）
+};
+
+// ===== DCモーター単体（テスト用） =====
+const DriveMotorConfig DRIVE_MOTOR_CONFIG = {
+    .in1Pin            = 4,      // GPIO4: 方向制御1
+    .in2Pin            = 16,     // GPIO16: 方向制御2
+    .pwmPin            = 17,     // GPIO17: PWM速度制御
+    .pwmChannel        = 1,      // LEDCチャネル1
+    .pwmFreqHz         = 1220,   // 1220Hz
+    .minPowerThreshold = 5.0f,   // 5%以下は停止
+};
+
+// ===== シャーシ（4輪オムニ） =====
+const ChassisConfig CHASSIS_CONFIG = {
+    .motors = {
+        // [0] 左前（LEDCチャネル2）
+        {.in1Pin = 4,  .in2Pin = 16, .pwmPin = 17, .pwmChannel = 2, .pwmFreqHz = 1220, .minPowerThreshold = 5.0f},
+        // [1] 右前（LEDCチャネル3）
+        {.in1Pin = 26, .in2Pin = 25, .pwmPin = 33, .pwmChannel = 3, .pwmFreqHz = 1220, .minPowerThreshold = 5.0f},
+        // [2] 左後（LEDCチャネル4）
+        {.in1Pin = 18, .in2Pin = 19, .pwmPin = 23, .pwmChannel = 4, .pwmFreqHz = 1220, .minPowerThreshold = 5.0f},
+        // [3] 右後（LEDCチャネル5）
+        {.in1Pin = 13, .in2Pin = 14, .pwmPin = 27, .pwmChannel = 5, .pwmFreqHz = 1220, .minPowerThreshold = 5.0f},
+    },
+    .wheelPattern     = WheelPattern::OMNI,
+    .maxOutputPercent = 90.0f,
+};
