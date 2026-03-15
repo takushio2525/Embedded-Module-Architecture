@@ -1,6 +1,5 @@
 // DriveMotorModule.cpp — DCモーター単体制御モジュール
 #include "DriveMotorModule.h"
-#include "SystemData.h"
 
 static constexpr uint8_t  MOTOR_PWM_RES  = 16;
 static constexpr uint32_t MOTOR_DUTY_MAX = 65535;  // 2^16 - 1
@@ -25,8 +24,9 @@ bool DriveMotorModule::init() {
     return true;
 }
 
-void DriveMotorModule::update(SystemData& data) {
-    _applyMotor(data.driveMotor.power);
+void DriveMotorModule::update(SystemData& /* data */) {
+    // 単体使用時はdrive()を直接呼ぶ設計のため、ここでは何もしない
+    // ChassisModule等の統合モジュール経由で制御される場合もdrive()を使用する
 }
 
 void DriveMotorModule::drive(float power) {

@@ -24,7 +24,6 @@ CameraModule  cameraModule(CAMERA_CONFIG);
 LedModule        ledModule(LED_CONFIG);
 TftModule        tftModule(TFT_CONFIG, &tftDriver);
 ServoModule      servoModule(SERVO_CONFIG);
-DriveMotorModule driveMotorModule(DRIVE_MOTOR_CONFIG);
 ChassisModule    chassisModule(CHASSIS_CONFIG);
 
 // モジュール配列
@@ -39,7 +38,6 @@ IModule* outputModules[] = {
     &ledModule,
     &tftModule,
     &servoModule,
-    &driveMotorModule,
     &chassisModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);

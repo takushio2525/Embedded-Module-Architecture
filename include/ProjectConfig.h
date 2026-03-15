@@ -64,16 +64,6 @@ const ServoConfig SERVO_CONFIG = {
     .defaultAngle = 90,    // 初期角度 90度（中央）
 };
 
-// ===== DCモーター単体（テスト用） =====
-const DriveMotorConfig DRIVE_MOTOR_CONFIG = {
-    .in1Pin            = 4,      // GPIO4: 方向制御1
-    .in2Pin            = 16,     // GPIO16: 方向制御2
-    .pwmPin            = 17,     // GPIO17: PWM速度制御
-    .pwmChannel        = 1,      // LEDCチャネル1
-    .pwmFreqHz         = 1220,   // 1220Hz
-    .minPowerThreshold = 5.0f,   // 5%以下は停止
-};
-
 // ===== シャーシ（4輪オムニ） =====
 const ChassisConfig CHASSIS_CONFIG = {
     .motors = {

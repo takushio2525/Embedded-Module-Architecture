@@ -593,7 +593,9 @@ OV5640でJPEGを使用する場合は必ずPSRAMを有効にすること（\text
 \begin{apibox}{DriveMotorModule}
 \textbf{定義ファイル:} \texttt{lib/DriveMotorModule/DriveMotorModule.h/.cpp}\\
 \textbf{外部ライブラリ:} なし（GPIO + LEDC PWMで直接制御）\\
-\textbf{役割:} 出力モジュール — Hブリッジドライバ経由でDCモーターを制御する
+\textbf{役割:} 出力モジュール — Hブリッジドライバ経由でDCモーターを制御する。
+単体で使用する場合は\texttt{drive()}メソッドで直接制御する。
+ChassisModule等の統合モジュールの内部部品としても使用される
 \end{apibox}
 
 \begin{tabularx}{\textwidth}{l l X}
@@ -609,6 +611,15 @@ OV5640でJPEGを使用する場合は必ずPSRAMを有効にすること（\text
 \texttt{DriveMotorData} & \texttt{power} & 目標出力 [-100.0 $\sim$ 100.0]（デフォルト: 0.0） \\
 \bottomrule
 \end{tabularx}
+
+\begin{notebox}[統合モジュールの内部部品としての使用]
+\texttt{DriveMotorModule}を\texttt{ChassisModule}等の統合モジュール内部で使用する場合、
+\texttt{SystemData}に\texttt{DriveMotorData}を含める必要はない。
+統合モジュールが内部で\texttt{drive()}メソッドを直接呼び出すため、
+\texttt{update(SystemData\&)}は空実装となる。\\
+\texttt{SystemData}への登録・\texttt{outputModules[]}への追加が必要なのは、
+モーターを単体で独立制御する場合のみである。
+\end{notebox}
 
 \paragraph{方向制御ロジック}
 IN1/IN2の組み合わせで正転・逆転・ブレーキを制御する。
@@ -631,7 +642,8 @@ LOW & LOW & 0 & 停止（フリー） \\
 
 \paragraph{drive()メソッド}
 \texttt{drive(float power)}は\texttt{SystemData}を経由せずに直接モーターを制御するメソッド。
-\texttt{ChassisModule}の内部からの呼び出し用として公開されている。
+\texttt{ChassisModule}等の統合モジュールからの内部呼び出しや、
+単体使用時のロジックフェーズからの直接制御に使用する。
 
 % ---- ChassisModule ----
 \needspace{5\baselineskip}
