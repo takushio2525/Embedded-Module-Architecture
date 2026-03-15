@@ -1,0 +1,57 @@
+% TftModule
+\section{TftModule — SPI共有 + 複合デバイスの分離}
+
+\begin{patternbox}{TftModule で学べるパターン}
+\begin{itemize}
+    \item SPI共有ドライバを使った画面描画
+    \item ModuleTimerによるFPS制御（更新頻度の制限）
+    \item テキスト表示をData構造体経由で受け渡す方法
+\end{itemize}
+\end{patternbox}
+
+\subsection{Data構造体のテキストバッファ}
+
+\begin{lstlisting}[style=cppstyle, caption={TftModule.h — Data}]
+struct TftData {
+    bool touchPressed = false;
+    int16_t touchX = 0, touchY = 0;
+    char line1[48] = "";  // ロジックフェーズが書き込む表示テキスト
+    char line2[48] = "";
+    char line3[48] = "";
+    char line4[48] = "";
+    char line5[48] = "";
+};
+\end{lstlisting}
+
+\begin{pointbox}[出力モジュールは「何を表示するか」を決めない]
+\texttt{line1}〜\texttt{line5}はロジックフェーズが\texttt{snprintf()}で書き込む文字列。
+TftModuleの\texttt{update()}はそれを画面に描画するだけで、
+表示内容の判断は一切行わない。出力モジュールの責務を守っている。
+\end{pointbox}
+
+\subsection{ロジックフェーズでの表示内容設定}
+
+\begin{lstlisting}[style=cppstyle, caption={main.cpp — applyPattern()でのTFT表示設定}]
+void applyPattern(SystemData& data) {
+    // MPU-6500データをTFT表示用にフォーマット
+    if (data.mpu.isValid) {
+        snprintf(data.tft.line1, sizeof(data.tft.line1),
+                 "Ax:%.2f Ay:%.2f Az:%.2f",
+                 data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
+    }
+    // カメラ情報
+    if (data.camera.isValid && data.camera.frameReady) {
+        snprintf(data.tft.line4, sizeof(data.tft.line4),
+                 "CAM: %dx%d (%d B)",
+                 data.camera.width, data.camera.height,
+                 (int)data.camera.frameSize);
+    }
+}
+\end{lstlisting}
+
+\begin{pointbox}[入力→ロジック→出力のデータフロー]
+入力フェーズでMpu6500Moduleが\texttt{data.mpu}に値を書き込み、
+ロジックフェーズでそれを文字列に変換して\texttt{data.tft.line1}に書き込み、
+出力フェーズでTftModuleが画面に描画する。
+3フェーズモデルの典型的なデータフローの実例。
+\end{pointbox}

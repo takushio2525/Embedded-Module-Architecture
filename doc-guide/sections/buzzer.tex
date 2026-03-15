@@ -1,0 +1,80 @@
+% BuzzerModule
+\section{BuzzerModule — deinit()パターン}
+
+\begin{patternbox}{BuzzerModule で学べるパターン}
+\begin{itemize}
+    \item deinit()によるPWMリソースの明示的解放
+    \item リクエスト方式による出力制御（requestPlayフラグ）
+    \item ModuleTimerによる時間指定再生の自動停止
+\end{itemize}
+\end{patternbox}
+
+\subsection{Data構造体のリクエストパターン}
+
+\begin{lstlisting}[style=cppstyle, caption={BuzzerModule.h — Data}]
+struct BuzzerData {
+    uint16_t frequency = 0;       // 再生周波数 [Hz]（0=消音）
+    unsigned long durationMs = 0; // 再生時間 [ms]（0=無制限）
+    bool     requestPlay = false; // ロジックフェーズからの再生リクエスト
+};
+\end{lstlisting}
+
+\begin{pointbox}[リクエストフラグパターン]
+\texttt{requestPlay}は「ロジックフェーズからの指示を1回だけ処理する」ためのフラグ。
+\texttt{update()}が処理後に\texttt{false}に戻すため、次ループでは再度処理しない。
+LedModuleのように毎ループ同じ状態を出力するのではなく、
+「イベント的に1回だけ何かをする」場合にこのパターンを使う。
+\end{pointbox}
+
+\subsection{update()の実装}
+
+\begin{lstlisting}[style=cppstyle, caption={BuzzerModule.cpp — update()}]
+void BuzzerModule::update(SystemData& data) {
+    // 再生リクエスト処理
+    if (data.buzzer.requestPlay) {
+        data.buzzer.requestPlay = false;  // 処理済みフラグクリア
+
+        if (data.buzzer.frequency > 0) {
+            _toneOn(data.buzzer.frequency);
+            if (data.buzzer.durationMs > 0) {
+                _durationTimer.setTime();
+                _timed = true;
+            } else {
+                _timed = false;  // 無制限再生
+            }
+        } else {
+            _toneOff();
+        }
+    }
+
+    // 時間指定ありの場合、経過したら自動消音
+    if (_playing && _timed) {
+        if (_durationTimer.getNowTime() >= data.buzzer.durationMs) {
+            _toneOff();
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{deinit()の実装}
+
+\begin{lstlisting}[style=cppstyle, caption={BuzzerModule.cpp — deinit()}]
+void BuzzerModule::deinit() {
+    _toneOff();
+    ledcDetachPin(_config.pin);  // PWMチャネルとピンの紐付けを解除
+    Serial.println("[Buzzer] deinit OK");
+}
+\end{lstlisting}
+
+\begin{pointbox}[deinit()の実装が必要なケース]
+\texttt{IModule::deinit()}はデフォルトで空実装。
+BuzzerModuleのように\textbf{ハードウェアリソース（PWMチャネル）を占有する}モジュールでは、
+スリープ前やモジュール停止時にリソースを明示的に解放する必要がある。\\
+\texttt{ledcDetachPin()}を呼ばないと、PWMチャネルが占有されたままスリープに入り、
+復帰後に同じチャネルを使えなくなる可能性がある。
+\end{pointbox}
+
+\begin{notebox}[deinit()が不要なモジュール]
+LedModuleやButtonModuleは\texttt{pinMode()}で設定したGPIOを使うだけで、
+特別なリソースを占有しない。こうしたモジュールでは\texttt{deinit()}をオーバーライドしなくてよい。
+\end{notebox}

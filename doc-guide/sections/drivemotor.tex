@@ -1,0 +1,63 @@
+% DriveMotorModule
+\section{DriveMotorModule — PWM 2ピン制御 + 統合部品}
+
+\begin{patternbox}{DriveMotorModule で学べるパターン}
+\begin{itemize}
+    \item Hブリッジによる方向制御（IN1/IN2 + PWM）
+    \item 逆転保護（ブレーキ自動挿入）
+    \item drive()メソッドによるSystemData非経由の直接制御
+    \item 統合モジュールの「内部部品」としての使い方
+\end{itemize}
+\end{patternbox}
+
+\subsection{2つの使い方}
+
+\texttt{DriveMotorModule}は2つのモードで使える。
+
+\begin{enumerate}
+    \item \textbf{単体使用} — \texttt{outputModules[]}に登録し、\texttt{SystemData}経由で制御
+    \item \textbf{統合モジュールの内部部品} — \texttt{ChassisModule}等が内部で\texttt{drive()}を呼ぶ
+\end{enumerate}
+
+\begin{lstlisting}[style=cppstyle, caption={DriveMotorModule.h — drive()メソッド}]
+class DriveMotorModule : public IModule {
+public:
+    // SystemData経由の制御（単体使用時）
+    void update(SystemData& data) override;
+
+    // SystemData非経由の直接制御（統合モジュールから使用）
+    void drive(float power);
+    void brake();
+};
+\end{lstlisting}
+
+\begin{pointbox}[update()とdrive()の使い分け]
+\texttt{update()}はSystemDataの\texttt{DriveMotorData.power}を読んで\texttt{drive()}を呼ぶラッパー。
+統合モジュールの内部部品として使う場合は\texttt{drive()}を直接呼び、
+\texttt{update()}は空実装（呼ばれない）となる。
+この設計により、同じモジュールコードを単体でも統合でも使い回せる。
+\end{pointbox}
+
+\subsection{逆転保護}
+
+\begin{lstlisting}[style=cppstyle, caption={DriveMotorModule.cpp — 逆転保護}]
+void DriveMotorModule::drive(float power) {
+    Direction newDir = (power > 0) ? FORWARD
+                     : (power < 0) ? REVERSE : STOP;
+
+    // 正転<->逆転の直接切り替え時、1フレーム分のブレーキを挿入
+    if ((_lastDir == FORWARD && newDir == REVERSE) ||
+        (_lastDir == REVERSE && newDir == FORWARD)) {
+        brake();
+        _lastDir = STOP;
+        return;  // 次のupdate()で実際の方向転換が行われる
+    }
+    // ... 実際のPWM制御 ...
+}
+\end{lstlisting}
+
+\begin{pointbox}[1フレーム遅延によるモーター保護]
+正転→逆転の直接切り替えはモーターやドライバICに大きな負荷がかかる。
+1フレーム分（1ループ分）のブレーキを挿入することで、物理的に安全な方向転換を実現する。
+3フェーズモデルの「毎ループ1回だけ呼ばれる」性質を利用した保護パターン。
+\end{pointbox}

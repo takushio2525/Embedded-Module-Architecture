@@ -1,0 +1,123 @@
+% EncoderModule
+\section{EncoderModule — 割り込み連携パターン}
+
+\begin{patternbox}{EncoderModule で学べるパターン}
+\begin{itemize}
+    \item ハードウェア割り込み（ISR）とvolatile変数の連携
+    \item IRAM\_ATTR による割り込みハンドラのRAM配置
+    \item ISR→volatile変数→update()→SystemDataのデータフロー
+    \item deinit()による割り込みの解除
+\end{itemize}
+\end{patternbox}
+
+\subsection{割り込みハンドラの設計}
+
+\begin{lstlisting}[style=cppstyle, caption={EncoderModule.h — 割り込み関連}]
+class EncoderModule : public IModule {
+private:
+    EncoderConfig _config;
+    ModuleTimer   _sampleTimer;
+
+    // ISRが更新する変数（volatile必須）
+    volatile int32_t _isrCount = 0;
+
+    // update()内で使う前回値
+    int32_t _prevCount = 0;
+
+    // ISRはstatic関数でなければattachInterruptに渡せない
+    static void IRAM_ATTR _isrHandlerA();
+    static EncoderModule* _instance;
+
+    void IRAM_ATTR _onPulseA();
+    // ...
+};
+\end{lstlisting}
+
+\begin{cautionbox}[ISR（割り込みサービスルーチン）の制約]
+\begin{itemize}
+    \item \texttt{attachInterrupt()}に渡す関数は\textbf{static関数}でなければならない
+    \item ISR内では\texttt{Serial.print()}やメモリ確保等の重い処理は禁止
+    \item ESP32では\texttt{IRAM\_ATTR}を付けてRAMに配置する必要がある
+    \item ISRから参照する変数は\texttt{volatile}を付ける
+\end{itemize}
+\end{cautionbox}
+
+\subsection{ISR→volatile→update()の流れ}
+
+\begin{lstlisting}[style=cppstyle, caption={EncoderModule.cpp — ISRとupdate()}]
+// ISRハンドラ（IRAM_ATTR = RAM配置、高速アクセス）
+void IRAM_ATTR EncoderModule::_isrHandlerA() {
+    if (_instance) {
+        _instance->_onPulseA();
+    }
+}
+
+void IRAM_ATTR EncoderModule::_onPulseA() {
+    // A相の立ち上がり時にB相を読み取って方向を判定
+    if (digitalRead(_config.pinB) == HIGH) {
+        _isrCount++;   // CW
+    } else {
+        _isrCount--;   // CCW
+    }
+}
+
+// update()はメインタスクの3フェーズループ内で呼ばれる
+void EncoderModule::update(SystemData& data) {
+    // volatile変数を一度だけ読み取り
+    int32_t currentCount = _isrCount;
+
+    data.encoder.count = currentCount;
+
+    // 速度計算（一定間隔で実行）
+    if (_sampleTimer.getNowTime() >= _config.sampleIntervalMs) {
+        unsigned long elapsed = _sampleTimer.getNowTime();
+        _sampleTimer.setTime();
+
+        int32_t delta = currentCount - _prevCount;
+        _prevCount = currentCount;
+
+        float revolutions = (float)delta / _config.pulsesPerRev;
+        float seconds = (float)elapsed / 1000.0f;
+        data.encoder.rpm = (seconds > 0)
+            ? (revolutions / seconds * 60.0f) : 0.0f;
+        data.encoder.isValid = true;
+    }
+}
+\end{lstlisting}
+
+\begin{pointbox}[volatile変数を一度だけ読み取る]
+\texttt{int32\_t currentCount = \_isrCount;}で値をローカル変数にコピーしてから使う。
+volatile変数を関数内で複数回参照すると、参照のたびに値が変わる可能性がある。
+一度だけ読み取ることで、同一update()内での値の一貫性を保証する。
+\end{pointbox}
+
+\begin{pointbox}[BleModuleとの共通パターン]
+BleModule（コールバック）とEncoderModule（ISR）は、
+「メインタスク外からのデータ受け渡し」という同じ問題を解決している。
+どちらも\textbf{volatile変数（またはフラグ）}を介して安全にデータを渡す。
+BLEはバッファ+フラグ、エンコーダはカウンタ変数という違いはあるが、原理は同じ。
+\end{pointbox}
+
+\subsection{deinit()で割り込みを解除}
+
+\begin{lstlisting}[style=cppstyle, caption={EncoderModule.cpp — deinit()}]
+void EncoderModule::deinit() {
+    detachInterrupt(digitalPinToInterrupt(_config.pinA));
+    _instance = nullptr;
+    Serial.println("[Encoder] deinit OK");
+}
+\end{lstlisting}
+
+\begin{pointbox}[割り込み解除の重要性]
+割り込みを解除しないままスリープに入ると、
+スリープ中にも割り込みが発生してウェイクアップの原因になる可能性がある。
+また、\texttt{\_instance = nullptr}にすることで、
+deinit後にISRが呼ばれてもnullチェックで安全にスキップされる。
+\end{pointbox}
+
+\begin{notebox}[複数インスタンスへの拡張]
+現在の実装はstaticポインタ1つ（\texttt{\_instance}）のため、
+エンコーダモジュールは1つしか使えない。
+複数使う場合は\texttt{static EncoderModule* \_instances[MAX]}の配列に拡張し、
+チャネルIDでインデックスする方式に変更する。
+\end{notebox}

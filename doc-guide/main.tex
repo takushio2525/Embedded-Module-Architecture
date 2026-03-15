@@ -1,0 +1,207 @@
+%% ============================================================
+%% Embedded Module Architecture 実装ガイド
+%% ============================================================
+%% ビルド: latexmk main.tex (.latexmkrc で uplatex + dvipdfmx)
+%% ============================================================
+\documentclass[a4paper,11pt,dvipdfmx]{jsarticle}
+
+%% ─── パッケージ ───────────────────────────────
+\usepackage[dvipdfmx]{graphicx}
+\usepackage[dvipdfmx]{xcolor}
+\usepackage[dvipdfmx,
+  bookmarks=true,
+  bookmarksnumbered=true,
+  colorlinks=true,
+  linkcolor={blue!70!black},
+  citecolor={green!50!black},
+  urlcolor={blue!60!black},
+  pdfauthor={Shiozawa},
+  pdftitle={Embedded Module Architecture 実装ガイド},
+  pdfsubject={モジュール設計パターンの実装例と解説},
+]{hyperref}
+\usepackage{pxjahyper}
+\usepackage[top=25mm,bottom=25mm,left=20mm,right=20mm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{plistings}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{needspace}
+\usepackage{placeins}
+\usepackage{amssymb}            % checkmarkシンボル
+
+%% ─── 色定義 ──────────────────────────────────
+\definecolor{headerblue}{HTML}{1B3A5C}
+\definecolor{accentblue}{HTML}{2E86C1}
+\definecolor{lightgray}{HTML}{F2F3F4}
+\definecolor{codebg}{HTML}{F7F9FB}
+\definecolor{warnred}{HTML}{E74C3C}
+\definecolor{noteyellow}{HTML}{F39C12}
+\definecolor{okgreen}{HTML}{27AE60}
+
+%% ─── ヘッダー・フッター ───────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{headerblue}\textbf{Embedded Module Architecture} 実装ガイド}
+\fancyhead[R]{\small\color{headerblue}Rev.\,1.0}
+\fancyfoot[C]{\small\thepage\,/\,\pageref{LastPage}}
+\fancyfoot[R]{\small\color{gray}2026-03-15}
+\renewcommand{\headrulewidth}{0.8pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+%% ─── セクション見出しスタイル ─────────────────
+\titleformat{\section}
+  {\Large\bfseries\color{headerblue}}
+  {\thesection}{1em}{}
+  [\vspace{-0.5em}\textcolor{accentblue}{\rule{\textwidth}{1.2pt}}]
+\titleformat{\subsection}
+  {\large\bfseries\color{headerblue}}
+  {\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{accentblue}}
+  {\thesubsubsection}{1em}{}
+\titleformat{\paragraph}[runin]
+  {\normalsize\bfseries\color{headerblue}}
+  {}{}{}[　]
+
+%% ─── listings 設定 (C++) ──────────────────────
+\lstdefinestyle{cppstyle}{
+  language=C++,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{accentblue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{okgreen},
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=8pt,
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{accentblue!40},
+  backgroundcolor=\color{codebg},
+  breaklines=true,
+  breakatwhitespace=false,
+  tabsize=4,
+  showstringspaces=false,
+  captionpos=b,
+  xleftmargin=15pt,
+  framexleftmargin=15pt,
+  morekeywords={override,nullptr,uint8_t,uint16_t,uint32_t,int32_t,int8_t,bool,volatile,size_t},
+}
+\lstset{style=cppstyle}
+
+%% ─── tcolorbox スタイル ──────────────────────
+% パターン解説ボックス
+\newtcolorbox{patternbox}[1]{
+  enhanced,
+  colback=white,
+  colframe=accentblue,
+  coltitle=white,
+  fonttitle=\bfseries\large,
+  title=#1,
+  top=4mm,
+  arc=2mm,
+  breakable,
+  before upper={\parindent0pt},
+  attach boxed title to top left={yshift=-3mm,xshift=5mm},
+  boxed title style={colback=accentblue,arc=1.5mm},
+}
+
+% ポイント解説ボックス
+\newtcolorbox{pointbox}[1][ポイント]{
+  enhanced,
+  colback=okgreen!5,
+  colframe=okgreen!60,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title={$\checkmark$ #1},
+  arc=1.5mm,
+  breakable,
+  attach boxed title to top left={yshift=-2mm,xshift=5mm},
+  boxed title style={colback=okgreen!60,arc=1mm},
+}
+
+% 注意ボックス
+\newtcolorbox{cautionbox}[1][注意]{
+  enhanced,
+  colback=warnred!5,
+  colframe=warnred!70,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title={! #1},
+  arc=1.5mm,
+  breakable,
+  attach boxed title to top left={yshift=-2mm,xshift=5mm},
+  boxed title style={colback=warnred!70,arc=1mm},
+}
+
+% ノートボックス
+\newtcolorbox{notebox}[1][補足]{
+  enhanced,
+  colback=accentblue!5,
+  colframe=accentblue!50,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title={$\triangleright$ #1},
+  arc=1.5mm,
+  breakable,
+  attach boxed title to top left={yshift=-2mm,xshift=5mm},
+  boxed title style={colback=accentblue!50,arc=1mm},
+}
+
+% 機能ブロック
+\newtcolorbox{funcblock}[1]{
+  enhanced,
+  colback=white,
+  colframe=accentblue!25,
+  coltitle=headerblue,
+  fonttitle=\bfseries\ttfamily\small,
+  title={◆ #1},
+  arc=1mm,
+  boxrule=0.4pt,
+  breakable,
+  left=3mm, right=3mm, top=2mm, bottom=2mm,
+  before skip=3mm, after skip=3mm,
+  before upper={\parindent0pt},
+}
+
+%% ─── ドキュメント情報 ─────────────────────────
+\newcommand{\doctitle}{Embedded Module Architecture\\実装ガイド}
+\newcommand{\docsubtitle}{リポジトリの各モジュールで学ぶ設計パターンの実践}
+\newcommand{\docauthor}{Shiozawa}
+\newcommand{\docversion}{1.0}
+\newcommand{\docdate}{2026年3月15日}
+
+%% ============================================================
+\begin{document}
+
+\input{sections/cover}
+\input{sections/revision}
+\newpage
+\tableofcontents
+\newpage
+\input{sections/introduction}
+\input{sections/led}
+\input{sections/button}
+\input{sections/battery}
+\input{sections/servo}
+\input{sections/buzzer}
+\input{sections/mpu6500}
+\input{sections/touch}
+\input{sections/tft}
+\input{sections/camera}
+\input{sections/drivemotor}
+\input{sections/chassis}
+\input{sections/ble}
+\input{sections/wifi}
+\input{sections/encoder}
+
+\end{document}

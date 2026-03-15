@@ -1,0 +1,91 @@
+% ButtonModule
+\section{ButtonModule — デバウンスパターン}
+
+\begin{patternbox}{ButtonModule で学べるパターン}
+\begin{itemize}
+    \item ModuleTimerを使ったデバウンス処理
+    \item エッジ検出（justPressed / justReleased）
+    \item 入力モジュールの基本形（ハードウェアから読んでSystemDataに書くだけ）
+\end{itemize}
+\end{patternbox}
+
+\subsection{Config/Data構造体}
+
+\begin{lstlisting}[style=cppstyle, caption={ButtonModule.h — Config/Data}]
+struct ButtonConfig {
+    uint8_t       pin;         // ボタンピン
+    bool          activeLow;   // true: LOW=押下（プルアップ）
+    unsigned long debounceMs;  // デバウンス安定時間 [ms]
+};
+
+struct ButtonData {
+    bool pressed      = false;  // デバウンス後の押下状態
+    bool justPressed  = false;  // 今ループで押下された（立ち上がりエッジ）
+    bool justReleased = false;  // 今ループで離された（立ち下がりエッジ）
+};
+\end{lstlisting}
+
+\begin{pointbox}[Configに動作パラメータを含める]
+\texttt{debounceMs}はピンアサインではないが、モジュールの動作特性を決める設定なのでConfigに含める。
+ハードウェア環境によって最適なデバウンス時間は異なるため、外部から注入可能にしておく。
+\end{pointbox}
+
+\subsection{デバウンスの実装}
+
+\begin{lstlisting}[style=cppstyle, caption={ButtonModule.cpp — update()}]
+void ButtonModule::update(SystemData& data) {
+    // 生の入力値を読み取り
+    bool rawPressed = digitalRead(_config.pin);
+    if (_config.activeLow) {
+        rawPressed = !rawPressed;
+    }
+
+    // 入力値が変化したらデバウンスタイマーをリセット
+    if (rawPressed != _lastRaw) {
+        _debounceTimer.setTime();
+        _lastRaw = rawPressed;
+    }
+
+    // デバウンス安定時間を超えたら状態を確定
+    if (_debounceTimer.getNowTime() >= _config.debounceMs) {
+        _stableState = _lastRaw;
+    }
+
+    // エッジ検出
+    data.button.pressed      = _stableState;
+    data.button.justPressed  = (_stableState && !_prevStable);
+    data.button.justReleased = (!_stableState && _prevStable);
+    _prevStable = _stableState;
+}
+\end{lstlisting}
+
+\begin{pointbox}[ModuleTimerによるデバウンス]
+仕様書のデバウンスパターンそのまま。
+入力が変化するたびに\texttt{setTime()}でタイマーをリセットし、
+\texttt{debounceMs}の間安定したら状態を確定する。
+\texttt{delay()}は一切使わず、毎ループ非同期で判定している。
+\end{pointbox}
+
+\begin{pointbox}[エッジ検出をData構造体に含める]
+\texttt{justPressed}と\texttt{justReleased}をData構造体に含めることで、
+ロジックフェーズで「ボタンが今押された瞬間」を簡単に検出できる。
+\texttt{if (data.button.justPressed)}と書くだけでよく、
+ロジック側で前回値を保持する必要がない。
+\end{pointbox}
+
+\subsection{ロジックフェーズでの使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={ロジックフェーズでのButtonData参照}]
+void applyPattern(SystemData& data) {
+    // ボタンが押された瞬間にLEDをトグル
+    if (data.button.justPressed) {
+        data.led.state = !data.led.state;
+    }
+
+    // ボタン押下中にブザーを鳴らす
+    if (data.button.pressed) {
+        data.buzzer.frequency = 1000;
+        data.buzzer.requestPlay = true;
+    }
+}
+\end{lstlisting}

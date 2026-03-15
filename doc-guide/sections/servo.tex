@@ -1,0 +1,60 @@
+% ServoModule
+\section{ServoModule — PWM出力パターン}
+
+\begin{patternbox}{ServoModule で学べるパターン}
+\begin{itemize}
+    \item ESP32 LEDC（PWM）の初期化と制御
+    \item 「変化がある場合のみ更新」による無駄な出力の抑制
+    \item currentAngle による出力状態のフィードバック
+\end{itemize}
+\end{patternbox}
+
+\subsection{Config/Data構造体}
+
+\begin{lstlisting}[style=cppstyle, caption={ServoModule.h — Config/Data}]
+struct ServoConfig {
+    uint8_t  pin;            // サーボ信号ピン
+    uint8_t  pwmChannel;     // LEDCチャネル番号（0-15）
+    uint16_t minPulseUs;     // 最小パルス幅 [us]（例: 500）
+    uint16_t maxPulseUs;     // 最大パルス幅 [us]（例: 2500）
+    uint8_t  defaultAngle;   // 初期角度 [度]（0-180）
+};
+
+struct ServoData {
+    uint8_t targetAngle  = 90;  // 目標角度（ロジックフェーズが設定）
+    uint8_t currentAngle = 90;  // 現在の角度（モジュールが更新）
+};
+\end{lstlisting}
+
+\begin{pointbox}[targetとcurrentの分離]
+\texttt{targetAngle}はロジックフェーズが書き込む「指示値」、
+\texttt{currentAngle}はモジュールが更新する「実際の出力値」。
+この分離により、ロジックフェーズが「今サーボがどの角度にいるか」を確認できる。
+\end{pointbox}
+
+\subsection{update()の実装}
+
+\begin{lstlisting}[style=cppstyle, caption={ServoModule.cpp — update()}]
+void ServoModule::update(SystemData& data) {
+    uint8_t target = constrain(data.servo.targetAngle, 0, 180);
+
+    // 変化がある場合のみPWM更新
+    if (target != data.servo.currentAngle) {
+        ledcWrite(_config.pwmChannel, _angleToDuty(target));
+        data.servo.currentAngle = target;
+    }
+}
+\end{lstlisting}
+
+\begin{pointbox}[変化検出パターン]
+毎ループPWMを書き込むのではなく、\texttt{target != current}の場合のみ更新する。
+同じ値を毎回書き込んでも動作に問題はないが、
+不要なハードウェアアクセスを避けるのは良い習慣。
+特にI2C/SPI経由のデバイスでは通信コストの削減になる。
+\end{pointbox}
+
+\begin{pointbox}[constrainによる安全性]
+\texttt{constrain()}でサーボの物理的な可動範囲に制限している。
+ロジックフェーズが誤って範囲外の値を設定しても、モジュール側で安全に丸める。
+入力バリデーションはモジュールの責務。
+\end{pointbox}

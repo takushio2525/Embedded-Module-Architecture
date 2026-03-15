@@ -1,0 +1,78 @@
+% BatteryModule
+\section{BatteryModule — ADC + 移動平均フィルタ}
+
+\begin{patternbox}{BatteryModule で学べるパターン}
+\begin{itemize}
+    \item ModuleTimerによる周期サンプリング
+    \item リングバッファを使った移動平均フィルタ
+    \item ADC値の電圧変換（分圧回路対応）
+    \item isValidフラグによる「データが十分溜まったか」の表現
+\end{itemize}
+\end{patternbox}
+
+\subsection{Config/Data構造体}
+
+\begin{lstlisting}[style=cppstyle, caption={BatteryModule.h — Config/Data}]
+static constexpr uint8_t BATTERY_FILTER_SIZE = 16;
+
+struct BatteryConfig {
+    uint8_t       adcPin;
+    float         voltageDivider;      // 分圧比（例: 2.0 = 1/2分圧）
+    float         adcRefVoltage;       // ADC基準電圧 [V]
+    uint16_t      adcResolution;       // ADC分解能（ESP32: 4095）
+    unsigned long sampleIntervalMs;
+    float         lowVoltageThreshold; // 低電圧警告閾値 [V]
+};
+
+struct BatteryData {
+    float voltage    = 0.0f;   // フィルタ済み電圧 [V]
+    float rawVoltage = 0.0f;   // 最新の生電圧 [V]
+    bool  isValid    = false;  // サンプルが十分溜まったらtrue
+    bool  isLow      = false;  // 低電圧警告フラグ
+};
+\end{lstlisting}
+
+\begin{pointbox}[Configにハードウェア特性を含める]
+\texttt{voltageDivider}（分圧比）や\texttt{adcRefVoltage}（基準電圧）はハードウェア構成に依存する値。
+これらをConfigに含めることで、異なる回路構成でも同じモジュールコードを再利用できる。
+\end{pointbox}
+
+\subsection{リングバッファと移動平均}
+
+\begin{lstlisting}[style=cppstyle, caption={BatteryModule.cpp — update()}]
+void BatteryModule::update(SystemData& data) {
+    if (_sampleTimer.getNowTime() < _config.sampleIntervalMs) {
+        return;  // 周期未到達なら何もしない（ノンブロッキング）
+    }
+    _sampleTimer.setTime();
+
+    // ADC読み取り -> 電圧変換
+    uint16_t adcRaw = analogRead(_config.adcPin);
+    float voltage = _adcToVoltage(adcRaw);
+
+    // リングバッファに追加
+    _samples[_sampleIndex] = voltage;
+    _sampleIndex = (_sampleIndex + 1) % BATTERY_FILTER_SIZE;
+    if (_sampleCount < BATTERY_FILTER_SIZE) {
+        _sampleCount++;
+    }
+
+    // SystemDataに書き込み
+    data.battery.rawVoltage = voltage;
+    data.battery.voltage    = _calcAverage();
+    data.battery.isValid    = (_sampleCount >= BATTERY_FILTER_SIZE);
+    data.battery.isLow      = (data.battery.voltage < _config.lowVoltageThreshold);
+}
+\end{lstlisting}
+
+\begin{pointbox}[isValidの使い方]
+\texttt{isValid}は「移動平均のサンプルが\texttt{BATTERY\_FILTER\_SIZE}に達したか」を示す。
+起動直後はサンプルが少なく平均値が不正確なため、ロジックフェーズは\texttt{isValid == true}になるまで
+電圧値を信用しないようにできる。
+仕様書の「デフォルト値は正常値と区別できる無効値」ルールと同じ考え方。
+\end{pointbox}
+
+\begin{pointbox}[周期サンプリングの定石]
+\texttt{update()}の冒頭で\texttt{getNowTime() < interval}なら即\texttt{return}するパターンは、
+周期実行の定石。ガード節として最初に書くことで、残りのコードのインデントが深くならない。
+\end{pointbox}

@@ -1,0 +1,122 @@
+% WifiModule
+\section{WifiModule — ステートマシンパターン}
+
+\begin{patternbox}{WifiModule で学べるパターン}
+\begin{itemize}
+    \item enum classによる状態定義とswitch文による状態遷移
+    \item ModuleTimerによるタイムアウト・再接続間隔の管理
+    \item リクエストフラグによる外部からの制御（接続/切断指示）
+    \item deinit()によるWiFiリソースの解放
+\end{itemize}
+\end{patternbox}
+
+\subsection{状態定義}
+
+\begin{lstlisting}[style=cppstyle, caption={WifiModule.h — 状態定義}]
+enum class WifiState : uint8_t {
+    DISCONNECTED,  // 未接続（接続リクエスト待ち）
+    CONNECTING,    // 接続試行中
+    CONNECTED,     // 接続済み
+    RECONNECTING,  // 再接続試行中
+    FAILED,        // 接続失敗（リトライ上限超過）
+};
+\end{lstlisting}
+
+\begin{pointbox}[Data構造体にステートを公開]
+\texttt{WifiData.state}としてenum値をSystemDataに公開することで、
+ロジックフェーズが現在の接続状態に応じた判断を行える。
+\texttt{isConnected}は簡易参照用のboolで、\texttt{state == CONNECTED}の省略形。
+\end{pointbox}
+
+\subsection{ステートマシンの実装}
+
+\begin{lstlisting}[style=cppstyle, caption={WifiModule.cpp — update()のステートマシン}]
+void WifiModule::update(SystemData& data) {
+    // ロジックフェーズからのリクエスト処理
+    if (data.wifi.requestConnect) {
+        data.wifi.requestConnect = false;
+        if (_state == WifiState::DISCONNECTED
+            || _state == WifiState::FAILED) {
+            _retryCount = 0;
+            _startConnect();
+        }
+    }
+
+    // ステートマシン
+    switch (_state) {
+        case WifiState::CONNECTING:
+        case WifiState::RECONNECTING:
+            if (WiFi.status() == WL_CONNECTED) {
+                _state = WifiState::CONNECTED;
+                _retryCount = 0;
+            } else if (_stateTimer.getNowTime()
+                       >= _config.connectTimeoutMs) {
+                WiFi.disconnect();
+                _retryCount++;
+                if (_config.maxRetries > 0
+                    && _retryCount >= _config.maxRetries) {
+                    _state = WifiState::FAILED;
+                } else {
+                    _state = WifiState::RECONNECTING;
+                    _stateTimer.setTime();
+                }
+            }
+            break;
+
+        case WifiState::CONNECTED:
+            if (WiFi.status() != WL_CONNECTED) {
+                _state = WifiState::RECONNECTING;
+                _stateTimer.setTime();
+            }
+            break;
+        // ...
+    }
+
+    // SystemDataに状態を反映
+    data.wifi.state       = _state;
+    data.wifi.isConnected = (_state == WifiState::CONNECTED);
+    data.wifi.retryCount  = _retryCount;
+}
+\end{lstlisting}
+
+\begin{pointbox}[ノンブロッキングなステートマシン]
+WiFi接続は通常数秒かかるが、\texttt{delay()}で待たない。
+\texttt{CONNECTING}状態では毎ループ\texttt{WiFi.status()}を確認し、
+接続完了かタイムアウトかを判定する。
+これにより、WiFi接続中も他のモジュール（LED、センサー等）は正常に動作し続ける。
+\end{pointbox}
+
+\begin{pointbox}[リクエストフラグパターン]
+\texttt{requestConnect}はロジックフェーズからの「接続して」という指示。
+BuzzerModuleの\texttt{requestPlay}と同じパターンで、
+\texttt{update()}が処理後に\texttt{false}に戻す。
+\end{pointbox}
+
+\subsection{ロジックフェーズでの使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={ロジックフェーズでのWiFi制御}]
+void applyPattern(SystemData& data) {
+    // ボタンが押されたらWiFi接続開始
+    if (data.button.justPressed
+        && !data.wifi.isConnected) {
+        data.wifi.requestConnect = true;
+    }
+
+    // WiFi接続状態に応じた表示
+    switch (data.wifi.state) {
+        case WifiState::CONNECTING:
+            snprintf(data.tft.line1, 48, "WiFi: Connecting...");
+            break;
+        case WifiState::CONNECTED:
+            snprintf(data.tft.line1, 48,
+                     "WiFi: OK (RSSI=%d)", data.wifi.rssi);
+            break;
+        case WifiState::FAILED:
+            snprintf(data.tft.line1, 48,
+                     "WiFi: Failed (%d retries)",
+                     data.wifi.retryCount);
+            break;
+        default: break;
+    }
+}
+\end{lstlisting}

@@ -1,0 +1,76 @@
+% CameraModule
+\section{CameraModule — PSRAMバッファ + フレーム管理}
+
+\begin{patternbox}{CameraModule で学べるパターン}
+\begin{itemize}
+    \item PSRAMへの大容量バッファ配置
+    \item フレームバッファのライフサイクル管理（取得→使用→解放）
+    \item Data構造体にメタデータのみ格納し、生データはモジュール内に保持
+    \item 多数のピンをConfig構造体で一元管理
+\end{itemize}
+\end{patternbox}
+
+\subsection{Configの大量ピン管理}
+
+\begin{lstlisting}[style=cppstyle, caption={CameraModule.h — Config（多数のピン）}]
+struct CameraConfig {
+    int8_t pwdnPin, resetPin;           // 電源/リセット
+    int8_t xclkPin, siodPin, siocPin;   // クロック/SCCB
+    int8_t d0Pin, d1Pin, d2Pin, d3Pin;  // DVPデータバス
+    int8_t d4Pin, d5Pin, d6Pin, d7Pin;
+    int8_t vsyncPin, hrefPin, pclkPin;  // 同期
+    uint32_t xclkFreqHz;
+    int frameSize, pixFormat;
+    int jpegQuality;
+    int fbCount;
+};
+\end{lstlisting}
+
+\begin{pointbox}[Config構造体の威力]
+カメラモジュールはピンが16本以上ある。
+コンストラクタの引数で16個のピンを渡すと順序を間違える危険があるが、
+Config構造体なら\texttt{.d0Pin = 11}のように名前で指定できる。
+Config構造体のピンアサインが\texttt{ProjectConfig.h}に集約されるため、
+回路設計者はこのファイルだけでピンの確認・変更ができる。
+\end{pointbox}
+
+\subsection{フレームバッファの管理}
+
+\begin{lstlisting}[style=cppstyle, caption={CameraModule — フレームバッファ管理}]
+// update()はメタデータだけをSystemDataに書き込む
+void CameraModule::update(SystemData& data) {
+    if (_prevFb) {
+        esp_camera_fb_return(_prevFb);  // 前回のフレームを自動解放
+        _prevFb = nullptr;
+    }
+    camera_fb_t* fb = esp_camera_fb_get();
+    if (fb) {
+        data.camera.frameReady = true;
+        data.camera.width = fb->width;
+        data.camera.height = fb->height;
+        data.camera.frameSize = fb->len;
+        _prevFb = fb;  // モジュール内で保持
+    }
+}
+
+// ロジックフェーズから生データにアクセスする場合
+camera_fb_t* CameraModule::getFrameBuffer() { return _prevFb; }
+void CameraModule::releaseFrame() {
+    if (_prevFb) {
+        esp_camera_fb_return(_prevFb);
+        _prevFb = nullptr;
+    }
+}
+\end{lstlisting}
+
+\begin{pointbox}[Data構造体に生データを入れない]
+\texttt{camera\_fb\_t*}（フレームバッファポインタ）はSystemDataに格納しない。
+SystemDataに入れると、他モジュールがフレームの解放タイミングを制御できてしまう。
+代わに\texttt{getFrameBuffer()} / \texttt{releaseFrame()}でアクセスを制御し、
+\texttt{CameraData}にはメタデータ（サイズ、解像度等）のみを格納する。
+\end{pointbox}
+
+\begin{notebox}[PSRAMの自動配置]
+\texttt{fbCount >= 2}の場合、esp\_cameraライブラリが自動的にPSRAMにバッファを配置する。
+Config構造体の\texttt{fbCount}で制御でき、モジュール内部でPSRAM判定のコードを書く必要はない。
+\end{notebox}

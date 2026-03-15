@@ -1,0 +1,122 @@
+% BleModule
+\section{BleModule — スレッドセーフティパターン}
+
+\begin{patternbox}{BleModule で学べるパターン}
+\begin{itemize}
+    \item volatileフラグ方式による安全なデータ受け渡し
+    \item BLEコールバック（別タスク）→内部バッファ→update()→SystemData
+    \item deinit()によるBLEリソースの解放
+    \item 双方向通信（RX: コールバック受信、TX: update()で送信）
+\end{itemize}
+\end{patternbox}
+
+\subsection{内部バッファとvolatileフラグ}
+
+\begin{lstlisting}[style=cppstyle, caption={BleModule.h — 内部バッファ}]
+class BleModule : public IModule {
+private:
+    // 内部バッファ（BLEコールバックスレッドが書き込む）
+    uint8_t       _rxBuffer[BLE_RX_BUFFER_SIZE] = {};
+    uint8_t       _rxBufferLength = 0;
+    volatile bool _dataReceived   = false;  // volatileフラグ
+    volatile bool _clientConnected = false;
+public:
+    // BLEコールバックから呼ばれる（別タスクで実行される）
+    void onReceive(const uint8_t* payload, uint8_t length);
+    // ...
+};
+\end{lstlisting}
+
+\begin{cautionbox}[なぜvolatileが必要か]
+BLEコールバックはArduinoのメインループとは別のFreeRTOSタスクで実行される。
+\texttt{volatile}がないと、コンパイラが\texttt{\_dataReceived}の値をレジスタにキャッシュし、
+メインループ側で変更を検出できない場合がある。
+\texttt{volatile}は「この変数は外部から変更されるかもしれない」とコンパイラに伝えるキーワード。
+\end{cautionbox}
+
+\subsection{コールバック→内部バッファ→SystemData}
+
+\begin{lstlisting}[style=cppstyle, caption={BleModule.cpp — データ受け渡しの流れ}]
+// BLEコールバック（別タスクから呼ばれる）
+void BleModule::onReceive(const uint8_t* payload, uint8_t length) {
+    memcpy(_rxBuffer, payload, length);  // (1) バッファに書き込み
+    _rxBufferLength = length;
+    _dataReceived = true;                // (2) フラグを立てる
+}
+
+// update()は3フェーズループ内で呼ばれる（メインタスク）
+void BleModule::update(SystemData& data) {
+    data.ble.connected = _clientConnected;
+
+    if (_dataReceived) {                             // (3) フラグ確認
+        memcpy(data.ble.rxData, _rxBuffer, _rxBufferLength); // (4) コピー
+        data.ble.rxLength  = _rxBufferLength;
+        data.ble.newDataIn = true;
+        _dataReceived = false;                       // (5) フラグクリア
+    }
+
+    // 送信リクエスト処理
+    if (data.ble.sendRequest && _clientConnected && _txChar) {
+        _txChar->setValue(data.ble.txData, data.ble.txLength);
+        _txChar->notify();
+        data.ble.sendRequest = false;
+    }
+}
+\end{lstlisting}
+
+\begin{pointbox}[volatileフラグ方式の安全性]
+\texttt{bool}型の読み書きは原子的（1命令で完了する）。
+「バッファに全データを書き込んだ後にフラグを立てる」→「フラグを確認してからバッファを読む」
+の順序により、バッファの途中状態を読むことがない。
+mutexやセマフォは不要で、割り込みコンテキストでも安全に使える。
+\end{pointbox}
+
+\subsection{BLEコールバックの登録}
+
+\begin{lstlisting}[style=cppstyle, caption={BleModule.cpp — コールバッククラス}]
+// BLEライブラリのコールバッククラスを継承
+class BleRxCallbacks : public BLECharacteristicCallbacks {
+private:
+    BleModule* _module;
+public:
+    BleRxCallbacks(BleModule* module) : _module(module) {}
+    void onWrite(BLECharacteristic* characteristic) override {
+        std::string value = characteristic->getValue();
+        uint8_t len = min((int)value.length(), BLE_RX_BUFFER_SIZE);
+        _module->onReceive(
+            reinterpret_cast<const uint8_t*>(value.data()), len);
+    }
+};
+\end{lstlisting}
+
+\begin{pointbox}[コールバックからモジュールへの橋渡し]
+BLEライブラリはコールバッククラスの継承を要求するため、
+内部クラスでラップして\texttt{BleModule::onReceive()}に橋渡しする。
+コールバッククラスはモジュールのポインタを保持し、受信データをモジュールの内部バッファに渡す。
+\end{pointbox}
+
+\subsection{送信の流れ（ロジックフェーズ→update()）}
+
+\begin{lstlisting}[style=cppstyle, caption={ロジックフェーズでの送信リクエスト}]
+void applyPattern(SystemData& data) {
+    // BLE受信データの処理
+    if (data.ble.newDataIn) {
+        // 受信データを処理...
+        data.ble.newDataIn = false;  // 処理済みフラグクリア
+    }
+
+    // BLE送信（応答を返す例）
+    if (needToRespond) {
+        memcpy(data.ble.txData, response, responseLen);
+        data.ble.txLength = responseLen;
+        data.ble.sendRequest = true;  // 次のupdate()で送信される
+    }
+}
+\end{lstlisting}
+
+\begin{notebox}[双方向通信のデータフロー]
+\textbf{受信}: BLEコールバック → 内部バッファ → update() → SystemData.ble.rxData → ロジックフェーズ\\
+\textbf{送信}: ロジックフェーズ → SystemData.ble.txData → update() → BLE Notify\\
+受信は入力フェーズの流れ、送信は出力フェーズの流れに対応する。
+BleModuleは入力配列に登録するが、送信処理も\texttt{update()}内で行うため実質的に入出力兼用。
+\end{notebox}

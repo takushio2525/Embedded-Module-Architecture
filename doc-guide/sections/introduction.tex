@@ -1,0 +1,53 @@
+% 概要
+\section{この資料について}
+
+\subsection{位置づけ}
+
+本リポジトリには3つのドキュメントがある。
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{ドキュメント} & \textbf{ディレクトリ} & \textbf{内容} \\
+\midrule
+設計仕様書 & \texttt{doc/} & アーキテクチャのルール・API仕様（「何を守るか」） \\
+教科書 & \texttt{doc-textbook/} & パターンの段階的な学習（「なぜそうするか」） \\
+\textbf{実装ガイド}（本書） & \texttt{doc-guide/} & 実コードの解説（「実際にどう書いたか」） \\
+\bottomrule
+\end{tabularx}
+
+\subsection{読み方}
+
+本書では、リポジトリに実装されている各モジュールを取り上げ、以下の構成で解説する。
+
+\begin{enumerate}
+    \item \textbf{概要} — モジュールの役割と、そのモジュールで学べるパターン
+    \item \textbf{コード解説} — 実際のコードを引用し、設計ルールとの対応を示す
+    \item \textbf{ポイント} — 特に注目すべき設計判断やテクニック
+\end{enumerate}
+
+モジュールは簡単なものから順に並べている。
+前半のモジュールで基本パターンを押さえたうえで、後半の応用パターンに進む構成になっている。
+
+\subsection{モジュール一覧}
+
+\begin{longtable}{l l l}
+\toprule
+\textbf{モジュール} & \textbf{種別} & \textbf{主な学習パターン} \\
+\midrule
+\endhead
+LedModule & 出力 & 最小構成の基本パターン \\
+ButtonModule & 入力 & デバウンス（ModuleTimer活用） \\
+BatteryModule & 入力 & ADC読み取り + 移動平均フィルタ \\
+ServoModule & 出力 & PWM制御（LEDC） \\
+BuzzerModule & 出力 & deinit()によるリソース解放 \\
+Mpu6500Module & 入力 & I2Cバスパターン + レジスタ直接アクセス \\
+TouchModule & 入力 & バスオブジェクト共有（TFT\_eSPIドライバ） \\
+TftModule & 出力 & SPI共有 + 複合デバイスの分離 \\
+CameraModule & 入力 & PSRAMバッファ + フレーム管理 \\
+DriveMotorModule & 出力 & PWM 2ピン制御 + 統合モジュール部品 \\
+ChassisModule & 出力 & 機能統合系（内部にモジュールを持つ） \\
+BleModule & 入力 & スレッドセーフティ（volatileフラグ方式） \\
+WifiModule & 入力 & ステートマシン内蔵 \\
+EncoderModule & 入力 & ハードウェア割り込み連携 \\
+\bottomrule
+\end{longtable}

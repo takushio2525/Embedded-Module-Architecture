@@ -1,0 +1,64 @@
+% Mpu6500Module
+\section{Mpu6500Module — I2Cバスパターン}
+
+\begin{patternbox}{Mpu6500Module で学べるパターン}
+\begin{itemize}
+    \item 通信バスパターン（コンストラクタでバスポインタを受け取る）
+    \item ヘッダーでのバスクラス前方宣言（\texttt{<Wire.h>}依存を.cppに閉じ込める）
+    \item WHO\_AM\_I による init() でのデバイス識別
+    \item 周期サンプリング + バースト読み取り
+\end{itemize}
+\end{patternbox}
+
+\subsection{バスポインタの受け取り}
+
+\begin{lstlisting}[style=cppstyle, caption={Mpu6500Module.h — バスの前方宣言とコンストラクタ}]
+// TwoWireはポインタのみ使用するため前方宣言で十分
+class TwoWire;
+
+class Mpu6500Module : public IModule {
+private:
+    Mpu6500Config _config;
+    TwoWire*      _wire;       // コンストラクタで受け取るバスポインタ
+    ModuleTimer   _sampleTimer;
+public:
+    explicit Mpu6500Module(const Mpu6500Config& config, TwoWire* wire);
+    // ...
+};
+\end{lstlisting}
+
+\begin{pointbox}[ヘッダーでの前方宣言]
+\texttt{class TwoWire;}と前方宣言することで、ヘッダーに\texttt{<Wire.h>}をインクルードする必要がない。
+ポインタや参照の宣言には前方宣言だけで十分。
+これにより、\texttt{Mpu6500Module.h}をインクルードするファイルに\texttt{Wire.h}の依存が波及しない。
+\end{pointbox}
+
+\begin{pointbox}[Configにバスポインタを含めない理由]
+\texttt{Mpu6500Config}にはI2Cアドレスとピン情報だけを含め、\texttt{TwoWire*}は含めない。
+バスポインタをConfigに含めると、\texttt{ProjectConfig.h}でバスインスタンスの\texttt{extern}宣言が
+必要になり、インクルード順序の制約が生じる。
+コンストラクタの別引数にすることで、Configは純粋な設定値のみを持つ。
+\end{pointbox}
+
+\subsection{main.cppでのバス管理}
+
+\begin{lstlisting}[style=cppstyle, caption={main.cpp — バスの生成と初期化}]
+// バスインスタンス（グローバルスコープで生成）
+static TwoWire mpuWire = TwoWire(0);
+
+// モジュール生成（Config + バスポインタ）
+Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
+
+void setup() {
+    // バス初期化は全モジュールのinit()より前に実行
+    mpuWire.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
+    // ...
+    mpu6500Module.init();  // init()ではbus.begin()を呼ばない
+}
+\end{lstlisting}
+
+\begin{pointbox}[init()でbus.begin()を呼ばない]
+バスの初期化は\texttt{main.cpp}の\texttt{setup()}で一元管理する。
+モジュールの\texttt{init()}ではデバイス固有の初期化（WHO\_AM\_Iの確認、レジスタ設定等）のみ行う。
+同じバスを複数モジュールが共有する場合、各モジュールが\texttt{begin()}すると二重初期化になる。
+\end{pointbox}

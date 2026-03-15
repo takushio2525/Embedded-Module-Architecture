@@ -1,0 +1,90 @@
+% LedModule
+\section{LedModule — 最小構成の基本パターン}
+
+\begin{patternbox}{LedModule で学べるパターン}
+\begin{itemize}
+    \item Config構造体によるピンアサインの外部注入
+    \item Data構造体のデフォルト値
+    \item .h/.cpp分離（循環依存回避）
+    \item 出力モジュールの基本形（SystemDataの値に従って動作するだけ）
+\end{itemize}
+\end{patternbox}
+
+\subsection{ヘッダー（LedModule.h）}
+
+\begin{lstlisting}[style=cppstyle, caption={LedModule.h}]
+#pragma once
+#include <Arduino.h>
+#include "IModule.h"
+
+struct LedConfig {
+    uint8_t ledPin;  // LED出力ピン
+};
+
+struct LedData {
+    bool state = false;       // LED状態（デフォルト: 消灯）
+    uint8_t brightness = 0;   // 輝度（将来拡張用）
+};
+
+class LedModule : public IModule {
+private:
+    LedConfig _config;
+public:
+    LedModule(const LedConfig& config);
+    bool init() override;
+    void update(SystemData& data) override;
+};
+\end{lstlisting}
+
+\begin{pointbox}[Config構造体のポイント]
+\texttt{LedConfig}にはピン番号だけを持つ。
+ピン番号を\texttt{LedModule}内にハードコードせず、Config構造体で外部から注入する。
+これにより、同じ\texttt{LedModule}クラスを別プロジェクトでピンだけ変えて再利用できる。
+\end{pointbox}
+
+\begin{pointbox}[Data構造体のデフォルト値]
+\texttt{LedData}の\texttt{state = false}は「\texttt{update()}が1度も呼ばれていない状態でも安全」を保証する。
+ロジックフェーズが\texttt{state}を\texttt{true}に変更するまで、LEDは消灯したままとなる。
+\end{pointbox}
+
+\subsection{実装（LedModule.cpp）}
+
+\begin{lstlisting}[style=cppstyle, caption={LedModule.cpp}]
+#include "LedModule.h"
+#include "SystemData.h"  // ヘッダーでは前方宣言のみ、cppで完全な定義を取得
+
+LedModule::LedModule(const LedConfig& config) : _config(config) {}
+
+bool LedModule::init() {
+    pinMode(_config.ledPin, OUTPUT);
+    Serial.println("[Led] init OK");
+    return true;
+}
+
+void LedModule::update(SystemData& data) {
+    digitalWrite(_config.ledPin, data.led.state ? HIGH : LOW);
+}
+\end{lstlisting}
+
+\begin{pointbox}[出力モジュールの責務]
+\texttt{update()}は\textbf{自身のData構造体の値に従って動作するだけ}。
+「いつ点灯するか」「何の条件で消すか」などのロジックは一切書かない。
+それはロジックフェーズ（\texttt{applyPattern()}等）の仕事である。
+\end{pointbox}
+
+\begin{pointbox}[.h/.cpp分離のルール]
+ヘッダーでは\texttt{SystemData.h}をインクルードせず、\texttt{IModule.h}内の前方宣言だけを利用する。
+\texttt{SystemData.h}のインクルードは\texttt{.cpp}側で行う。
+これにより\texttt{LedModule.h} → \texttt{SystemData} → \texttt{LedModule.h}の循環依存を防ぐ。
+\end{pointbox}
+
+\subsection{ProjectConfig.hでの定義}
+
+\begin{lstlisting}[style=cppstyle, caption={ProjectConfig.hでのConfig定義}]
+const LedConfig LED_CONFIG = {
+    .ledPin = 2,  // GPIO2: オンボードLED
+};
+\end{lstlisting}
+
+回路設計者はこのファイルだけ見ればピンアサインが分かる。
+\texttt{LED\_CONFIG}という大文字スネークケースの命名規則も守っている。

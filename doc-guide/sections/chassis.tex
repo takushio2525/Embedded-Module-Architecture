@@ -1,0 +1,93 @@
+% ChassisModule
+\section{ChassisModule — 機能統合パターン}
+
+\begin{patternbox}{ChassisModule で学べるパターン}
+\begin{itemize}
+    \item 複数モジュールを内部に保持する「機能統合系モジュール」
+    \item 内部モジュールのinit()/update()/deinit()を親が管理
+    \item ベクトル合成による高レベル制御（3軸入力→4輪出力）
+    \item 内部モジュールのSystemData登録が不要なケース
+\end{itemize}
+\end{patternbox}
+
+\subsection{内部モジュールの保持}
+
+\begin{lstlisting}[style=cppstyle, caption={ChassisModule.h — 内部にDriveMotorModuleを4つ保持}]
+struct ChassisConfig {
+    DriveMotorConfig motors[4];     // 4輪分のモーターConfig
+    WheelPattern     wheelPattern;
+    float            maxOutputPercent;
+};
+
+class ChassisModule : public IModule {
+private:
+    ChassisConfig      _config;
+    DriveMotorModule   _motors[4];  // 内部にモジュールを直接保持
+public:
+    ChassisModule(const ChassisConfig& config);
+    bool init() override;
+    void update(SystemData& data) override;
+    void deinit() override;
+};
+\end{lstlisting}
+
+\begin{pointbox}[内部モジュールはIModule配列に登録しない]
+\texttt{\_motors[4]}は\texttt{ChassisModule}のメンバ変数であり、
+\texttt{main.cpp}の\texttt{outputModules[]}には登録しない。
+\texttt{SystemData}にも\texttt{DriveMotorData}を含める必要がない。
+外部からは\texttt{ChassisModule}1つだけが見え、3軸入力だけで4輪を制御できる。
+\end{pointbox}
+
+\subsection{親モジュールからの制御委譲}
+
+\begin{lstlisting}[style=cppstyle, caption={ChassisModule.cpp — init()/deinit()で内部モジュールを管理}]
+ChassisModule::ChassisModule(const ChassisConfig& config)
+    : _config(config),
+      _motors{
+          DriveMotorModule(config.motors[0]),
+          DriveMotorModule(config.motors[1]),
+          DriveMotorModule(config.motors[2]),
+          DriveMotorModule(config.motors[3]),
+      } {}
+
+bool ChassisModule::init() {
+    for (int i = 0; i < 4; i++) {
+        if (!_motors[i].init()) return false;
+    }
+    return true;
+}
+
+void ChassisModule::deinit() {
+    for (int i = 0; i < 4; i++) {
+        _motors[i].deinit();
+    }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=cppstyle, caption={ChassisModule.cpp — update()でベクトル合成→各モーターをdrive()}]
+void ChassisModule::update(SystemData& data) {
+    float outputs[4];
+    // ベクトル合成（ホイールパターンに応じた方向行列）
+    calcWheelOutputs(data.chassis, outputs);
+    // リミッタ + スケーリング
+    applyLimiter(outputs, _config.maxOutputPercent);
+    // 各内部モジュールのdrive()を直接呼ぶ
+    for (int i = 0; i < 4; i++) {
+        _motors[i].drive(outputs[i]);
+        data.chassis.motorOutputs[i] = outputs[i];
+    }
+}
+\end{lstlisting}
+
+\begin{pointbox}[機能統合の原則]
+仕様書の「モジュール間の依存関係は存在しないものとして設計する」ルールに従い、
+依存関係があるモジュール同士は1つに統合する。
+ChassisModuleとDriveMotorModuleは明確に依存関係があるため、
+ChassisModuleがDriveMotorModuleを内部部品として包含している。
+\end{pointbox}
+
+\begin{notebox}[Config構造体のネスト]
+\texttt{ChassisConfig.motors[4]}は\texttt{DriveMotorConfig}の配列。
+Config構造体は別のConfig構造体をメンバとして持てる。
+これにより\texttt{ProjectConfig.h}で4輪分のピンアサインを一括定義できる。
+\end{notebox}
