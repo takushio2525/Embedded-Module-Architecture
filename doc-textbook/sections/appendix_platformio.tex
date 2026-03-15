@@ -1,0 +1,162 @@
+% 付録A: PlatformIOのススメ
+\section*{付録A: PlatformIOのススメ}
+\label{sec:appendix_platformio}
+\addcontentsline{toc}{section}{付録A: PlatformIOのススメ}
+
+この付録では、本書のサンプルプロジェクトで使用している開発環境「PlatformIO」について解説します。
+
+%% ── Q1: PlatformIOって何？ ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{PlatformIOって何？}
+
+PlatformIOは、マイコンのプログラムを書いてボードに書き込むための開発環境です。Arduino IDEと同じ役割を果たしますが、大きな違いが1つあります。
+
+\begin{itemize}
+  \item \textbf{Arduino IDE} — マイコン開発専用のスタンドアロンアプリ
+  \item \textbf{PlatformIO} — VSCode（Visual Studio Code）の拡張機能として動作する
+\end{itemize}
+
+Arduino互換なので、Arduino IDEで書いたコードはほぼそのままPlatformIOでも動きます。「Arduino IDEに慣れているからコードが書けない」という心配は不要です。
+
+\begin{notebox}[VSCodeとは]
+VSCode（Visual Studio Code）はMicrosoftが無料で提供する高機能テキストエディタです。拡張機能を追加することでさまざまな言語・用途に対応でき、現在最も広く使われている開発エディタの一つです。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q2: Arduino IDEと何が違うの？ ───────────
+\needspace{5\baselineskip}
+\begin{qabox}{Arduino IDEと何が違うの？}
+
+主な違いを比較表にまとめます。
+
+\vspace{2mm}
+\begin{tabularx}{\textwidth}{l X X}
+\toprule
+\textbf{項目} & \textbf{Arduino IDE} & \textbf{PlatformIO} \\
+\midrule
+エディタ & 専用エディタ（機能が限定的） & VSCode（補完・定義ジャンプ等が強力） \\
+\midrule
+ライブラリ管理 & グローバルに1バージョンのみ & プロジェクトごとにバージョン固定 \\
+\midrule
+ボード設定 & GUIで毎回選択 & \texttt{platformio.ini} に記述（固定） \\
+\midrule
+環境の共有 & 口頭やメモで伝える & \texttt{platformio.ini} をGitで共有 \\
+\midrule
+CI/CD & 対応困難 & CLIベースで容易 \\
+\midrule
+複数ボード対応 & 手動で切り替え & \texttt{[env:名前]} で同時管理 \\
+\bottomrule
+\end{tabularx}
+
+\vspace{3mm}
+特に「ライブラリのバージョン管理」と「環境の共有」がPlatformIOの大きな強みです。
+
+\end{qabox}
+
+%% ── Q3: チーム開発でPIOが強い理由は？ ─────────
+\needspace{5\baselineskip}
+\begin{qabox}{チーム開発でPlatformIOが強い理由は？}
+
+Arduino IDEでチーム開発をしようとすると、よくこんな問題が起きます。
+
+\begin{badexample}{Arduino IDEでのチーム開発あるある}
+\begin{itemize}
+  \item 「ボードマネージャ v2.0.11 じゃないとビルド通らないんだけど…」
+  \item 「ライブラリのバージョン合わせて」→ 口頭伝達 → 忘れる → ビルドが通らない
+  \item 「え、自分のPCでは動くんだけどな」
+\end{itemize}
+\end{badexample}
+
+PlatformIOなら、プロジェクトに必要な情報がすべて \texttt{platformio.ini} に記述されています。
+
+\begin{goodexample}{PlatformIOならgit cloneするだけで同じ環境が再現される}
+\begin{lstlisting}
+git clone https://github.com/yourname/yourproject
+cd yourproject
+pio run        # 同じplatformio.iniからビルド → 全員同じ結果
+\end{lstlisting}
+\end{goodexample}
+
+\begin{notebox}[AIとのデバッグでも強い]
+ChatGPTやClaudeなどのAIツールにデバッグを相談するとき、\texttt{platformio.ini} を貼り付けるだけでプラットフォーム・ボード・ライブラリバージョンが確定した状態で相談できます。「環境が違うのでは？」という的外れな回答が減ります。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q4: platformio.ini の読み方 ──────────────
+\needspace{5\baselineskip}
+\begin{qabox}{platformio.ini の読み方}
+
+\texttt{platformio.ini} は、プロジェクトのビルド設定をすべて記述するファイルです。本リポジトリの設定を例に各項目を解説します。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle=\color{gray}\itshape,morecomment={[l]{;}}]
+[env:esp32-s3-cam-n16r8]   ; ビルド対象の環境定義（名前は自由）
+platform = espressif32      ; 使用するマイコンプラットフォーム
+board = esp32-s3-devkitc-1  ; 対象ボード
+framework = arduino         ; Arduinoフレームワークを使用
+monitor_speed = 115200      ; シリアルモニターのボーレート
+
+lib_deps =
+    bodmer/TFT_eSPI @ ^2.5.43  ; 使用ライブラリとバージョン
+
+build_flags =
+    -D BOARD_HAS_PSRAM    ; コンパイルマクロの定義
+    -I include            ; include/ フォルダをパスに追加
+\end{lstlisting}
+
+各項目の役割をまとめます。
+
+\vspace{2mm}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{説明} \\
+\midrule
+\texttt{[env:名前]} & ビルド対象の環境定義。複数書けば複数ボードを管理できる \\
+\texttt{platform} & 使用するマイコンプラットフォーム（例: \texttt{espressif32}） \\
+\texttt{board} & 対象ボードの識別子 \\
+\texttt{framework} & \texttt{arduino} または \texttt{espidf} 等 \\
+\texttt{lib\_deps} & 使用ライブラリとバージョン。\texttt{@\^{}2.5.43} はマイナーバージョン以上を許容 \\
+\texttt{build\_flags} & コンパイルオプション（マクロ定義・インクルードパス等） \\
+\texttt{monitor\_speed} & シリアルモニターのボーレート \\
+\bottomrule
+\end{tabularx}
+
+\begin{notebox}[Arduino IDEとの対応]
+Arduino IDEで言うところの「ボードマネージャのURL追加 → ボード選択 → ライブラリマネージャでインストール」を、この \texttt{platformio.ini} 1ファイルで全部済ませています。初回 \texttt{pio run} 時に必要なものが自動でダウンロードされます。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q5: PlatformIOの始め方 ──────────────────
+\needspace{5\baselineskip}
+\begin{qabox}{PlatformIOの始め方}
+
+以下のステップで環境を構築できます。
+
+\begin{enumerate}
+  \item \textbf{VSCodeをインストール} \\
+        \url{https://code.visualstudio.com/} からダウンロードしてインストールする
+
+  \item \textbf{拡張機能「PlatformIO IDE」をインストール} \\
+        VSCode の拡張機能タブ（\texttt{Ctrl+Shift+X}）で「PlatformIO IDE」を検索してインストールする
+
+  \item \textbf{プロジェクトを開く} \\
+        PlatformIOのホーム画面から「Open Project」で既存プロジェクトを開く、\\
+        または「New Project」でボードを選んで新規作成する
+
+  \item \textbf{ビルドする} \\
+        画面下のチェックマーク（\checkmark）をクリック、またはターミナルで \texttt{pio run}
+
+  \item \textbf{書き込む} \\
+        画面下の矢印（\textrightarrow）をクリック、またはターミナルで \texttt{pio run -t upload}
+
+  \item \textbf{シリアルモニターを開く} \\
+        画面下のコンセントマークをクリック、またはターミナルで \texttt{pio device monitor}
+\end{enumerate}
+
+\begin{notebox}[本書のサンプルプロジェクトについて]
+本書のサンプルプロジェクトもPlatformIO形式です。\texttt{git clone} してVSCodeで開くだけで、すぐにビルド・書き込みができます。ライブラリのインストール等は \texttt{platformio.ini} が自動で処理します。
+\end{notebox}
+
+\end{qabox}
