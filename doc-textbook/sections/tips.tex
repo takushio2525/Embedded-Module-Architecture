@@ -1,4 +1,4 @@
-% 第9章: 設計のコツ集
+% 第10章: 設計のコツ集
 \section{設計のコツ集}
 
 この章では、実装でよくある疑問に短いQ\&A形式で答えます。
@@ -160,6 +160,61 @@ void applyLogic(SystemData& data) {
 }
 \end{lstlisting}
 \end{goodexample}
+
+\end{qabox}
+
+%% ── ビルドエラー ──────────────────────────
+\begin{qabox}{ビルドが通らない！よくあるエラーは？}
+
+初めてモジュールを追加したとき、コンパイルエラーに悩むことが多いです。よくあるエラーとその対処法をまとめます。
+
+\subsection{「No such file or directory」}
+
+\begin{lstlisting}[language={},numbers=none,backgroundcolor=\color{warnred!5}]
+fatal error: SystemData.h: No such file or directory
+\end{lstlisting}
+
+\texttt{lib/} 内のコードから \texttt{include/} のヘッダーが見つかっていません。\texttt{platformio.ini} の \texttt{build\_flags} に \texttt{-I include} が入っているか確認してください。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle=\color{gray}\itshape,morecomment={[l]{;}},numbers=none]
+build_flags =
+    -I include            ; これがないとlib/からinclude/が見えない
+\end{lstlisting}
+
+\subsection{「does not name a type」}
+
+\begin{lstlisting}[language={},numbers=none,backgroundcolor=\color{warnred!5}]
+error: 'SystemData' does not name a type
+\end{lstlisting}
+
+ヘッダーファイルで \texttt{struct SystemData;} の前方宣言を忘れている、または \texttt{.h} で \texttt{SystemData.h} をインクルードしてしまい循環依存が発生しています。以下を確認してください。
+
+\begin{itemize}
+  \item \texttt{XxxModule.h} — \texttt{struct SystemData;} の前方宣言があるか
+  \item \texttt{XxxModule.h} — \texttt{SystemData.h} をインクルードしていないか
+  \item \texttt{XxxModule.cpp} — \texttt{\#include "SystemData.h"} があるか
+\end{itemize}
+
+\subsection{「is not a member of 'SystemData'」}
+
+\begin{lstlisting}[language={},numbers=none,backgroundcolor=\color{warnred!5}]
+error: 'struct SystemData' has no member named 'temp'
+\end{lstlisting}
+
+新しいモジュールのDataを \texttt{SystemData.h} に追加し忘れています。\texttt{include/SystemData.h} を開いて、自分のモジュールの \texttt{\#include} と \texttt{Data} メンバを追加してください（実践の章ステップ5参照）。
+
+\subsection{「marked 'override', but does not override」}
+
+\begin{lstlisting}[language={},numbers=none,backgroundcolor=\color{warnred!5}]
+error: 'bool XxxModule::init()' marked 'override', but does not
+override any member functions
+\end{lstlisting}
+
+\texttt{IModule} を継承していないか、メソッドのシグネチャ（引数・戻り値）が合っていません。\texttt{: public IModule} の継承と、\texttt{init()}/\texttt{update()} の引数が正しいか確認してください。
+
+\begin{notebox}[エラーメッセージの読み方]
+コンパイルエラーは上から順に読みます。最初のエラーが原因で後続のエラーが連鎖的に発生することが多いため、まず最初の1つを修正してから再ビルドしてください。
+\end{notebox}
 
 \end{qabox}
 

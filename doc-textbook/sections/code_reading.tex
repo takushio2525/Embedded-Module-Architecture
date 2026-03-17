@@ -1,0 +1,144 @@
+% 実コードを読んでみよう（第7章と第8章の橋渡し）
+\section{実コードを読んでみよう}
+
+実践に入る前に、リポジトリに実装されている最もシンプルなモジュール「LedModule」の実コードを読んでみましょう。ここまで学んできたパターンが、実際のコードでどう使われているかを確認します。
+
+%% ── Q1: LedModule.h ──────────────────────────
+\begin{qabox}{LedModule.h はどうなってるの？}
+
+まずはヘッダーファイル（\texttt{lib/LedModule/LedModule.h}）です。
+
+\begin{lstlisting}
+// LedModule.h — LED制御モジュール
+#pragma once
+#include <Arduino.h>
+#include "IModule.h"
+
+// --- Config構造体 ---
+struct LedConfig {
+    uint8_t ledPin;  // LED出力ピン
+};
+
+// --- Data構造体 ---
+struct LedData {
+    bool state = false;
+    uint8_t brightness = 0;
+};
+
+// SystemDataの前方宣言はIModule.h内で行われている
+
+// --- モジュール実装 ---
+class LedModule : public IModule {
+private:
+    LedConfig _config;
+
+public:
+    LedModule(const LedConfig& config);
+    bool init() override;
+    void update(SystemData& data) override;
+};
+\end{lstlisting}
+
+ここまで学んだパターンがすべて揃っています。
+
+\begin{itemize}
+  \item \textbf{Config構造体}（第3章） — \texttt{LedConfig} にピン番号をまとめている
+  \item \textbf{Data構造体}（第3章） — \texttt{LedData} にデフォルト値が設定されている
+  \item \textbf{IModule継承}（第4章） — \texttt{: public IModule} で統一インターフェースを実装
+  \item \textbf{前方宣言}（第5章） — \texttt{SystemData.h} をインクルードしていない（IModule.hの中で前方宣言済み）
+  \item \textbf{override}（第4章） — 親クラスの仮想関数を上書きすることを明示
+\end{itemize}
+
+\begin{notebox}[ヘッダーには宣言だけ]
+メソッドの中身（実装）は書かれていません。「こういう関数がありますよ」という宣言だけです。実装は \texttt{.cpp} ファイルに書きます。これが第7章で説明した「\texttt{.h} + \texttt{.cpp}」の分離ルールです。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q2: LedModule.cpp ──────────────────────────
+\begin{qabox}{LedModule.cpp はどうなってるの？}
+
+次に実装ファイル（\texttt{lib/LedModule/LedModule.cpp}）です。
+
+\begin{lstlisting}
+// LedModule.cpp — LED制御モジュールの実装
+#include "LedModule.h"
+#include "SystemData.h"
+#include <Arduino.h>
+
+LedModule::LedModule(const LedConfig& config) : _config(config) {}
+
+bool LedModule::init() {
+    pinMode(_config.ledPin, OUTPUT);
+    Serial.println("[Led] init OK");
+    return true;
+}
+
+void LedModule::update(SystemData& data) {
+    digitalWrite(_config.ledPin, data.led.state ? HIGH : LOW);
+}
+\end{lstlisting}
+
+たった16行です。各メソッドを見ていきましょう。
+
+\subsection{コンストラクタ}
+
+\begin{lstlisting}
+LedModule::LedModule(const LedConfig& config) : _config(config) {}
+\end{lstlisting}
+
+Configを受け取って \texttt{\_config} にコピーするだけです。ピン番号はハードコードせず、Configから取得します。
+
+\subsection{init()}
+
+\begin{lstlisting}
+bool LedModule::init() {
+    pinMode(_config.ledPin, OUTPUT);
+    Serial.println("[Led] init OK");
+    return true;
+}
+\end{lstlisting}
+
+\texttt{\_config.ledPin} でピン番号にアクセスしています。ログフォーマットは \texttt{[モジュール名] メッセージ} の統一形式です。成功時は \texttt{true} を返します。
+
+\subsection{update()}
+
+\begin{lstlisting}
+void LedModule::update(SystemData& data) {
+    digitalWrite(_config.ledPin, data.led.state ? HIGH : LOW);
+}
+\end{lstlisting}
+
+SystemDataから \texttt{data.led.state} を読み取り、LEDのON/OFFを制御しています。LED自身は「なぜ光るのか」を知りません。ロジックフェーズが \texttt{data.led.state} を書き換え、LEDモジュールはそれに従うだけです。これが3フェーズモデルの「出力モジュール」の役割です。
+
+\begin{notebox}[\texttt{.cpp} では SystemData.h をインクルード]
+\texttt{.h} では前方宣言だけでしたが、\texttt{.cpp} では \texttt{\#include "SystemData.h"} でフル定義を取得しています。\texttt{data.led.state} のようにメンバにアクセスするには、SystemDataの中身を知る必要があるためです。
+\end{notebox}
+
+\end{qabox}
+
+%% ── Q3: 全体の流れ ──────────────────────────
+\begin{qabox}{このモジュールはどうやって動くの？}
+
+LedModuleが動くまでの全体の流れを確認しましょう。
+
+\begin{enumerate}
+  \item \texttt{ProjectConfig.h} で設定を定義:
+\begin{lstlisting}
+const LedConfig LED_CONFIG = { .ledPin = 2 };
+\end{lstlisting}
+
+  \item \texttt{main.cpp} でインスタンスを作成し、配列に登録:
+\begin{lstlisting}
+LedModule ledModule(LED_CONFIG);
+IModule* outputModules[] = { &ledModule };
+\end{lstlisting}
+
+  \item \texttt{setup()} で \texttt{init()} が呼ばれ、ピンが初期化される
+  \item \texttt{loop()} の出力フェーズで \texttt{update(systemData)} が呼ばれる
+  \item ロジックフェーズが \texttt{systemData.led.state} を書き換えると、次のループでLEDに反映される
+\end{enumerate}
+
+これが「Config → インスタンス化 → init → update」の基本サイクルです。次の章では、このサイクルをゼロから自分で作ります。
+
+\end{qabox}

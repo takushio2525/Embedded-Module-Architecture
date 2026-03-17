@@ -131,7 +131,52 @@ IModule.hは \texttt{update(SystemData\& data)} を宣言していますが、Sy
 \end{lstlisting}
 \end{badexample}
 
-前方宣言を使えば、この循環を断ち切れます。
+図にすると、矢印がぐるっと一周しているのが分かります。
+
+\begin{center}
+\begin{tikzpicture}[
+  file/.style={rectangle, draw=warnred!70, fill=warnred!5,
+    minimum width=32mm, minimum height=10mm, font=\small\ttfamily\bfseries,
+    rounded corners=1mm},
+  arr/.style={-{Stealth[length=3mm]}, thick, warnred!70},
+]
+  \node[file] (imod) {IModule.h};
+  \node[file, right=30mm of imod] (sysdata) {SystemData.h};
+  \node[file, below=18mm of sysdata] (ledmod) {LedModule.h};
+
+  \draw[arr] (imod) -- node[above, font=\scriptsize]{include} (sysdata);
+  \draw[arr] (sysdata) -- node[right, font=\scriptsize]{include} (ledmod);
+  \draw[arr] (ledmod) -- node[below, font=\scriptsize, sloped]{include} (imod);
+
+  % 循環を示す赤い円弧
+  \node[warnred, font=\bfseries\large] at ($(imod)!0.5!(ledmod) + (-8mm, -3mm)$) {循環!};
+\end{tikzpicture}
+\end{center}
+
+前方宣言を使えば、IModule.hからSystemData.hへのインクルードが不要になり、循環を断ち切れます。
+
+\begin{center}
+\begin{tikzpicture}[
+  file/.style={rectangle, draw=accentblue, fill=accentblue!8,
+    minimum width=32mm, minimum height=10mm, font=\small\ttfamily\bfseries,
+    rounded corners=1mm},
+  arr/.style={-{Stealth[length=3mm]}, thick, accentblue},
+  cut/.style={thick, warnred, dashed},
+]
+  \node[file] (imod) {IModule.h};
+  \node[file, right=30mm of imod] (sysdata) {SystemData.h};
+  \node[file, below=18mm of sysdata] (ledmod) {LedModule.h};
+
+  % 前方宣言（破線で「includeしない」を表現）
+  \draw[cut, -{Stealth[length=3mm]}] (imod) -- node[above, font=\scriptsize\color{warnred}]{前方宣言のみ} (sysdata);
+  \draw[arr] (sysdata) -- node[right, font=\scriptsize]{include} (ledmod);
+  \draw[arr] (ledmod) -- node[below, font=\scriptsize, sloped]{include} (imod);
+
+  \node[okgreen, font=\bfseries] at ($(imod)!0.5!(ledmod) + (-8mm, -3mm)$) {循環なし};
+\end{tikzpicture}
+\end{center}
+
+赤い破線の部分が「前方宣言で置き換えた箇所」です。IModule.hはSystemData.hをインクルードしないので、循環が発生しません。
 
 \begin{goodexample}{前方宣言で循環を回避}
 \begin{lstlisting}
