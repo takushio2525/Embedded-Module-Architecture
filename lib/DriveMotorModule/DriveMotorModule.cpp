@@ -25,8 +25,15 @@ bool DriveMotorModule::init() {
 }
 
 void DriveMotorModule::update(SystemData& /* data */) {
-    // 単体使用時はdrive()を直接呼ぶ設計のため、ここでは何もしない
-    // ChassisModule等の統合モジュール経由で制御される場合もdrive()を使用する
+    // このモジュールはChassisModule等の統合モジュールが内部で保持し、
+    // drive()メソッドを直接呼び出す設計のため、update()は空実装。
+    // outputModules[]に直接登録して使うモジュールではない。
+    //
+    // 単体モーターをoutputModules[]で使いたい場合は、
+    // DriveMotorDataをSystemDataに追加し、以下のように実装する:
+    //   void DriveMotorModule::update(SystemData& data) {
+    //       _applyMotor(data.driveMotor.power);
+    //   }
 }
 
 void DriveMotorModule::drive(float power) {

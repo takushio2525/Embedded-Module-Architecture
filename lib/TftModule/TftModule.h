@@ -27,6 +27,8 @@ struct TftData {
 };
 
 // --- モジュール実装 ---
+struct SystemData;
+
 class TftModule : public IModule {
 public:
     TftModule(const TftConfig& config, TFT_eSPI* tft);

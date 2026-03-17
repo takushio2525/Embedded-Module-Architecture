@@ -8,7 +8,9 @@
 class TFT_eSPI;
 
 // --- Config構造体 ---
-// タッチピン(TOUCH_CS)はplatformio.iniのbuild_flagsで設定
+// タッチパネルのCSピンはTFT_eSPIと共有されており、
+// platformio.iniのbuild_flags（TFT_eSPI設定）で指定する。
+// そのためこのConfig構造体に追加パラメータはない。
 struct TouchConfig {
 };
 

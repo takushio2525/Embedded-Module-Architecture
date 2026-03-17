@@ -20,6 +20,8 @@ struct DriveMotorData {
 };
 
 // ===== モジュール =====
+// 注意: このモジュールはChassisModule等の統合モジュールが内部で保持し、
+// drive()を直接呼ぶ前提の設計。outputModules[]には登録しない。
 struct SystemData;
 
 class DriveMotorModule : public IModule {
