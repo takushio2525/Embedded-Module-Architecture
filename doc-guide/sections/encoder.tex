@@ -1,5 +1,5 @@
 % EncoderModule
-\section{EncoderModule — 割り込み連携パターン}
+\section{【応用】EncoderModule — 割り込み連携パターン}
 
 \begin{patternbox}{EncoderModule で学べるパターン}
 \begin{itemize}
@@ -32,6 +32,33 @@ private:
     // ...
 };
 \end{lstlisting}
+
+\begin{notebox}[なぜstaticが必要なのか？ — 初学者向け解説]
+C++のクラスのメンバ関数（例: \texttt{\_onPulseA()}）は、内部的に「どのオブジェクトの関数か」という情報（thisポインタ）を持っています。しかし、\texttt{attachInterrupt()}が受け付けるのはC言語形式の「普通の関数ポインタ」だけで、thisポインタを渡す仕組みがありません。
+
+そこで以下の2段構えで解決します。
+
+\begin{enumerate}
+    \item \textbf{static関数}を用意する — static関数はthisポインタを必要としないので、割り込みに登録できる
+    \item \textbf{staticなインスタンスポインタ}を用意する — static関数の中から「どのオブジェクトか」を知るための橋渡し
+\end{enumerate}
+
+\begin{lstlisting}
+// 1. staticポインタ: 「どのエンコーダか」を覚えておく
+static EncoderModule* _instance;
+
+// 2. static関数: 割り込みに登録できる
+static void _isrHandlerA() {
+    _instance->_onPulseA();  // ここで実際の処理に橋渡し
+}
+
+// init()で登録
+_instance = this;
+attachInterrupt(pin, _isrHandlerA, RISING);
+\end{lstlisting}
+
+これは「C++のオブジェクト指向とC言語の割り込みの橋渡し」パターンです。割り込みを使わない通常のモジュールでは不要なので、初めて見る場合はこのパターンだけ覚えれば十分です。
+\end{notebox}
 
 \begin{cautionbox}[ISR（割り込みサービスルーチン）の制約]
 \begin{itemize}

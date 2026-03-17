@@ -33,26 +33,38 @@
 モジュールは簡単なものから順に並べている。
 前半のモジュールで基本パターンを押さえたうえで、後半の応用パターンに進む構成になっている。
 
-\subsection{モジュール一覧}
+\subsection{モジュール一覧と学習レベル}
 
-\begin{longtable}{l l l}
+各モジュールには難易度レベルを付けている。まず【基本】を全て読んでパターンを身につけてから、必要に応じて【中級】【応用】に進むことを推奨する。
+
+\begin{longtable}{l l l l}
 \toprule
-\textbf{モジュール} & \textbf{種別} & \textbf{主な学習パターン} \\
+\textbf{モジュール} & \textbf{種別} & \textbf{レベル} & \textbf{主な学習パターン} \\
 \midrule
 \endhead
-LedModule & 出力 & 最小構成の基本パターン \\
-ButtonModule & 入力 & デバウンス（ModuleTimer活用） \\
-BatteryModule & 入力 & ADC読み取り + 移動平均フィルタ \\
-ServoModule & 出力 & PWM制御（LEDC） \\
-BuzzerModule & 出力 & deinit()によるリソース解放 \\
-Mpu6500Module & 入力 & I2Cバスパターン + レジスタ直接アクセス \\
-TouchModule & 入力 & バスオブジェクト共有（TFT\_eSPIドライバ） \\
-TftModule & 出力 & SPI共有 + 複合デバイスの分離 \\
-CameraModule & 入力 & PSRAMバッファ + フレーム管理 \\
-DriveMotorModule & 出力 & PWM 2ピン制御 + 統合モジュール部品 \\
-ChassisModule & 出力 & 機能統合系（内部にモジュールを持つ） \\
-BleModule & 入力 & スレッドセーフティ（volatileフラグ方式） \\
-WifiModule & 入力 & ステートマシン内蔵 \\
-EncoderModule & 入力 & ハードウェア割り込み連携 \\
+LedModule & 出力 & 【基本】 & 最小構成の基本パターン \\
+ButtonModule & 入力 & 【基本】 & デバウンス（ModuleTimer活用） \\
+BatteryModule & 入力 & 【基本】 & ADC読み取り + 移動平均フィルタ \\
+ServoModule & 出力 & 【基本】 & PWM制御（LEDC） \\
+BuzzerModule & 出力 & 【基本】 & deinit()によるリソース解放 \\
+\midrule
+Mpu6500Module & 入力 & 【中級】 & I2Cバスパターン + レジスタ直接アクセス \\
+TouchModule & 入力 & 【中級】 & バスオブジェクト共有（TFT\_eSPIドライバ） \\
+TftModule & 出力 & 【中級】 & SPI共有 + 複合デバイスの分離 \\
+CameraModule & 入力 & 【中級】 & PSRAMバッファ + フレーム管理 \\
+\midrule
+DriveMotorModule & 出力 & 【応用】 & PWM 2ピン制御 + 統合モジュール部品 \\
+ChassisModule & 出力 & 【応用】 & 機能統合系（内部にモジュールを持つ） \\
+BleModule & 入力 & 【応用】 & スレッドセーフティ（volatileフラグ方式） \\
+WifiModule & 入力 & 【応用】 & ステートマシン内蔵 \\
+EncoderModule & 入力 & 【応用】 & ハードウェア割り込み連携 \\
 \bottomrule
 \end{longtable}
+
+\begin{notebox}[レベルの目安]
+\begin{itemize}
+    \item \textbf{【基本】} — 教科書の内容だけで理解できる。最初に全て読むべき
+    \item \textbf{【中級】} — I2C/SPI等の通信バスパターンが加わる。必要に応じて読む
+    \item \textbf{【応用】} — 統合パターン・スレッドセーフティ・割り込みなど高度な内容。チャレンジ向け
+\end{itemize}
+\end{notebox}

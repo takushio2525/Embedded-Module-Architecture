@@ -1,5 +1,5 @@
 % ChassisModule
-\section{ChassisModule — 機能統合パターン}
+\section{【応用】ChassisModule — 機能統合パターン}
 
 \begin{patternbox}{ChassisModule で学べるパターン}
 \begin{itemize}
@@ -49,6 +49,24 @@ ChassisModule::ChassisModule(const ChassisConfig& config)
           DriveMotorModule(config.motors[2]),
           DriveMotorModule(config.motors[3]),
       } {}
+\end{lstlisting}
+
+\begin{notebox}[コンストラクタの初期化リスト — 初学者向け解説]
+コロン（\texttt{:}）の後に書かれている部分が「初期化リスト」です。ここでは以下の処理を行っています。
+
+\begin{enumerate}
+    \item \texttt{\_config(config)} — Config構造体をコピー保存
+    \item \texttt{\_motors\{...\}} — DriveMotorModuleの配列を、各モーターのConfigで初期化
+\end{enumerate}
+
+配列の初期化は波括弧 \texttt{\{\}} で囲みます。中の \texttt{DriveMotorModule(config.motors[0])} は「config.motors[0]の設定でDriveMotorModuleを作る」という意味です。
+
+\vspace{2mm}
+これは「コンストラクタの中で4つの子モジュールを一気に作る」処理です。
+初期化リスト構文に慣れないうちは「コンストラクタ引数を受け取って、メンバ変数に渡している」とだけ理解すれば十分です。
+\end{notebox}
+
+\begin{lstlisting}[style=cppstyle, caption={ChassisModule.cpp — init()/deinit()（続き）}]
 
 bool ChassisModule::init() {
     for (int i = 0; i < 4; i++) {
