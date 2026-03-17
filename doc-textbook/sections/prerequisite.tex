@@ -8,6 +8,103 @@
 構造体・クラス・コンストラクタ・アクセス修飾子を理解している方は、この章を飛ばして次の「全部main.cppに書くとどうなる？」に進んでください。
 \end{notebox}
 
+%% ── Q0: プログラミングの部品を整理しよう ──────
+\begin{qabox}{プログラミングの部品を整理しよう}
+
+C++にはいろいろな「部品」が出てきますが、実はどれも「何かを入れる箱」としてイメージできます。
+まずは全体像をつかみましょう。
+
+\subsection{変数 — 値の箱}
+
+一番シンプルな部品です。1つの値を入れておく箱。
+
+\begin{lstlisting}
+int speed = 100;       // 整数を1つ入れる箱
+float temperature = 25.3; // 小数を1つ入れる箱
+bool isRunning = true; // true/falseを1つ入れる箱
+\end{lstlisting}
+
+\subsection{配列 — 箱の列}
+
+同じ種類の箱を一列に並べたもの。番号（インデックス）で「何番目の箱か」を指定してアクセスします。
+
+\begin{lstlisting}
+int scores[3] = {80, 95, 70};  // int型の箱が3つ並んだ列
+scores[0];  // → 80（0番目）
+scores[1];  // → 95（1番目）
+\end{lstlisting}
+
+\subsection{関数 — 処理の箱}
+
+「一連の処理」をまとめて名前を付けた箱です。呼び出すと中の処理が実行されます。
+
+\begin{lstlisting}
+// 関数の定義（処理を箱に入れる）
+void blinkLed(int pin) {
+    digitalWrite(pin, HIGH);
+    delay(500);
+    digitalWrite(pin, LOW);
+}
+
+// 関数の呼び出し（箱を使う）
+blinkLed(13);  // ピン13でLEDを点滅
+\end{lstlisting}
+
+\subsection{構造体 — 変数の箱}
+
+関連する変数をまとめて1つの「箱」にしたもの。中に複数の変数を持てます。
+
+\begin{lstlisting}
+struct LedData {           // 「LedDataという箱の設計図」
+    bool state = false;    //   中に入る変数1
+    uint8_t brightness = 0; //   中に入る変数2
+};
+\end{lstlisting}
+
+\subsection{クラス — 変数と関数の箱}
+
+構造体の進化版。変数（データ）だけでなく、関数（操作）も一緒にまとめた箱です。
+
+\begin{lstlisting}
+class LedModule {          // 「LedModuleという箱の設計図」
+    uint8_t _pin;          //   中に入る変数（データ）
+    bool _state;           //   中に入る変数（データ）
+    void turnOn();         //   中に入る関数（操作）
+    void turnOff();        //   中に入る関数（操作）
+};
+\end{lstlisting}
+
+\vspace{2mm}
+ここまでの関係をまとめると、こうなります。
+
+\begin{center}
+\begin{tikzpicture}[
+    box/.style={draw, rounded corners=3pt, minimum width=28mm, minimum height=10mm, align=center, font=\small\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, color=accentblue},
+    label/.style={font=\scriptsize\color{gray}, align=center},
+]
+    \node[box, fill=accentblue!10] (var) at (0,0) {変数};
+    \node[box, fill=accentblue!10] (arr) at (3.5,0) {配列};
+    \node[box, fill=accentblue!10] (func) at (7,0) {関数};
+    \node[box, fill=okgreen!15] (struct) at (2,-2) {構造体};
+    \node[box, fill=okgreen!20] (class) at (6,-2) {クラス};
+
+    \node[label, above=1mm of var] {値の箱};
+    \node[label, above=1mm of arr] {箱の列};
+    \node[label, above=1mm of func] {処理の箱};
+    \node[label, below=1mm of struct] {変数の箱};
+    \node[label, below=1mm of class] {変数＋関数の箱};
+
+    \draw[arrow] (var) -- node[label, right, pos=0.5] {まとめる} (struct);
+    \draw[arrow] (struct) -- node[label, above, pos=0.5] {関数も追加} (class);
+    \draw[arrow] (func) -- node[label, right, pos=0.5] {組み込む} (class);
+\end{tikzpicture}
+\end{center}
+
+この先の章では、構造体とクラスを詳しく見ていきます。
+
+\end{qabox}
+
 %% ── Q1: 構造体 ──────────────────────────────
 \begin{qabox}{構造体（struct）って何？}
 
@@ -46,6 +143,32 @@ led2.brightness = 128;
 \end{goodexample}
 
 構造体を使えば、「LEDに必要なデータは何か」が型として明確になり、LEDが何個増えても変数の定義は1行で済みます。
+
+\begin{cautionbox}[構造体の定義だけでは「実体」はない]
+初学者がつまずきやすいポイントです。\texttt{struct LedData \{...\};} と書いた時点では、メモリ上に何も作られていません。これは「設計図（型）」を定義しただけです。
+
+\begin{lstlisting}
+// これは「設計図」を書いただけ（実体はまだない）
+struct LedData {
+    bool state = false;
+    uint8_t brightness = 0;
+};
+
+// ここで初めて「実体（インスタンス）」が作られる
+LedData led1;   // LedData型の実体を1つ作成
+LedData led2;   // もう1つ作成（led1とled2は別々の実体）
+\end{lstlisting}
+
+たとえるなら、構造体の定義は「たい焼きの型（金型）」です。型を作っただけではたい焼きは食べられません。型に生地を流し込んで焼いて初めて、食べられるたい焼き（実体）ができます。
+
+\begin{itemize}
+    \item \textbf{型（設計図）}: \texttt{struct LedData \{...\};} — 「こういうデータの組み合わせがある」と定義
+    \item \textbf{実体（インスタンス）}: \texttt{LedData led1;} — 実際にメモリ上に作られた「もの」
+\end{itemize}
+
+1つの型から何個でも実体を作れます。led1とled2はどちらもLedData型ですが、それぞれ独立した別のデータを持ちます。
+\end{cautionbox}
+
 \end{qabox}
 
 %% ── Q2: クラス ──────────────────────────────
@@ -88,6 +211,30 @@ public:
 \begin{notebox}[structとclassの技術的な違い]
 C++ではstructとclassの唯一の違いは「デフォルトのアクセス修飾子」です。structはデフォルトpublic、classはデフォルトprivateです。本書ではデータの入れ物にstruct、操作を持つものにclassを使います。
 \end{notebox}
+
+\begin{cautionbox}[クラスも「型を定義している」だけ]
+構造体と同じく、クラスの定義だけでは実体は作られません。
+
+\begin{lstlisting}
+// これは設計図（型）
+class LedModule {
+    uint8_t _pin;
+    bool _state;
+public:
+    LedModule(uint8_t pin) : _pin(pin), _state(false) {}
+    void turnOn();
+    void turnOff();
+};
+
+// ここで実体（インスタンス）が作られる
+LedModule led1(13);   // ピン13のLEDモジュール
+LedModule led2(14);   // ピン14のLEDモジュール（別の実体）
+\end{lstlisting}
+
+\texttt{led1.turnOn()} と呼ぶと \texttt{led1} だけが点灯し、\texttt{led2} には影響しません。同じ設計図から作られていても、実体はそれぞれ独立しています。
+
+この「型の定義」と「実体の作成」が別であるという点は、本書の設計パターン全体を通じて重要な考え方です。Config構造体の「型定義」とConfigインスタンスの「値定義」が別ファイルになっているのも、この原則に基づいています。
+\end{cautionbox}
 
 \end{qabox}
 
