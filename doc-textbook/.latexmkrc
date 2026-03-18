@@ -7,3 +7,4 @@ $dvipdf = 'dvipdfmx %O -o %D %S';
 $pdf_mode = 3;
 $bibtex = 'pbibtex %O %B';
 $makeindex = 'mendex %O -o %D %S';
+$jobname = 'モジュール設計パターン教科書';
