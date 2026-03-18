@@ -185,30 +185,33 @@
   boxed title style={colback=accentblue,arc=1.5mm},
 }
 
-% ダメな例ボックス（赤系）
-\newtcolorbox{badexample}[1]{
-  enhanced,
-  colback=warnred!3,
-  colframe=warnred!70,
-  coltitle=white,
-  fonttitle=\bfseries,
-  title={\texttimes\ #1},
-  arc=1.5mm,
-  breakable,
-  before upper={\parindent0pt},
+% ダメな例（軽量版 — tcolorbox ではなくルール線＋バッジ描画）
+% qabox 内にネストしてもページ分割が効く
+\newenvironment{badexample}[1]{%
+  \par\smallskip\noindent
+  {\color{warnred}\hrule height 0.8pt}\vspace{3pt}%
+  \noindent\colorbox{warnred!70}{%
+    \textcolor{white}{\bfseries\small\texttimes\ #1}%
+  }\par\vspace{4pt}\noindent
+  \parindent=0pt\relax
+}{%
+  \par\vspace{3pt}\noindent
+  {\color{warnred}\hrule height 0.8pt}%
+  \par\smallskip
 }
 
-% 良い例ボックス（緑系）
-\newtcolorbox{goodexample}[1]{
-  enhanced,
-  colback=okgreen!3,
-  colframe=okgreen!70,
-  coltitle=white,
-  fonttitle=\bfseries,
-  title={\checkmark\ #1},
-  arc=1.5mm,
-  breakable,
-  before upper={\parindent0pt},
+% 良い例（軽量版 — tcolorbox ではなくルール線＋バッジ描画）
+\newenvironment{goodexample}[1]{%
+  \par\smallskip\noindent
+  {\color{okgreen}\hrule height 0.8pt}\vspace{3pt}%
+  \noindent\colorbox{okgreen!70}{%
+    \textcolor{white}{\bfseries\small\checkmark\ #1}%
+  }\par\vspace{4pt}\noindent
+  \parindent=0pt\relax
+}{%
+  \par\vspace{3pt}\noindent
+  {\color{okgreen}\hrule height 0.8pt}%
+  \par\smallskip
 }
 
 %% ─── ドキュメント情報 ─────────────────────────
