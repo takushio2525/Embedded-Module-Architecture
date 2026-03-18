@@ -40,6 +40,17 @@
 \usepackage{placeins}
 \usepackage{amssymb}            % checkmarkシンボル
 
+%% ─── 改ページ制御 ─────────────────────────────
+% 孤立行（widow/orphan）防止 — ページ末尾/先頭に1行だけ残さない
+\widowpenalty=10000
+\clubpenalty=10000
+% 数式前後の改ページ抑制
+\predisplaypenalty=10000
+% 脚注の分割禁止
+\interfootnotelinepenalty=10000
+% 改ページコスト調整 — 見出し直後や短い段落での改ページを避ける
+\brokenpenalty=5000
+
 %% ─── 色定義 ──────────────────────────────────
 \definecolor{headerblue}{HTML}{1B3A5C}
 \definecolor{accentblue}{HTML}{2E86C1}
@@ -65,10 +76,10 @@
   {\thesection}{1em}{}
   [\vspace{-0.5em}\textcolor{accentblue}{\rule{\textwidth}{1.2pt}}]
 \titleformat{\subsection}
-  {\large\bfseries\color{headerblue}}
+  {\needspace{4\baselineskip}\large\bfseries\color{headerblue}}
   {\thesubsection}{1em}{}
 \titleformat{\subsubsection}
-  {\normalsize\bfseries\color{accentblue}}
+  {\needspace{3\baselineskip}\normalsize\bfseries\color{accentblue}}
   {\thesubsubsection}{1em}{}
 \titleformat{\paragraph}[runin]
   {\normalsize\bfseries\color{headerblue}}
