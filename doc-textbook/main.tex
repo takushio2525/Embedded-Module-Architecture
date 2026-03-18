@@ -128,28 +128,33 @@
   boxed title style={colback=accentblue,arc=1.5mm},
 }
 
-% 注意ボックス
-\newtcolorbox{cautionbox}[1][注意]{
-  enhanced,
-  colback=warnred!5,
-  colframe=warnred!70,
-  coltitle=white,
-  fonttitle=\bfseries,
-  title={! #1},
-  arc=1.5mm,
-  breakable,
+% 注意ボックス（軽量版 — ルール線＋バッジ描画）
+% アンバー系で badexample（赤）と差別化
+\newenvironment{cautionbox}[1][注意]{%
+  \par\smallskip\noindent
+  {\color{noteyellow}\hrule height 1pt}\vspace{3pt}%
+  \noindent\colorbox{noteyellow}{%
+    \textcolor{white}{\bfseries\small\textbf{!}\ #1}%
+  }\par\vspace{4pt}\noindent
+  \parindent=0pt\relax
+}{%
+  \par\vspace{3pt}\noindent
+  {\color{noteyellow}\hrule height 1pt}%
+  \par\smallskip
 }
 
-% ノートボックス
-\newtcolorbox{notebox}[1][補足]{
-  enhanced,
-  colback=accentblue!5,
-  colframe=accentblue!50,
-  coltitle=white,
-  fonttitle=\bfseries,
-  title={$\triangleright$ #1},
-  arc=1.5mm,
-  breakable,
+% ノートボックス（軽量版 — ルール線＋バッジ描画）
+\newenvironment{notebox}[1][補足]{%
+  \par\smallskip\noindent
+  {\color{accentblue!50}\hrule height 0.8pt}\vspace{3pt}%
+  \noindent\colorbox{accentblue!50}{%
+    \textcolor{white}{\bfseries\small$\triangleright$ #1}%
+  }\par\vspace{4pt}\noindent
+  \parindent=0pt\relax
+}{%
+  \par\vspace{3pt}\noindent
+  {\color{accentblue!50}\hrule height 0.8pt}%
+  \par\smallskip
 }
 
 % 機能ブロック

@@ -9,13 +9,10 @@
 ルールはシンプルです。
 
 \begin{center}
-\begin{tcolorbox}[
-  enhanced, colback=accentblue!8, colframe=accentblue,
-  arc=2mm, width=10cm, breakable,
-]
-  \centering\large\bfseries
-  1ハードウェア = 1クラス（1モジュール）
-\end{tcolorbox}
+  \fcolorbox{accentblue}{accentblue!8}{%
+    \parbox{9cm}{\centering\large\bfseries
+      1ハードウェア = 1クラス（1モジュール）}%
+  }
 \end{center}
 
 第1章のベタ書きコードから、LED部分だけを抜き出してクラスにしてみましょう。
