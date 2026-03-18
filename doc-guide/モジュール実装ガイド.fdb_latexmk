@@ -1,12 +1,12 @@
 # Fdb version 4
-["dvipdf"] 1773708230.41763 "モジュール実装ガイド.dvi" "モジュール実装ガイド.pdf" "モジュール実装ガイド" 1773708230.67126 0
-  "モジュール実装ガイド.dvi" 1773708230.36493 980936 c375341a7c079ab782ec314571933150 "latex"
-  "モジュール実装ガイド.dvi" 1773708230.36493 980936 c375341a7c079ab782ec314571933150 "latex"
+["dvipdf"] 1773840490.34664 "モジュール実装ガイド.dvi" "モジュール実装ガイド.pdf" "モジュール実装ガイド" 1773840490.5131 0
+  "モジュール実装ガイド.dvi" 1773840490.23902 981156 124bc65c8f889f4811d579343ef9bfdf "latex"
+  "モジュール実装ガイド.dvi" 1773840490.23902 981156 124bc65c8f889f4811d579343ef9bfdf "latex"
   (generated)
   "モジュール実装ガイド.pdf"
   "モジュール実装ガイド.pdf"
   (rewritten before read)
-["latex"] 1773708227.36702 "main.tex" "モジュール実装ガイド.dvi" "モジュール実装ガイド" 1773708230.67006 0
+["latex"] 1773840487.14036 "main.tex" "モジュール実装ガイド.dvi" "モジュール実装ガイド" 1773840490.51198 0
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1000.tfm" 1136768653 1536 e07581a4bb3136ece9eeb4c3ffab8233 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -176,9 +176,9 @@
   "/usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf" 1749313668 42213 4e2ca030e8e2640502016e9e45868dcb ""
   "/usr/local/texlive/2025/texmf-var/web2c/euptex/uplatex.fmt" 1770929074 2371991 fb34f7ea8ca590bfabe5e089b86541ad ""
   "/usr/local/texlive/2025/texmf.cnf" 1770926123 455 5b996dcaa0eb4ef14a83b026bc0a008c ""
-  "main.tex" 1773706981.72814 6361 66cb180d13050f91934be37f990fef33 ""
+  "main.tex" 1773840412.71576 6893 bd1d0209a7e5de864fd57374b10c563f ""
   "plistings.sty" 1773576036.8777 12288 ac8656e96afebe4019d45d29b2fa5256 ""
-  "sections/battery.tex" 1773707888.85329 3392 3ab0fcc3a0740aad6ceeabc20170ebcd ""
+  "sections/battery.tex" 1773840375.4946 3411 04de935ca2a2671475b297aead1c0073 ""
   "sections/ble.tex" 1773707898.26663 5527 7954c2418b4de7298692713e4a0f50c3 ""
   "sections/button.tex" 1773707887.5598 3545 7142dd858e048d9417e2a28d65539083 ""
   "sections/buzzer.tex" 1773707891.06979 3259 784a413a32c5a5f367ded23fc9a7f0a1 ""
@@ -186,19 +186,19 @@
   "sections/chassis.tex" 1773707946.35274 4691 895544f7dc85cd72ca74fb0dacde0d84 ""
   "sections/cover.tex" 1773576080.83876 1018 aaf91a3b1ba23974a0197169fddf06cf ""
   "sections/drivemotor.tex" 1773707897.00205 2705 403d5bdc2c8c271d5e04c3e47362832f ""
-  "sections/encoder.tex" 1773707918.20446 6284 c3376af949a674ffbf23c8cab9557c15 ""
+  "sections/encoder.tex" 1773840375.49456 6308 f2aa6fff25dd66f1ea8be32896bc6336 ""
   "sections/introduction.tex" 1773707833.03364 3828 f348047028b0c436bc57b0a50e59a514 ""
   "sections/led.tex" 1773707886.69476 3358 7724103df1d3621032b73e5adddac852 ""
   "sections/mpu6500.tex" 1773707892.45573 2976 88fba1c3998f119b7b61ea02498a931f ""
-  "sections/revision.tex" 1773707005.37038 464 37bf60d17876167ca92c92aeba609b78 ""
-  "sections/servo.tex" 1773707889.86432 2524 e2bc392dfa202c8ca9016cca40aff751 ""
+  "sections/revision.tex" 1773840402.71293 608 2f1efb6ad580018969f3bc951d4ca192 ""
+  "sections/servo.tex" 1773840375.49462 2518 084412ed22c6ed1441bae0ab1406feda ""
   "sections/tft.tex" 1773707894.76845 2338 a5c956a38798b5a898ed597f4bd58ce0 ""
   "sections/touch.tex" 1773707893.33094 2091 3523085e348e7d43eb164866a3b2ac2b ""
   "sections/wifi.tex" 1773707899.11074 4505 518e62979d6dda678c364d0e0e0135f7 ""
-  "モジュール実装ガイド.aux" 1773708230.36209 13886 5c3d81b7fdd4893fb1c42f8d251beff6 "latex"
-  "モジュール実装ガイド.out" 1773708230.36402 10418 00c543bb251176b3c004fc04b7e0addf "latex"
-  "モジュール実装ガイド.toc" 1773708230.36457 5363 4b106588281991f2ccd8cfdfbb9b65a1 "latex"
-  "モジュール実装ガイド.aux" 1773708230.36209 13886 5c3d81b7fdd4893fb1c42f8d251beff6 "latex"
+  "モジュール実装ガイド.aux" 1773840490.23634 13886 3253b1bfe963a84d269e6991a81807c1 "latex"
+  "モジュール実装ガイド.out" 1773840490.23805 10418 00c543bb251176b3c004fc04b7e0addf "latex"
+  "モジュール実装ガイド.toc" 1773840490.23879 5363 3894ac51fbfd0b5b20a3e7e31506cc7a "latex"
+  "モジュール実装ガイド.aux" 1773840490.23634 13886 3253b1bfe963a84d269e6991a81807c1 "latex"
   (generated)
   "モジュール実装ガイド.aux"
   "モジュール実装ガイド.dvi"

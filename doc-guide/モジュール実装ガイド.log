@@ -1,4 +1,4 @@
-This is e-upTeX, Version 3.141592653-p4.1.2-u2.00-250202-2.6 (utf8.uptex) (TeX Live 2025) (preloaded format=uplatex 2026.2.12)  17 MAR 2026 00:43
+This is e-upTeX, Version 3.141592653-p4.1.2-u2.00-250202-2.6 (utf8.uptex) (TeX Live 2025) (preloaded format=uplatex 2026.2.12)  18 MAR 2026 13:28
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -833,29 +833,29 @@ File: l3backend-dvipdfmx.def 2025-10-09 L3 backend support: dvipdfmx
 ) (./モジュール実装ガイド.aux)
 \openout1 = `モジュール実装ガイド.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for JY2/mc/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for JT2/mc/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 185.
-LaTeX Font Info:    ... okay on input line 185.
-Package hyperref Info: Link coloring ON on input line 185.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for JY2/mc/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for JT2/mc/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 196.
+LaTeX Font Info:    ... okay on input line 196.
+Package hyperref Info: Link coloring ON on input line 196.
  (./モジュール実装ガイド.out)
 (./モジュール実装ガイド.out)
 \@outlinefile=\write4
@@ -952,28 +952,35 @@ LaTeX Font Info:    Font shape `JY2/mc/bx/n' in size <14.4> not available
 (Font)              Font shape `JY2/gt/m/n' tried instead on input line 2.
 LaTeX Font Info:    Font shape `JY2/gt/m/n' will be
 (Font)              scaled to size 13.31541pt on input line 2.
+
+Underfull \hbox (badness 1062) in paragraph at lines 13--13
+[]|\OT1/cmr/m/n/10 ESP32 \JY2/mc/m/n/10 固有の記述を \OT1/cmr/m/n/10 Ar-d
+uino/\JY2/mc/m/n/10 組み込み汎用に変更 。 \OT1/cmr/m/n/10 ADC \JY2/mc
+/m/n/10 コメント ・
+ []
+
 )
-Overfull \hbox (9.24683pt too wide) in paragraph at lines 12--189
+Overfull \hbox (9.24683pt too wide) in paragraph at lines 13--200
 [][]
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 12--189
+Underfull \hbox (badness 10000) in paragraph at lines 13--200
 
  []
 
 LaTeX Font Info:    Font shape `JT2/mc/m/n' will be
-(Font)              scaled to size 8.32214pt on input line 189.
+(Font)              scaled to size 8.32214pt on input line 200.
 LaTeX Font Info:    Font shape `JY2/mc/m/n' will be
-(Font)              scaled to size 8.32214pt on input line 189.
+(Font)              scaled to size 8.32214pt on input line 200.
 LaTeX Font Info:    Font shape `JT2/mc/bx/n' in size <9> not available
-(Font)              Font shape `JT2/gt/m/n' tried instead on input line 189.
+(Font)              Font shape `JT2/gt/m/n' tried instead on input line 200.
 LaTeX Font Info:    Font shape `JT2/gt/m/n' will be
-(Font)              scaled to size 8.32214pt on input line 189.
+(Font)              scaled to size 8.32214pt on input line 200.
 LaTeX Font Info:    Font shape `JY2/mc/bx/n' in size <9> not available
-(Font)              Font shape `JY2/gt/m/n' tried instead on input line 189.
+(Font)              Font shape `JY2/gt/m/n' tried instead on input line 200.
 LaTeX Font Info:    Font shape `JY2/gt/m/n' will be
-(Font)              scaled to size 8.32214pt on input line 189.
+(Font)              scaled to size 8.32214pt on input line 200.
 [1] (./モジュール実装ガイド.toc [2])
 \tf@toc=\write5
 \openout5 = `モジュール実装ガイド.toc'.
@@ -1022,9 +1029,9 @@ LaTeX Font Info:    Font shape `JY2/gt/m/n' will be
 (Font)              scaled to size 8.32214pt on input line 21.
  [5]) (./sections/button.tex [6]
 [7]) (./sections/battery.tex [8] [9]) (./sections/servo.tex [10])
-(./sections/buzzer.tex [11]) (./sections/mpu6500.tex [12] [13])
+(./sections/buzzer.tex [11] [12]) (./sections/mpu6500.tex [13])
 (./sections/touch.tex [14]) (./sections/tft.tex [15]) (./sections/camera.tex
-[16]) (./sections/drivemotor.tex [17]) (./sections/chassis.tex [18]
+[16]) (./sections/drivemotor.tex [17] [18]) (./sections/chassis.tex [19]
 LaTeX Font Info:    Trying to load font information for OMS+cmtt on input line 
 59.
 LaTeX Font Info:    No file OMScmtt.fd. on input line 59.
@@ -1034,7 +1041,7 @@ LaTeX Font Warning: Font shape `OMS/cmtt/m/n' undefined
 (Font)              using `OMS/cmsy/m/n' instead
 (Font)              for symbol `textbraceleft' on input line 59.
 
-[19] [20]) (./sections/ble.tex [21]
+[20]) (./sections/ble.tex [21]
 Underfull \hbox (badness 1728) in paragraph at lines 93--96
 []\OT1/cmr/m/n/10 BLE \JY2/mc/m/n/10 ライブラリはコ ールバ ックク
 ラスの継承を要求するため 、 内部クラスでラ ップして
@@ -1060,10 +1067,10 @@ changed.
 Here is how much of TeX's memory you used:
  29439 strings out of 469642
  569067 string characters out of 5471207
- 1515832 words of memory out of 5000000
+ 1518844 words of memory out of 5000000
  57754 multiletter control sequences out of 15000+600000
  694140 words of font info for 108 fonts, out of 8000000 for 9000
  41 hyphenation exceptions out of 8191
- 98i,13n,108p,748b,2214s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 98i,13n,108p,748b,2212s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on モジュール実装ガイド.dvi (29 pages, 980936 bytes).
+Output written on モジュール実装ガイド.dvi (29 pages, 981156 bytes).

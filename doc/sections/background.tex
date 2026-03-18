@@ -44,9 +44,10 @@
     結果として、機能の重複や抜け漏れが発生しやすくなる。
 \end{enumerate}
 
-\subsection{ESP32-S3 CAMの特徴}
+\subsection{サンプル実装で使用するボード：ESP32-S3 CAM}
 
-本プロジェクトで使用するESP32-S3 N16R8 CAM開発ボードは、以下の特徴を持つ：
+本設計パターンはArduino互換のあらゆるマイコンに適用可能であるが、
+サンプル実装ではESP32-S3 N16R8 CAM開発ボードを使用する。このボードの主な特徴は以下の通り：
 
 \begin{table}[h]
 \centering
@@ -66,3 +67,5 @@ PSRAM & 8MB（R8、OPI接続） \\
 \end{table}
 
 多機能なハードウェアを効率的に管理するために、統一的なモジュール管理アーキテクチャが求められる。
+なお、本アーキテクチャのコア設計（IModule・ModuleTimer）はESP32固有のAPIを使用しておらず、
+Arduino標準API（\texttt{millis()}等）のみで構成されているため、Arduino互換の他のマイコンにもそのまま適用できる。

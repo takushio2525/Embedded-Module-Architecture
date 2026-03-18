@@ -64,7 +64,7 @@ attachInterrupt(pin, _isrHandlerA, RISING);
 \begin{itemize}
     \item \texttt{attachInterrupt()}に渡す関数は\textbf{static関数}でなければならない
     \item ISR内では\texttt{Serial.print()}やメモリ確保等の重い処理は禁止
-    \item ESP32では\texttt{IRAM\_ATTR}を付けてRAMに配置する必要がある
+    \item ESP32等では\texttt{IRAM\_ATTR}を付けてRAMに配置する必要がある（ボード依存）
     \item ISRから参照する変数は\texttt{volatile}を付ける
 \end{itemize}
 \end{cautionbox}

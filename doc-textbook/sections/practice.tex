@@ -93,7 +93,7 @@ TempSensorModule::TempSensorModule(const TempSensorConfig& config)
     : _config(config) {}
 
 bool TempSensorModule::init() {
-    // アナログピンはpinMode不要（ESP32）
+    // アナログピンはpinMode不要（Arduino標準動作）
     _readTimer.setTime();
     Serial.println("[TempSensor] init OK");
     return true;

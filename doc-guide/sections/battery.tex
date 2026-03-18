@@ -19,7 +19,7 @@ struct BatteryConfig {
     uint8_t       adcPin;
     float         voltageDivider;      // 分圧比（例: 2.0 = 1/2分圧）
     float         adcRefVoltage;       // ADC基準電圧 [V]
-    uint16_t      adcResolution;       // ADC分解能（ESP32: 4095）
+    uint16_t      adcResolution;       // ADC分解能（例: ESP32は4095、AVRは1023）
     unsigned long sampleIntervalMs;
     float         lowVoltageThreshold; // 低電圧警告閾値 [V]
 };

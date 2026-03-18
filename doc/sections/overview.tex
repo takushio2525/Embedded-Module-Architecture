@@ -2,16 +2,17 @@
 \section{概要}
 
 \subsection{プロジェクト名}
-Embedded Module Architecture — ESP32-S3 CAM サンプルプロジェクト
+Embedded Module Architecture — Arduino対応 組み込みモジュール設計パターン
 
 \subsection{コンセプト}
-本プロジェクトは、組み込みシステムにおける\textbf{Moduleインターフェース設計パターン}のリファレンス実装である。
-ESP32-S3 N16R8 CAM開発ボードを題材に、カメラ・センサー・LED・LCD等の多様なハードウェアモジュールを
+本プロジェクトは、Arduinoフレームワーク対応マイコン全般で使える\textbf{Moduleインターフェース設計パターン}のリファレンス実装である。
+コア設計（IModule・ModuleTimer）はESP32に限らず、STM32やAVR等のArduino互換ボードにもそのまま適用できる。
+サンプル実装としてESP32-S3 N16R8 CAM開発ボードを題材に、カメラ・センサー・LED・LCD等の多様なハードウェアモジュールを
 統一的なインターフェースで管理する手法を示す。
 
 \begin{cautionbox}[サンプルコードについて]
 本リポジトリに実装されているモジュール群のコードは、あくまで\textbf{アーキテクチャの設計パターンを具体的に示すためのサンプル実装}である。
-実機（ESP32-S3 N16R8 CAM開発ボード）での動作検証は行っていない。
+実機での動作検証は行っていない。
 実プロジェクトへの適用時は、ハードウェア固有の動作・タイミング・電気的仕様を考慮したうえで十分なテストを実施すること。
 \end{cautionbox}
 
