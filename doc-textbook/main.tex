@@ -30,7 +30,7 @@
 \usepackage{titlesec}
 \usepackage{tcolorbox}
 \tcbuselibrary{skins,breakable}
-\tcbset{before={\par\medskip\needspace{4\baselineskip}\noindent}}  % ボックス前に最低4行分確保（タイトル孤立防止）
+\tcbset{before={\par\medskip\needspace{3\baselineskip}\noindent}}  % ボックス前に最低3行分確保（タイトル孤立防止）
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,calc}
 \usepackage{listings}
@@ -62,7 +62,7 @@
 
 %% ─── セクション見出しスタイル ─────────────────
 \titleformat{\section}
-  {\needspace{5\baselineskip}\Large\bfseries\color{headerblue}}
+  {\needspace{4\baselineskip}\Large\bfseries\color{headerblue}}
   {\thesection}{1em}{}
   [\vspace{-0.5em}\textcolor{accentblue}{\rule{\textwidth}{1.2pt}}]
 \titleformat{\subsection}
