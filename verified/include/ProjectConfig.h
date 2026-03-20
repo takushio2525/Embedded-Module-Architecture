@@ -50,4 +50,14 @@ constexpr int CAM_HREF_PIN  = 7;
 constexpr int CAM_PCLK_PIN  = 13;
 
 // ===== Configインスタンス =====
-// モジュール実装時に各Config構造体をここに定義していく
+
+// TFT LCD (ILI9341, 2.8インチ)
+// SPIピン・タッチCSは platformio.ini の build_flags で設定済み
+const TftConfig TFT_CONFIG = {
+    .rotation        = 1,    // 1=横向き (landscape, 320x240)
+    .updateIntervalMs = 100, // 画面更新周期 100ms (10fps)
+};
+
+// タッチパネル (XPT2046)
+// CSピンは platformio.ini の TOUCH_CS で設定済み
+const TouchConfig TOUCH_CONFIG = {};
