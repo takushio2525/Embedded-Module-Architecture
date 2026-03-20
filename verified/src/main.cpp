@@ -24,7 +24,7 @@ Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 SdModule      sdModule(SD_CONFIG, &sharedSpi);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
-// 入出力モジュール（入力フェーズで受信、出力フェーズで送信）
+// 入出力モジュール（入力/出力フェーズで個別メソッドを呼び分ける）
 BleModule bleModule(BLE_CONFIG);
 
 // 出力モジュール
@@ -32,19 +32,19 @@ TftModule   tftModule(TFT_CONFIG, &tftDriver);
 ServoModule servoModule(SERVO_CONFIG);
 
 // モジュール配列
+// 注意: BleModuleは入出力両方の処理を持つため配列には含めず、
+//       loop()内でupdateInput()/updateOutput()を個別に呼び出す
 IModule* inputModules[] = {
     &touchModule,
     &mpu6500Module,
     &sdModule,
     &cameraModule,
-    &bleModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
 IModule* outputModules[] = {
     &tftModule,
     &servoModule,
-    &bleModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
@@ -53,6 +53,10 @@ const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 // BLE経由でIMUデータを送信する周期タイマー
 static ModuleTimer bleSendTimer;
 static constexpr uint32_t BLE_SEND_INTERVAL_MS = 100;  // 100ms (10Hz)
+
+// init失敗モジュールの再試行タイマーと間隔
+static ModuleTimer reinitTimer;
+static constexpr uint32_t REINIT_INTERVAL_MS = 5000;  // 5秒ごとに再試行
 
 void applyPattern(SystemData& data) {
     // MPU6500データをTFT表示
@@ -111,6 +115,24 @@ void applyPattern(SystemData& data) {
              "Heap:%dK PSRAM:%dK  ",
              (int)(ESP.getFreeHeap() / 1024),
              (int)(ESP.getFreePsram() / 1024));
+
+    // init失敗モジュールの定期再試行
+    if (reinitTimer.getNowTime() >= REINIT_INTERVAL_MS) {
+        reinitTimer.setTime();
+        // 全モジュール配列を走査し、無効化されたモジュールのinit()を再試行
+        IModule* allModules[] = {
+            &touchModule, &mpu6500Module, &sdModule, &cameraModule,
+            &bleModule, &tftModule, &servoModule,
+        };
+        for (auto* mod : allModules) {
+            if (!mod->enabled) {
+                if (mod->init()) {
+                    mod->enabled = true;
+                    Serial.println("[System] モジュール再init成功、有効化");
+                }
+            }
+        }
+    }
 }
 
 // ===== ユーティリティ =====
@@ -138,14 +160,29 @@ void setup() {
 
     // バス初期化（全モジュールのinit()より前に実行）
     mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);           // I2Cバス
-    sharedSpi.begin(SPI_SCK, SPI_MISO, SPI_MOSI, -1);  // 共有SPIバス（CSは各モジュールで管理）
+    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（CSは各モジュールで管理）
     tftDriver.init();  // TFT_eSPIドライバ初期化（TouchModuleも共有）
 
     // モジュール初期化
     initModuleArray(inputModules,  INPUT_COUNT,  "Input");
     initModuleArray(outputModules, OUTPUT_COUNT, "Output");
 
+    // BleModuleは配列外のため個別にinit
+    {
+        const int MAX_RETRY = 3;
+        bool success = false;
+        for (int r = 0; r < MAX_RETRY; r++) {
+            if (bleModule.init()) { success = true; break; }
+            delay(100);
+        }
+        if (!success) {
+            Serial.println("[System] BLE Module: init失敗、無効化");
+            bleModule.enabled = false;
+        }
+    }
+
     bleSendTimer.setTime();
+    reinitTimer.setTime();
     Serial.println("[System] 起動完了");
 }
 
@@ -157,6 +194,9 @@ void loop() {
         if (inputModules[i]->enabled) {
             inputModules[i]->update(systemData);
         }
+    }
+    if (bleModule.enabled) {
+        bleModule.updateInput(systemData);  // BLE受信データをSystemDataに反映
     }
 
     // 2. ロジックフェーズ
@@ -170,5 +210,8 @@ void loop() {
         if (outputModules[i]->enabled) {
             outputModules[i]->update(systemData);
         }
+    }
+    if (bleModule.enabled) {
+        bleModule.updateOutput(systemData);  // BLE送信リクエストを処理
     }
 }

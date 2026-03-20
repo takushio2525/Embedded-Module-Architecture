@@ -46,7 +46,7 @@ private:
 
     // --- 内部バッファ（コールバックスレッドが書き込む） ---
     uint8_t      _rxBuffer[BLE_RX_BUFFER_SIZE] = {};
-    uint8_t      _rxBufferLength = 0;
+    volatile uint8_t _rxBufferLength = 0;
     volatile bool _dataReceived  = false;  // volatileフラグ
     volatile bool _clientConnected = false;
 
@@ -55,6 +55,11 @@ public:
     bool init() override;
     void update(SystemData& data) override;
     void deinit() override;
+
+    // 入出力フェーズ分離メソッド
+    // update()は互換性のため両方を呼ぶ。main.cppではこちらを使う。
+    void updateInput(SystemData& data);   // 入力フェーズ: 受信データをSystemDataに反映
+    void updateOutput(SystemData& data);  // 出力フェーズ: 送信リクエストを処理
 
     // BLEコールバックから呼ばれるメソッド（別タスクで実行される）
     void onConnect();

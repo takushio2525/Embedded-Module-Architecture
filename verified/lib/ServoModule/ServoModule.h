@@ -22,14 +22,14 @@ struct ServoData {
 struct SystemData;
 
 class ServoModule : public IModule {
+public:
+    ServoModule(const ServoConfig& config);
+    bool init() override;
+    void update(SystemData& data) override;
+
 private:
     ServoConfig _config;
 
     // 角度からPWMデューティ値を計算
     uint32_t _angleToDuty(uint8_t angle) const;
-
-public:
-    ServoModule(const ServoConfig& config);
-    bool init() override;
-    void update(SystemData& data) override;
 };

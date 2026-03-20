@@ -31,9 +31,9 @@ struct Mpu6500Data {
     bool isValid = false;
 };
 
-// SystemDataの前方宣言はIModule.hで行われている
-
 // --- モジュール実装 ---
+struct SystemData;
+
 class Mpu6500Module : public IModule {
 public:
     explicit Mpu6500Module(const Mpu6500Config& config, TwoWire* wire);

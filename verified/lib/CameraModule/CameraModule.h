@@ -43,9 +43,9 @@ struct CameraData {
     size_t   frameSize  = 0;      // バイト単位のフレームサイズ
 };
 
-// SystemDataの前方宣言はIModule.hで行われている
-
 // --- モジュール実装 ---
+struct SystemData;
+
 class CameraModule : public IModule {
 public:
     explicit CameraModule(const CameraConfig& config);
