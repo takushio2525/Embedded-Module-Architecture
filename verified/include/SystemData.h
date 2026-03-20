@@ -6,6 +6,7 @@
 #include "Mpu6500Module.h"
 #include "ServoModule.h"
 #include "SdModule.h"
+#include "CameraModule.h"
 
 // ===== システムデータ =====
 struct SystemData {
@@ -14,4 +15,5 @@ struct SystemData {
     Mpu6500Data  mpu;
     ServoData    servo;
     SdData       sd;
+    CameraData   camera;
 };

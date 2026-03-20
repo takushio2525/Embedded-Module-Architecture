@@ -83,3 +83,28 @@ const ServoConfig SERVO_CONFIG = {
 const SdConfig SD_CONFIG = {
     .csPin = SD_CS_PIN,
 };
+
+// カメラ OV5640 (DVP)
+const CameraConfig CAMERA_CONFIG = {
+    .pwdnPin    = CAM_PWDN_PIN,
+    .resetPin   = CAM_RESET_PIN,
+    .xclkPin    = CAM_XCLK_PIN,
+    .siodPin    = CAM_SIOD_PIN,
+    .siocPin    = CAM_SIOC_PIN,
+    .d0Pin      = CAM_D0_PIN,
+    .d1Pin      = CAM_D1_PIN,
+    .d2Pin      = CAM_D2_PIN,
+    .d3Pin      = CAM_D3_PIN,
+    .d4Pin      = CAM_D4_PIN,
+    .d5Pin      = CAM_D5_PIN,
+    .d6Pin      = CAM_D6_PIN,
+    .d7Pin      = CAM_D7_PIN,
+    .vsyncPin   = CAM_VSYNC_PIN,
+    .hrefPin    = CAM_HREF_PIN,
+    .pclkPin    = CAM_PCLK_PIN,
+    .xclkFreqHz  = 20000000,   // 20MHz
+    .frameSize   = 5,          // FRAMESIZE_QVGA (320x240)
+    .pixFormat   = 4,          // PIXFORMAT_JPEG
+    .jpegQuality = 12,         // JPEG品質 (低い値=高画質)
+    .fbCount     = 2,          // PSRAMへのダブルバッファ
+};

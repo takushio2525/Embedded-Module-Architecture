@@ -22,6 +22,7 @@ SystemData systemData;
 TouchModule   touchModule(TOUCH_CONFIG, &tftDriver);
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 SdModule      sdModule(SD_CONFIG, &sharedSpi);
+CameraModule  cameraModule(CAMERA_CONFIG);
 
 // 出力モジュール
 TftModule   tftModule(TFT_CONFIG, &tftDriver);
@@ -32,6 +33,7 @@ IModule* inputModules[] = {
     &touchModule,
     &mpu6500Module,
     &sdModule,
+    &cameraModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
@@ -71,16 +73,20 @@ void applyPattern(SystemData& data) {
                  "Servo: %3d deg        ", data.servo.currentAngle);
     }
 
-    // SD + システム情報
+    // カメラ + SD情報
+    char camInfo[24] = "CAM:---";
+    if (data.camera.isValid && data.camera.frameReady) {
+        snprintf(camInfo, sizeof(camInfo), "CAM:%dx%d",
+                 data.camera.width, data.camera.height);
+    }
+    char sdInfo[24] = "SD:---";
     if (data.sd.isValid) {
-        snprintf(data.tft.line5, sizeof(data.tft.line5),
-                 "SD:%s %lluMB  ",
+        snprintf(sdInfo, sizeof(sdInfo), "SD:%s %lluMB",
                  data.sd.testPassed ? "OK" : "NG",
                  data.sd.totalBytes / (1024 * 1024));
-    } else {
-        snprintf(data.tft.line5, sizeof(data.tft.line5),
-                 "SD:--- Heap:%dB  ", (int)ESP.getFreeHeap());
     }
+    snprintf(data.tft.line5, sizeof(data.tft.line5),
+             "%s %s  ", camInfo, sdInfo);
 }
 
 // ===== ユーティリティ =====
@@ -130,6 +136,9 @@ void loop() {
 
     // 2. ロジックフェーズ
     applyPattern(systemData);
+
+    // カメラフレームバッファはロジックフェーズ終了時に解放
+    cameraModule.releaseFrame();
 
     // 3. 出力フェーズ
     for (int i = 0; i < OUTPUT_COUNT; i++) {
