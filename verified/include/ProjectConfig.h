@@ -61,3 +61,10 @@ const TftConfig TFT_CONFIG = {
 // タッチパネル (XPT2046)
 // CSピンは platformio.ini の TOUCH_CS で設定済み
 const TouchConfig TOUCH_CONFIG = {};
+
+// MPU-6500 (I2C)
+// I2Cバス(Wire)はmain.cppのsetup()でI2C_SDA_PIN/I2C_SCL_PINを指定して初期化
+const Mpu6500Config MPU6500_CONFIG = {
+    .address          = 0x68,  // AD0=LOW: 0x68 / AD0=HIGH: 0x69
+    .sampleIntervalMs = 20,    // サンプリング周期 20ms (50Hz)
+};

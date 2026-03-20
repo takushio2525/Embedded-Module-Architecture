@@ -1,13 +1,15 @@
 // main.cpp — テストベンチ エントリーポイント
 // 3フェーズ実行モデル: 入力 → ロジック → 出力
 #include <Arduino.h>
+#include <Wire.h>
 #include <TFT_eSPI.h>
 #include "IModule.h"
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
 // バスインスタンス（グローバルスコープで生成）
-static TFT_eSPI tftDriver;  // TFT LCD + タッチ共有ドライバ
+static TwoWire  mpuWire  = TwoWire(0);  // MPU6500用I2C
+static TFT_eSPI tftDriver;              // TFT LCD + タッチ共有ドライバ
 
 // システムデータ
 SystemData systemData;
@@ -15,7 +17,8 @@ SystemData systemData;
 // ===== モジュールインスタンス =====
 
 // 入力モジュール
-TouchModule touchModule(TOUCH_CONFIG, &tftDriver);
+TouchModule   touchModule(TOUCH_CONFIG, &tftDriver);
+Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 
 // 出力モジュール
 TftModule tftModule(TFT_CONFIG, &tftDriver);
@@ -23,6 +26,7 @@ TftModule tftModule(TFT_CONFIG, &tftDriver);
 // モジュール配列
 IModule* inputModules[] = {
     &touchModule,
+    &mpu6500Module,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
@@ -34,21 +38,34 @@ const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 // ===== ロジックフェーズ =====
 
 void applyPattern(SystemData& data) {
-    // タッチ座標をTFTに表示
-    if (data.touch.touchPressed) {
+    // MPU6500データをTFT表示
+    if (data.mpu.isValid) {
         snprintf(data.tft.line1, sizeof(data.tft.line1),
+                 "Ax:%.2f Ay:%.2f Az:%.2f  ",
+                 data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
+        snprintf(data.tft.line2, sizeof(data.tft.line2),
+                 "Gx:%.1f Gy:%.1f Gz:%.1f  ",
+                 data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
+        snprintf(data.tft.line3, sizeof(data.tft.line3),
+                 "Temp: %.1f C  ", data.mpu.temperature);
+    } else {
+        strncpy(data.tft.line1, "MPU6500: No data      ", sizeof(data.tft.line1));
+        data.tft.line2[0] = '\0';
+        data.tft.line3[0] = '\0';
+    }
+
+    // タッチ座標
+    if (data.touch.touchPressed) {
+        snprintf(data.tft.line4, sizeof(data.tft.line4),
                  "Touch: X=%3d  Y=%3d  ", data.touch.touchX, data.touch.touchY);
     } else {
-        strncpy(data.tft.line1, "Touch: ---            ", sizeof(data.tft.line1));
+        strncpy(data.tft.line4, "Touch: ---            ", sizeof(data.tft.line4));
     }
 
     // システム情報
-    snprintf(data.tft.line3, sizeof(data.tft.line3),
-             "Heap: %d B  ", (int)ESP.getFreeHeap());
-    snprintf(data.tft.line4, sizeof(data.tft.line4),
-             "PSRAM: %d B  ", (int)ESP.getFreePsram());
     snprintf(data.tft.line5, sizeof(data.tft.line5),
-             "Uptime: %lu s  ", millis() / 1000);
+             "Heap:%dB PSRAM:%dB  ",
+             (int)ESP.getFreeHeap(), (int)ESP.getFreePsram());
 }
 
 // ===== ユーティリティ =====
@@ -75,6 +92,7 @@ void setup() {
     Serial.println("[System] テストベンチ起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
+    mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // I2Cバス
     tftDriver.init();  // TFT_eSPIドライバ初期化（TouchModuleも共有）
 
     // モジュール初期化
