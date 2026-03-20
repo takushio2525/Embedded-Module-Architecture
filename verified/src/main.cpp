@@ -2,6 +2,7 @@
 // 3フェーズ実行モデル: 入力 → ロジック → 出力
 #include <Arduino.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <TFT_eSPI.h>
 #include "IModule.h"
 #include "ProjectConfig.h"
@@ -9,7 +10,8 @@
 
 // バスインスタンス（グローバルスコープで生成）
 static TwoWire  mpuWire  = TwoWire(0);  // MPU6500用I2C
-static TFT_eSPI tftDriver;              // TFT LCD + タッチ共有ドライバ
+static SPIClass sharedSpi = SPIClass(FSPI);  // TFT + Touch + SD 共有SPIバス
+static TFT_eSPI tftDriver;                   // TFT LCD + タッチ共有ドライバ
 
 // システムデータ
 SystemData systemData;
@@ -19,6 +21,7 @@ SystemData systemData;
 // 入力モジュール
 TouchModule   touchModule(TOUCH_CONFIG, &tftDriver);
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
+SdModule      sdModule(SD_CONFIG, &sharedSpi);
 
 // 出力モジュール
 TftModule   tftModule(TFT_CONFIG, &tftDriver);
@@ -28,6 +31,7 @@ ServoModule servoModule(SERVO_CONFIG);
 IModule* inputModules[] = {
     &touchModule,
     &mpu6500Module,
+    &sdModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
@@ -67,10 +71,16 @@ void applyPattern(SystemData& data) {
                  "Servo: %3d deg        ", data.servo.currentAngle);
     }
 
-    // システム情報
-    snprintf(data.tft.line5, sizeof(data.tft.line5),
-             "Heap:%dB PSRAM:%dB  ",
-             (int)ESP.getFreeHeap(), (int)ESP.getFreePsram());
+    // SD + システム情報
+    if (data.sd.isValid) {
+        snprintf(data.tft.line5, sizeof(data.tft.line5),
+                 "SD:%s %lluMB  ",
+                 data.sd.testPassed ? "OK" : "NG",
+                 data.sd.totalBytes / (1024 * 1024));
+    } else {
+        snprintf(data.tft.line5, sizeof(data.tft.line5),
+                 "SD:--- Heap:%dB  ", (int)ESP.getFreeHeap());
+    }
 }
 
 // ===== ユーティリティ =====
@@ -97,7 +107,8 @@ void setup() {
     Serial.println("[System] テストベンチ起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
-    mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // I2Cバス
+    mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);           // I2Cバス
+    sharedSpi.begin(SPI_SCK, SPI_MISO, SPI_MOSI, -1);  // 共有SPIバス（CSは各モジュールで管理）
     tftDriver.init();  // TFT_eSPIドライバ初期化（TouchModuleも共有）
 
     // モジュール初期化

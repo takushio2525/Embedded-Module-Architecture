@@ -77,3 +77,9 @@ const ServoConfig SERVO_CONFIG = {
     .maxPulseUs   = 2500,  // SG90: 2500μs
     .defaultAngle = 90,    // 初期角度 90度（中央）
 };
+
+// SDカード (SPI, ボード裏面スロット)
+// SPIバスはTFT/Touchと共有（main.cppで同一SPIインスタンスを渡す）
+const SdConfig SD_CONFIG = {
+    .csPin = SD_CS_PIN,
+};
