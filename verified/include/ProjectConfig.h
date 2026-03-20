@@ -108,3 +108,11 @@ const CameraConfig CAMERA_CONFIG = {
     .jpegQuality = 12,         // JPEG品質 (低い値=高画質)
     .fbCount     = 2,          // PSRAMへのダブルバッファ
 };
+
+// BLE
+const BleConfig BLE_CONFIG = {
+    .deviceName  = "ESP32-TestBench",
+    .serviceUuid = "12345678-1234-1234-1234-123456789abc",
+    .rxCharUuid  = "12345678-1234-1234-1234-123456789abd",
+    .txCharUuid  = "12345678-1234-1234-1234-123456789abe",
+};

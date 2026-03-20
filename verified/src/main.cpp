@@ -24,6 +24,9 @@ Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 SdModule      sdModule(SD_CONFIG, &sharedSpi);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
+// 入出力モジュール（入力フェーズで受信、出力フェーズで送信）
+BleModule bleModule(BLE_CONFIG);
+
 // 出力モジュール
 TftModule   tftModule(TFT_CONFIG, &tftDriver);
 ServoModule servoModule(SERVO_CONFIG);
@@ -34,16 +37,22 @@ IModule* inputModules[] = {
     &mpu6500Module,
     &sdModule,
     &cameraModule,
+    &bleModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
 IModule* outputModules[] = {
     &tftModule,
     &servoModule,
+    &bleModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
 // ===== ロジックフェーズ =====
+
+// BLE経由でIMUデータを送信する周期タイマー
+static ModuleTimer bleSendTimer;
+static constexpr uint32_t BLE_SEND_INTERVAL_MS = 100;  // 100ms (10Hz)
 
 void applyPattern(SystemData& data) {
     // MPU6500データをTFT表示
@@ -54,39 +63,54 @@ void applyPattern(SystemData& data) {
         snprintf(data.tft.line2, sizeof(data.tft.line2),
                  "Gx:%.1f Gy:%.1f Gz:%.1f  ",
                  data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
-        snprintf(data.tft.line3, sizeof(data.tft.line3),
-                 "Temp: %.1f C  ", data.mpu.temperature);
     } else {
         strncpy(data.tft.line1, "MPU6500: No data      ", sizeof(data.tft.line1));
         data.tft.line2[0] = '\0';
-        data.tft.line3[0] = '\0';
     }
 
     // タッチでサーボ制御（X座標 0-320 → 角度 0-180）
     if (data.touch.touchPressed) {
         data.servo.targetAngle = map(data.touch.touchX, 0, 320, 0, 180);
-        snprintf(data.tft.line4, sizeof(data.tft.line4),
+        snprintf(data.tft.line3, sizeof(data.tft.line3),
                  "Touch:X=%3d Y=%3d Sv:%3d ",
                  data.touch.touchX, data.touch.touchY, data.servo.targetAngle);
     } else {
-        snprintf(data.tft.line4, sizeof(data.tft.line4),
+        snprintf(data.tft.line3, sizeof(data.tft.line3),
                  "Servo: %3d deg        ", data.servo.currentAngle);
     }
 
-    // カメラ + SD情報
-    char camInfo[24] = "CAM:---";
+    // カメラ + SD + BLE ステータス
+    char camInfo[16] = "CAM:--";
     if (data.camera.isValid && data.camera.frameReady) {
-        snprintf(camInfo, sizeof(camInfo), "CAM:%dx%d",
-                 data.camera.width, data.camera.height);
+        snprintf(camInfo, sizeof(camInfo), "CAM:OK");
     }
-    char sdInfo[24] = "SD:---";
+    char sdInfo[16] = "SD:--";
     if (data.sd.isValid) {
-        snprintf(sdInfo, sizeof(sdInfo), "SD:%s %lluMB",
-                 data.sd.testPassed ? "OK" : "NG",
-                 data.sd.totalBytes / (1024 * 1024));
+        snprintf(sdInfo, sizeof(sdInfo), "SD:%s",
+                 data.sd.testPassed ? "OK" : "NG");
     }
+    snprintf(data.tft.line4, sizeof(data.tft.line4),
+             "%s %s BLE:%s  ", camInfo, sdInfo,
+             data.ble.connected ? "ON" : "--");
+
+    // BLE接続中はIMUデータをNotifyで定期送信
+    if (data.ble.connected && data.mpu.isValid &&
+        bleSendTimer.getNowTime() >= BLE_SEND_INTERVAL_MS) {
+        bleSendTimer.setTime();
+        // CSV形式: "ax,ay,az,gx,gy,gz\n"
+        int len = snprintf((char*)data.ble.txData, BLE_TX_BUFFER_SIZE,
+                           "%.2f,%.2f,%.2f,%.1f,%.1f,%.1f\n",
+                           data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ,
+                           data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
+        data.ble.txLength    = (uint8_t)len;
+        data.ble.sendRequest = true;
+    }
+
+    // メモリ情報
     snprintf(data.tft.line5, sizeof(data.tft.line5),
-             "%s %s  ", camInfo, sdInfo);
+             "Heap:%dK PSRAM:%dK  ",
+             (int)(ESP.getFreeHeap() / 1024),
+             (int)(ESP.getFreePsram() / 1024));
 }
 
 // ===== ユーティリティ =====
@@ -121,6 +145,7 @@ void setup() {
     initModuleArray(inputModules,  INPUT_COUNT,  "Input");
     initModuleArray(outputModules, OUTPUT_COUNT, "Output");
 
+    bleSendTimer.setTime();
     Serial.println("[System] 起動完了");
 }
 
