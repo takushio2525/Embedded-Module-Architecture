@@ -21,7 +21,8 @@ TouchModule   touchModule(TOUCH_CONFIG, &tftDriver);
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 
 // 出力モジュール
-TftModule tftModule(TFT_CONFIG, &tftDriver);
+TftModule   tftModule(TFT_CONFIG, &tftDriver);
+ServoModule servoModule(SERVO_CONFIG);
 
 // モジュール配列
 IModule* inputModules[] = {
@@ -32,6 +33,7 @@ const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
 IModule* outputModules[] = {
     &tftModule,
+    &servoModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
@@ -54,12 +56,15 @@ void applyPattern(SystemData& data) {
         data.tft.line3[0] = '\0';
     }
 
-    // タッチ座標
+    // タッチでサーボ制御（X座標 0-320 → 角度 0-180）
     if (data.touch.touchPressed) {
+        data.servo.targetAngle = map(data.touch.touchX, 0, 320, 0, 180);
         snprintf(data.tft.line4, sizeof(data.tft.line4),
-                 "Touch: X=%3d  Y=%3d  ", data.touch.touchX, data.touch.touchY);
+                 "Touch:X=%3d Y=%3d Sv:%3d ",
+                 data.touch.touchX, data.touch.touchY, data.servo.targetAngle);
     } else {
-        strncpy(data.tft.line4, "Touch: ---            ", sizeof(data.tft.line4));
+        snprintf(data.tft.line4, sizeof(data.tft.line4),
+                 "Servo: %3d deg        ", data.servo.currentAngle);
     }
 
     // システム情報

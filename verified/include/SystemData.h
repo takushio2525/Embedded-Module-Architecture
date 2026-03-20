@@ -4,10 +4,12 @@
 #include "TftModule.h"
 #include "TouchModule.h"
 #include "Mpu6500Module.h"
+#include "ServoModule.h"
 
 // ===== システムデータ =====
 struct SystemData {
     TftData      tft;
     TouchData    touch;
     Mpu6500Data  mpu;
+    ServoData    servo;
 };

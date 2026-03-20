@@ -68,3 +68,12 @@ const Mpu6500Config MPU6500_CONFIG = {
     .address          = 0x68,  // AD0=LOW: 0x68 / AD0=HIGH: 0x69
     .sampleIntervalMs = 20,    // サンプリング周期 20ms (50Hz)
 };
+
+// サーボ SG90 (PWM)
+const ServoConfig SERVO_CONFIG = {
+    .pin          = SERVO_PIN,
+    .pwmChannel   = 0,     // LEDCチャネル0
+    .minPulseUs   = 500,   // SG90: 500μs
+    .maxPulseUs   = 2500,  // SG90: 2500μs
+    .defaultAngle = 90,    // 初期角度 90度（中央）
+};
