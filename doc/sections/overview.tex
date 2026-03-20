@@ -7,13 +7,25 @@ Embedded Module Architecture — Arduino対応 組み込みモジュール設計
 \subsection{コンセプト}
 本プロジェクトは、Arduinoフレームワーク対応マイコン全般で使える\textbf{Moduleインターフェース設計パターン}のリファレンス実装である。
 コア設計（IModule・ModuleTimer）はESP32に限らず、STM32やAVR等のArduino互換ボードにもそのまま適用できる。
-サンプル実装としてESP32-S3 N16R8 CAM開発ボードを題材に、カメラ・センサー・LED・LCD等の多様なハードウェアモジュールを
-統一的なインターフェースで管理する手法を示す。
 
-\begin{cautionbox}[サンプルコードについて]
-本リポジトリに実装されているモジュール群のコードは、あくまで\textbf{アーキテクチャの設計パターンを具体的に示すためのサンプル実装}である。
+\subsection{リポジトリ構成}
+
+本リポジトリには2つのプロジェクトが含まれる。各プロジェクトは完全に自己完結しており、フォルダ単体でPlatformIOプロジェクトとして使用できる。
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ディレクトリ} & \textbf{内容} \\
+\midrule
+\texttt{sample/} & 設計パターンの構造説明用サンプル（ESP32-S3 N16R8 CAM題材、動作未確認） \\
+\texttt{verified/} & 実機で動作確認済みのプロジェクト \\
+\bottomrule
+\end{tabularx}
+
+\begin{cautionbox}[sample/ のコードについて]
+\texttt{sample/} に実装されているモジュール群のコードは、あくまで\textbf{アーキテクチャの設計パターンを具体的に示すためのサンプル実装}である。
 実機での動作検証は行っていない。
 実プロジェクトへの適用時は、ハードウェア固有の動作・タイミング・電気的仕様を考慮したうえで十分なテストを実施すること。
+動作確認済みのコードは \texttt{verified/} を参照すること。
 \end{cautionbox}
 
 \subsection{関連ドキュメント}

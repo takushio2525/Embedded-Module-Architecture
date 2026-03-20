@@ -5,12 +5,19 @@
 この章からC++のクラスを使います。構造体・クラス・コンストラクタに自信がある方はそのまま読み進めてください。不安な方は第1章「前提知識 — C++クラスの基礎」（\pageref{sec:prerequisite}ページ）で復習できます。
 \end{notebox}
 
-\begin{notebox}[関連ドキュメント]
-本リポジトリには3つのドキュメントがあります。
+\begin{notebox}[関連ドキュメントとプロジェクト構成]
+本リポジトリには2つのプロジェクトと3つのドキュメントがあります。
 
+\textbf{プロジェクト:}
+\begin{itemize}
+  \item \texttt{sample/} — 設計パターンの構造説明用サンプル（動作未確認）
+  \item \texttt{verified/} — 実機で動作確認済みのプロジェクト
+\end{itemize}
+
+\textbf{ドキュメント:}
 \begin{itemize}
   \item \textbf{教科書}（本書） — パターンの段階的な学習（「なぜそうするか」）
-  \item \textbf{実装ガイド}（\texttt{doc-guide/}） — リポジトリの実コードを題材にした解説（「実際にどう書いたか」）
+  \item \textbf{実装ガイド}（\texttt{doc-guide/}） — \texttt{sample/}の実コードを題材にした解説（「実際にどう書いたか」）
   \item \textbf{設計仕様書}（\texttt{doc/}） — ルール集・API仕様（「何を守るか」）
 \end{itemize}
 
@@ -18,8 +25,9 @@
 \end{notebox}
 
 \begin{cautionbox}[サンプルコードについて]
-本リポジトリに実装されているモジュール群のコードは、あくまで\textbf{設計パターンを具体的に示すためのサンプル実装}である。
+\texttt{sample/} に実装されているモジュール群のコードは、あくまで\textbf{設計パターンを具体的に示すためのサンプル実装}である。
 実機での動作検証は行っていないため、実プロジェクトへの適用時は十分なテストを実施すること。
+動作確認済みのコードは \texttt{verified/} を参照すること。
 \end{cautionbox}
 
 %% ── Q1: ベタ書きの問題 ──────────────────────

@@ -3,13 +3,42 @@
 
 ここまでで設計パターンの理論は一通り学びました。この章では、実際のリポジトリがどんなフォルダ構成になっているのかを見ていきます。
 
-%% ── Q1: フォルダ構成 ──────────────────────────
-\begin{qabox}{リポジトリのフォルダ構成はどうなってるの？}
+%% ── Q0: リポジトリ全体の構成 ──────────────────
+\begin{qabox}{リポジトリ全体の構成はどうなってるの？}
 
-本リポジトリはPlatformIOプロジェクトとして構成されています。ツリー構造を見てみましょう。
+本リポジトリには2つのプロジェクトが含まれています。
 
 \begin{lstlisting}[language={},keywordstyle={},commentstyle={},stringstyle={},numbers=none,frame=none,backgroundcolor=\color{lightgray},xleftmargin=5pt,framexleftmargin=5pt]
-project-root/
+repository-root/
+  |-- sample/              ... サンプルプロジェクト（設計パターンの構造説明用）
+  |-- verified/            ... 動作確認済みプロジェクト（実機テスト済み）
+  |-- doc/                 ... 設計仕様書
+  |-- doc-textbook/        ... 教科書（本書）
+  `-- doc-guide/           ... 実装ガイド
+\end{lstlisting}
+
+\vspace{2mm}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ディレクトリ} & \textbf{説明} \\
+\midrule
+\texttt{sample/} & 設計パターンを具体的なコードで示すためのサンプル。動作未確認 \\
+\texttt{verified/} & 実機で動作確認を行ったプロジェクト。フォルダごとダウンロードすればそのまま使える \\
+\bottomrule
+\end{tabularx}
+
+\vspace{2mm}
+各プロジェクトは完全に自己完結したPlatformIOプロジェクトです。フォルダ単体でビルド・書き込みができるようになっています。
+
+\end{qabox}
+
+%% ── Q1: フォルダ構成 ──────────────────────────
+\begin{qabox}{プロジェクトのフォルダ構成はどうなってるの？}
+
+各プロジェクト（\texttt{sample/}、\texttt{verified/}）はPlatformIOプロジェクトとして構成されています。ツリー構造を見てみましょう。
+
+\begin{lstlisting}[language={},keywordstyle={},commentstyle={},stringstyle={},numbers=none,frame=none,backgroundcolor=\color{lightgray},xleftmargin=5pt,framexleftmargin=5pt]
+sample/  (or verified/)
   |-- platformio.ini       ... ビルド設定（ボード・ライブラリ等）
   |-- src/
   |     `-- main.cpp       ... エントリーポイント（setup / loop）

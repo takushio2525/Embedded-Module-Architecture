@@ -4,12 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 概要
 
-ESP32-S3 N16R8 CAM開発ボードを題材にした、組み込みシステム向けModuleインターフェース設計パターンのリファレンス実装。PlatformIO + Arduino フレームワークを使用。
+組み込みシステム向けModuleインターフェース設計パターンのリファレンス実装。PlatformIO + Arduino フレームワークを使用。
+
+リポジトリには2つのプロジェクトが含まれる:
+- `sample/` — 設計パターンの構造説明用サンプル（動作未確認）
+- `verified/` — 実機で動作確認済みのプロジェクト
+
+各プロジェクトは完全に自己完結しており、フォルダ単体でPlatformIOプロジェクトとして使用できる。
 
 ## ビルドコマンド
 
 ```bash
-# ファームウェアビルド
+# サンプルプロジェクトのビルド
+cd sample/
 pio run -e esp32-s3-cam-n16r8
 
 # ビルド＋書き込み
@@ -30,7 +37,7 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 
 ### コア層（プロジェクト非依存）
 
-`lib/ModuleCore/` 以下の2ファイルで構成。他プロジェクトにそのまま流用可能。
+各プロジェクトの `lib/ModuleCore/` 以下の2ファイルで構成。他プロジェクトにそのまま流用可能。
 
 | ファイル | 役割 |
 |---|---|
