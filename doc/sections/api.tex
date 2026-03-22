@@ -292,6 +292,8 @@ void update(SystemData& data) override {
 \begin{enumerate}
     \item 各モジュールは、自身の\texttt{Config}構造体（型定義）と\texttt{Data}構造体（型定義）をモジュールのヘッダーファイル内に定義する
     \item \texttt{ProjectConfig.h}には、Configの\textbf{インスタンス}（実際のピン番号等の値）のみを定義する
+    \item モジュール固有のピン番号は\texttt{constexpr}単体定数にせず、Configインスタンスのリテラルに\textbf{直書き}する。外部からピンを参照する場合は\texttt{SERVO\_CONFIG.pin}のようにConfig構造体経由でアクセスする
+    \item 共有バスピン（\texttt{SPI\_MOSI\_PIN}等）は特定モジュールに属さないため、\texttt{constexpr}単体定数として定義してよい
     \item \texttt{SystemData}構造体は\texttt{SystemData.h}に分離し、プロジェクトで使用するモジュールのData構造体をメンバとして持つ
     \item モジュールの\texttt{.cpp}は\texttt{SystemData.h}をインクルードする（\texttt{ProjectConfig.h}はインクルードしない）
     \item モジュールは\texttt{update()}内で、\textbf{自身のData構造体のみ}にアクセスする（他モジュールのData構造体への読み書きは禁止）
@@ -312,11 +314,17 @@ struct SystemData {
 \end{lstlisting}
 
 \begin{lstlisting}[style=cppstyle, caption={ProjectConfig.h構成例}]
-// ProjectConfig.h — Configインスタンスのみ
+// ProjectConfig.h — 共有バスピン + Configインスタンス
 #pragma once
 #include "SystemData.h"
 
-// ===== モジュールConfig（ピンアサイン・設定値） =====
+// ===== 共有バスピン（単体定数OK） =====
+constexpr int SPI_MOSI_PIN = 38;
+constexpr int SPI_SCK_PIN  = 39;
+constexpr int I2C_SDA_PIN  = 2;
+constexpr int I2C_SCL_PIN  = 3;
+
+// ===== Configインスタンス（ピンは直書き） =====
 const LedConfig LED_CONFIG = { .ledPin = 13 };
 const TempSensorConfig TEMP_CONFIG = { .tempPin = 36 };
 const CameraConfig CAMERA_CONFIG = { .sdaPin = 21, .sclPin = 22 };

@@ -51,11 +51,17 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 | ファイル | 役割 |
 |---|---|
 | `include/SystemData.h` | 各モジュールの `Data` 構造体を集約した `SystemData` 構造体 |
-| `include/ProjectConfig.h` | 全モジュールのConfigインスタンス（ピンアサイン） |
+| `include/ProjectConfig.h` | 共有バスピン定義 + 全モジュールのConfigインスタンス |
 | `src/main.cpp` | モジュール配列の定義・ループ制御 |
 | `lib/{ModuleName}/` | 個別ハードウェアモジュールの実装 |
 
 各モジュールのヘッダーファイル内で `{Module}Config` と `{Module}Data` の型を定義し、`ProjectConfig.h` でConfigインスタンスの値を定義する。
+
+### ピン定義ルール
+
+- **モジュール固有のピン**（CSピン、信号ピン、カメラのDVPピン等）は `constexpr` 単体定数にせず、Configインスタンスのリテラルに**直書き**する
+- 外部からモジュールのピンを参照する場合は `SERVO_CONFIG.pin` のようにConfig構造体経由でアクセスする（「どのモジュールのピンか」が常に明確になる）
+- **共有バスピン**（SPI_MOSI/MISO/SCK、I2C_SDA/SCL等）は特定モジュールに属さない共有インフラのため、`constexpr` 単体定数として定義してよい（`main.cpp` の `bus.begin()` で直接使用するため）
 
 ### モジュールのファイル構成（.h/.cpp分離）
 

@@ -241,6 +241,33 @@ struct SystemData {
 \end{itemize}
 \end{funcblock}
 
+\begin{funcblock}{ピン定義のルール — 構造体リテラルへの直書き}
+モジュール固有のピン番号は\texttt{constexpr}単体定数にせず、Configインスタンスのリテラルに\textbf{直書き}する。
+外部からピンを参照する場合は\texttt{SERVO\_CONFIG.pin}のようにConfig構造体経由でアクセスする。
+これにより「どのモジュールのピンか」が常に明確になり、中間変数による二重管理を排除する。
+
+\medskip
+\textbf{例外:} 共有バスピン（\texttt{SPI\_MOSI\_PIN}等）は特定モジュールに属さない共有インフラのため、
+\texttt{constexpr}単体定数として定義してよい。\texttt{main.cpp}の\texttt{bus.begin()}で直接使用するため。
+
+\begin{lstlisting}[style=cppstyle, caption={ピン定義の正しい書き方}]
+// ===== 共有バスピン: 単体定数OK =====
+constexpr int SPI_MOSI_PIN = 38;
+constexpr int SPI_SCK_PIN  = 39;
+
+// ===== モジュール固有ピン: Configリテラルに直書き =====
+const ServoConfig SERVO_CONFIG = {
+    .pin = 1,   // 直書き（constexpr int SERVO_PIN = 1; は不要）
+};
+const SdConfig SD_CONFIG = {
+    .csPin = 21, // 直書き（constexpr int SD_CS_PIN = 21; は不要）
+};
+
+// 外部から参照する場合は構造体経由
+Serial.printf("Servo pin: %d\n", SERVO_CONFIG.pin);
+\end{lstlisting}
+\end{funcblock}
+
 \begin{lstlisting}[style=cppstyle, caption={モジュールConfigパターンの例}]
 // LedModule.h 内 — Config構造体とクラス宣言
 struct LedConfig {
