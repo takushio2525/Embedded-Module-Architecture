@@ -3,13 +3,11 @@
 // タッチ検出テストはユーザーの操作が必要
 #include <Arduino.h>
 #include <unity.h>
-#include <SPI.h>
 #include <TFT_eSPI.h>
 #include "TouchModule.h"
 #include "ProjectConfig.h"
 #include "../test_utils.h"
 
-static SPIClass sharedSpi = SPIClass(FSPI);
 static TFT_eSPI tftDriver;
 static TouchModule* touch = nullptr;
 static SystemData systemData;
@@ -39,6 +37,7 @@ void test_touch_no_press() {
 
     systemData.touch = TouchData{};
     touch->update(systemData);
+    delay(10);  // SPI安定待ち
     TEST_ASSERT_FALSE_MESSAGE(systemData.touch.touchPressed,
         "タッチしていないのにtouchPressed=true");
 }
@@ -156,8 +155,7 @@ void setup() {
     Serial.begin(115200);
     delay(3000);  // USB-CDC再接続待ち
 
-    // 共有SPIバス・TFTドライバ初期化
-    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);
+    // TFTドライバ初期化（TFT_eSPIが内部でSPIを管理するため、別途SPI.begin()は不要）
     tftDriver.init();
     tftDriver.setRotation(TFT_CONFIG.rotation);
 

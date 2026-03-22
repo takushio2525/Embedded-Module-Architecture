@@ -3,13 +3,11 @@
 // 各描画テストでシリアル経由のユーザー確認を待つ
 #include <Arduino.h>
 #include <unity.h>
-#include <SPI.h>
 #include <TFT_eSPI.h>
 #include "TftModule.h"
 #include "ProjectConfig.h"
 #include "../test_utils.h"
 
-static SPIClass sharedSpi = SPIClass(FSPI);
 static TFT_eSPI tftDriver;
 static TftModule* tft = nullptr;
 static SystemData systemData;
@@ -109,9 +107,7 @@ void setup() {
     Serial.begin(115200);
     delay(3000);  // USB-CDC再接続待ち
 
-    // 共有SPIバス初期化
-    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);
-
+    // TFT_eSPIが内部でSPIを管理するため、別途SPI.begin()は不要
     tft = new TftModule(TFT_CONFIG, &tftDriver);
 
     Serial.println();
