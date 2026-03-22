@@ -65,8 +65,7 @@ void test_timer_interval_pattern() {
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial) { delay(10); }  // USB-CDC接続待ち
-    delay(500);
+    delay(3000);  // USB-CDC再接続待ち
 
     UNITY_BEGIN();
 

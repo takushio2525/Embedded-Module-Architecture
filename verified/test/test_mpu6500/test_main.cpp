@@ -95,8 +95,7 @@ void test_mpu6500_temperature() {
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial) { delay(10); }  // USB-CDC接続待ち
-    delay(500);
+    delay(3000);  // USB-CDC再接続待ち
 
     // I2Cバス初期化
     testWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);

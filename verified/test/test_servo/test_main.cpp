@@ -65,8 +65,7 @@ void test_servo_clamp() {
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial) { delay(10); }  // USB-CDC接続待ち
-    delay(500);
+    delay(3000);  // USB-CDC再接続待ち
 
     servo = new ServoModule(SERVO_CONFIG);
 

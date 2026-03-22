@@ -99,8 +99,7 @@ void test_touch_coordinate_range() {
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial) { delay(10); }  // USB-CDC接続待ち
-    delay(500);
+    delay(3000);  // USB-CDC再接続待ち
 
     // 共有SPIバス・TFTドライバ初期化
     sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);
