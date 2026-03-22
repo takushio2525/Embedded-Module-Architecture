@@ -3,6 +3,7 @@
 // 各描画テストでシリアル経由のユーザー確認を待つ
 #include <Arduino.h>
 #include <unity.h>
+#include <SPI.h>
 #include <TFT_eSPI.h>
 #include "TftModule.h"
 #include "ProjectConfig.h"
@@ -14,7 +15,10 @@ static SystemData systemData;
 
 // TFT_eSPIドライバの初期化が成功すること
 void test_tft_driver_init() {
+    // TFT_eSPIがFSPIペリフェラルを使うため、事前にSPI.begin()が必要
+    SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);
     tftDriver.init();
+    tftDriver.setRotation(TFT_CONFIG.rotation);
     // init()でクラッシュしなければOK
     TEST_ASSERT_TRUE(true);
 }

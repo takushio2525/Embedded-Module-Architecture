@@ -3,6 +3,7 @@
 // タッチ検出テストはユーザーの操作が必要
 #include <Arduino.h>
 #include <unity.h>
+#include <SPI.h>
 #include <TFT_eSPI.h>
 #include "TouchModule.h"
 #include "ProjectConfig.h"
@@ -155,7 +156,8 @@ void setup() {
     Serial.begin(115200);
     delay(3000);  // USB-CDC再接続待ち
 
-    // TFTドライバ初期化（TFT_eSPIが内部でSPIを管理するため、別途SPI.begin()は不要）
+    // SPIバス初期化（TFT_eSPIがFSPIペリフェラルを使うため、事前にbegin()が必要）
+    SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);
     tftDriver.init();
     tftDriver.setRotation(TFT_CONFIG.rotation);
 
