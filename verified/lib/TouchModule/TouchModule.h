@@ -1,16 +1,16 @@
-// TouchModule.h — XPT2046タッチパネルモジュール（TFT_eSPI統合）
+// TouchModule.h — XPT2046タッチパネルモジュール（LovyanGFX統合）
 // タッチ読み込みを担う入力モジュール
 #pragma once
 #include <Arduino.h>
 #include "IModule.h"
 
-// TFT_eSPIはポインタのみ使用するため前方宣言（<TFT_eSPI.h>はcppでインクルード）
-class TFT_eSPI;
+// LgfxDriverはポインタのみ使用するため前方宣言（LgfxDriver.hはcppでインクルード）
+class LgfxDriver;
 
 // --- Config構造体 ---
-// タッチパネルのCSピンはTFT_eSPIと共有されており、
-// platformio.iniのbuild_flags（TOUCH_CS）で指定する。
+// ピン・バス設定は LgfxDriver.h に集約
 struct TouchConfig {
+    // キャリブレーション等の追加設定があればここに定義
 };
 
 // --- Data構造体 ---
@@ -25,11 +25,11 @@ struct SystemData;
 
 class TouchModule : public IModule {
 public:
-    TouchModule(const TouchConfig& config, TFT_eSPI* tft);
+    TouchModule(const TouchConfig& config, LgfxDriver* lcd);
     bool init()                   override;
     void update(SystemData& data) override;
 
 private:
     TouchConfig _config;
-    TFT_eSPI*   _tft;
+    LgfxDriver* _lcd;
 };

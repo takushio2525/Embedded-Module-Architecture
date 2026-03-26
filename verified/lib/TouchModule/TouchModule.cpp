@@ -1,10 +1,10 @@
 // TouchModule.cpp — XPT2046タッチパネルモジュール実装
 #include "TouchModule.h"
-#include <TFT_eSPI.h>
+#include "LgfxDriver.h"
 #include "SystemData.h"
 
-TouchModule::TouchModule(const TouchConfig& config, TFT_eSPI* tft)
-    : _config(config), _tft(tft) {}
+TouchModule::TouchModule(const TouchConfig& config, LgfxDriver* lcd)
+    : _config(config), _lcd(lcd) {}
 
 bool TouchModule::init() {
     Serial.println("[Touch] init OK");
@@ -12,10 +12,11 @@ bool TouchModule::init() {
 }
 
 void TouchModule::update(SystemData& data) {
-    uint16_t x, y;
-    data.touch.touchPressed = _tft->getTouch(&x, &y);
+    lgfx::touch_point_t tp;
+    int touchCount = _lcd->getTouch(&tp, 1);
+    data.touch.touchPressed = (touchCount > 0);
     if (data.touch.touchPressed) {
-        data.touch.touchX = x;
-        data.touch.touchY = y;
+        data.touch.touchX = tp.x;
+        data.touch.touchY = tp.y;
     }
 }

@@ -5,11 +5,11 @@
 #include "IModule.h"
 #include "ModuleTimer.h"
 
-// TFT_eSPIはポインタのみ使用するため前方宣言（<TFT_eSPI.h>はcppでインクルード）
-class TFT_eSPI;
+// LgfxDriverはポインタのみ使用するため前方宣言（LgfxDriver.hはcppでインクルード）
+class LgfxDriver;
 
 // --- Config構造体 ---
-// 注意: SPI/タッチのピン番号は platformio.ini の build_flags で設定すること
+// ピン・バス設定は LgfxDriver.h に集約（build_flagsへの二重定義は不要）
 struct TftConfig {
     uint8_t  rotation;         // 画面回転 0-3 (1=横向き)
     uint32_t updateIntervalMs; // 画面更新周期 [ms]
@@ -30,14 +30,14 @@ struct SystemData;
 
 class TftModule : public IModule {
 public:
-    TftModule(const TftConfig& config, TFT_eSPI* tft);
+    TftModule(const TftConfig& config, LgfxDriver* lcd);
     bool init()                   override;
     void update(SystemData& data) override;
     void deinit()                 override;
 
 private:
     TftConfig   _config;
-    TFT_eSPI*   _tft;
+    LgfxDriver* _lcd;
     ModuleTimer _updateTimer;
     bool        _initialized = false;
 

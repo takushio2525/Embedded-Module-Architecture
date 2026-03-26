@@ -3,15 +3,15 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <TFT_eSPI.h>
+#include "LgfxDriver.h"
 #include "IModule.h"
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
 // バスインスタンス（グローバルスコープで生成）
 static TwoWire  mpuWire  = TwoWire(0);  // MPU6500用I2C
-static SPIClass sharedSpi = SPIClass(FSPI);  // TFT + Touch + SD 共有SPIバス
-static TFT_eSPI tftDriver;                   // TFT LCD + タッチ共有ドライバ
+static SPIClass sharedSpi = SPIClass(FSPI);  // SD用 共有SPIバス
+static LgfxDriver lcd;                       // TFT LCD + タッチ ドライバ
 
 // システムデータ
 SystemData systemData;
@@ -19,7 +19,7 @@ SystemData systemData;
 // ===== モジュールインスタンス =====
 
 // 入力モジュール
-TouchModule   touchModule(TOUCH_CONFIG, &tftDriver);
+TouchModule   touchModule(TOUCH_CONFIG, &lcd);
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 SdModule      sdModule(SD_CONFIG, &sharedSpi);
 CameraModule  cameraModule(CAMERA_CONFIG);
@@ -28,7 +28,7 @@ CameraModule  cameraModule(CAMERA_CONFIG);
 BleModule bleModule(BLE_CONFIG);
 
 // 出力モジュール
-TftModule   tftModule(TFT_CONFIG, &tftDriver);
+TftModule   tftModule(TFT_CONFIG, &lcd);
 ServoModule servoModule(SERVO_CONFIG);
 
 // モジュール配列
@@ -155,13 +155,17 @@ static void initModuleArray(IModule** modules, int count, const char* label) {
 // ===== セットアップ =====
 
 void setup() {
+    delay(3000); // シリアルモニタ接続待ち
+
     Serial.begin(115200);
     Serial.println("[System] テストベンチ起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
     mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);           // I2Cバス
-    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（CSは各モジュールで管理）
-    tftDriver.init();  // TFT_eSPIドライバ初期化（TouchModuleも共有）
+    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（SDカード用）
+
+    // LovyanGFX初期化（SPIバスは sharedSpi と同じホスト SPI2_HOST を使用）
+    lcd.init();
 
     // モジュール初期化
     initModuleArray(inputModules,  INPUT_COUNT,  "Input");
