@@ -1,27 +1,94 @@
 // TftModule.cpp — TFT LCD 表示モジュール実装
-// LovyanGFX ライブラリを使用（ピン設定は ProjectConfig.h で管理）
+// LovyanGFXコンポーネントを内部で生成・設定・初期化する
 #include "TftModule.h"
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
 #include "SystemData.h"
 
-TftModule::TftModule(const TftConfig& config, lgfx::LGFX_Device* lcd)
-    : _config(config), _lcd(lcd) {}
+// LGFX内部コンポーネント（ヘッダではforward declareのみ）
+struct TftLgfxImpl {
+    lgfx::LGFX_Device    lcd;
+    lgfx::Panel_ILI9341  panel;
+    lgfx::Bus_SPI        bus;
+    lgfx::Touch_XPT2046  touch;
+};
+
+TftModule::TftModule(const TftConfig& config)
+    : _config(config), _impl(new TftLgfxImpl()) {}
+
+TftModule::~TftModule() {
+    delete _impl;
+}
+
+lgfx::LGFX_Device* TftModule::getLcd() {
+    return &_impl->lcd;
+}
 
 bool TftModule::init() {
-    // lcd->init() はsetup()で呼び出し済み
-    _lcd->setRotation(_config.rotation);
-    _lcd->fillScreen(TFT_BLACK);
-    _lcd->setFont(&lgfx::fonts::Font2);
+    // SPIバス設定
+    {
+        auto cfg = _impl->bus.config();
+        cfg.spi_host   = SPI2_HOST;   // FSPI (ESP32-S3)
+        cfg.freq_write = 40000000;    // 書き込み 40MHz
+        cfg.freq_read  = 20000000;    // 読み込み 20MHz
+        cfg.pin_mosi   = _config.mosiPin;
+        cfg.pin_miso   = _config.misoPin;
+        cfg.pin_sclk   = _config.sckPin;
+        cfg.pin_dc     = _config.dcPin;
+        cfg.spi_mode   = 0;
+        cfg.use_lock   = true;        // バス排他制御を有効化（SD共有）
+        _impl->bus.config(cfg);
+        _impl->panel.setBus(&_impl->bus);
+    }
+
+    // パネル設定 (ILI9341, 2.8インチ 320x240)
+    {
+        auto cfg = _impl->panel.config();
+        cfg.pin_cs        = _config.csPin;
+        cfg.pin_rst       = _config.rstPin;
+        cfg.panel_width   = 240;
+        cfg.panel_height  = 320;
+        cfg.memory_width  = 240;
+        cfg.memory_height = 320;
+        cfg.offset_x      = 0;
+        cfg.offset_y      = 0;
+        cfg.readable      = true;
+        cfg.invert        = false;
+        cfg.rgb_order     = false;
+        cfg.bus_shared    = true;     // SDカードとSPIバス共有
+        _impl->panel.config(cfg);
+    }
+
+    // タッチパネル設定 (XPT2046)
+    {
+        auto cfg = _impl->touch.config();
+        cfg.spi_host = SPI2_HOST;     // TFTと同じSPIバス
+        cfg.freq     = 2500000;       // タッチSPI 2.5MHz
+        cfg.pin_cs   = _config.touchCsPin;
+        cfg.pin_int  = _config.touchIrqPin;
+        cfg.x_min    = 300;
+        cfg.x_max    = 3900;
+        cfg.y_min    = 200;
+        cfg.y_max    = 3700;
+        _impl->touch.config(cfg);
+        _impl->panel.setTouch(&_impl->touch);
+    }
+
+    // LCDデバイス組み立て＋初期化
+    _impl->lcd.setPanel(&_impl->panel);
+    _impl->lcd.init();
+    _impl->lcd.setRotation(_config.rotation);
+    _impl->lcd.fillScreen(TFT_BLACK);
+    _impl->lcd.setFont(&lgfx::fonts::Font2);
 
     _updateTimer.setTime();
     _initialized = true;
 
     // 起動画面
-    _lcd->setTextColor(TFT_CYAN, TFT_BLACK);
-    _lcd->drawString("Module Test Bench", 10, 10);
-    _lcd->setTextColor(TFT_WHITE, TFT_BLACK);
-    _lcd->drawString("Initializing...", 10, 34);
+    _impl->lcd.setTextColor(TFT_CYAN, TFT_BLACK);
+    _impl->lcd.drawString("Module Test Bench", 10, 10);
+    _impl->lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+    _impl->lcd.drawString("Initializing...", 10, 34);
 
     Serial.println("[TFT] init OK");
     return true;
@@ -46,17 +113,17 @@ void TftModule::renderDisplay(const SystemData& data) {
     const uint16_t startX = 8;
     uint16_t y = 8;
 
-    _lcd->setTextColor(TFT_WHITE, TFT_BLACK);
-    _lcd->drawString(data.tft.line1, startX, y); y += lineHeight;
-    _lcd->drawString(data.tft.line2, startX, y); y += lineHeight;
-    _lcd->drawString(data.tft.line3, startX, y); y += lineHeight;
-    _lcd->drawString(data.tft.line4, startX, y); y += lineHeight;
+    _impl->lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+    _impl->lcd.drawString(data.tft.line1, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.tft.line2, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.tft.line3, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.tft.line4, startX, y); y += lineHeight;
 
-    // line5（タッチ座標など）
+    // line5（メモリ情報など）
     if (data.tft.line5[0] != '\0') {
-        _lcd->setTextColor(TFT_YELLOW, TFT_BLACK);
-        _lcd->drawString(data.tft.line5, startX, y);
+        _impl->lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
+        _impl->lcd.drawString(data.tft.line5, startX, y);
     } else {
-        _lcd->fillRect(startX, y, 300, lineHeight, TFT_BLACK);
+        _impl->lcd.fillRect(startX, y, 300, lineHeight, TFT_BLACK);
     }
 }

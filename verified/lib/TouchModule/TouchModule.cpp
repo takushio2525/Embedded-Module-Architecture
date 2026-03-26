@@ -1,4 +1,5 @@
 // TouchModule.cpp — XPT2046タッチパネルモジュール実装
+// TftModuleが所有するLGFX_Deviceからタッチデータを読み取る
 #include "TouchModule.h"
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>

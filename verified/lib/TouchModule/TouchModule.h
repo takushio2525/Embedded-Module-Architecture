@@ -1,5 +1,7 @@
 // TouchModule.h — XPT2046タッチパネルモジュール（LovyanGFX統合）
 // タッチ読み込みを担う入力モジュール
+// タッチハードウェアの初期化はTftModuleが担当（表示ボード上の同一IC）
+// 本モジュールはTftModule::getLcd()経由でタッチデータを読み取る
 #pragma once
 #include <Arduino.h>
 #include "IModule.h"
@@ -9,8 +11,8 @@ namespace lgfx { inline namespace v1 { class LGFX_Device; } }
 
 // --- Config構造体 ---
 struct TouchConfig {
-    int8_t csPin;   // タッチCSピン
-    int8_t irqPin;  // タッチIRQピン (-1で未使用)
+    // タッチ動作設定（キャリブレーション閾値等があればここに追加）
+    // ハードウェアピンはTftConfig内（表示ボード上の同一デバイスのため）
 };
 
 // --- Data構造体 ---
@@ -31,5 +33,5 @@ public:
 
 private:
     TouchConfig            _config;
-    lgfx::v1::LGFX_Device* _lcd;
+    lgfx::v1::LGFX_Device* _lcd;   // TftModuleが所有するLCDデバイス
 };
