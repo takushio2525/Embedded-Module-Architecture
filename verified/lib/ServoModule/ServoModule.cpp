@@ -11,12 +11,11 @@ static constexpr uint32_t SERVO_DUTY_MAX  = 65535;   // 2^16 - 1
 ServoModule::ServoModule(const ServoConfig& config) : _config(config) {}
 
 bool ServoModule::init() {
-    // ESP32 Arduino Core v2.x: ledcSetup + ledcAttachPin
-    ledcSetup(_config.pwmChannel, SERVO_PWM_FREQ, SERVO_PWM_RES);
-    ledcAttachPin(_config.pin, _config.pwmChannel);
+    // ESP32 Arduino Core v3.x: ledcAttach（setup + attachが統合）
+    ledcAttach(_config.pin, SERVO_PWM_FREQ, SERVO_PWM_RES);
 
     // 初期角度にセット
-    ledcWrite(_config.pwmChannel, _angleToDuty(_config.defaultAngle));
+    ledcWrite(_config.pin, _angleToDuty(_config.defaultAngle));
     Serial.printf("[Servo] init OK (pin=%d, angle=%d)\n",
                   _config.pin, _config.defaultAngle);
     return true;
@@ -28,7 +27,7 @@ void ServoModule::update(SystemData& data) {
 
     // 変化がある場合のみPWM更新
     if (target != data.servo.currentAngle) {
-        ledcWrite(_config.pwmChannel, _angleToDuty(target));
+        ledcWrite(_config.pin, _angleToDuty(target));
         data.servo.currentAngle = target;
     }
 }

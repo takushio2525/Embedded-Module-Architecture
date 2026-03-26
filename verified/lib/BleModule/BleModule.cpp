@@ -29,12 +29,12 @@ private:
 public:
     BleRxCallbacks(BleModule* module) : _module(module) {}
     void onWrite(BLECharacteristic* characteristic) override {
-        std::string value = characteristic->getValue();
+        String value = characteristic->getValue();
         if (value.length() > 0) {
             uint8_t len = (value.length() > BLE_RX_BUFFER_SIZE)
                           ? BLE_RX_BUFFER_SIZE : value.length();
             _module->onReceive(
-                reinterpret_cast<const uint8_t*>(value.data()), len);
+                reinterpret_cast<const uint8_t*>(value.c_str()), len);
         }
     }
 };
