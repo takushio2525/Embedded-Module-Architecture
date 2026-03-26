@@ -5,12 +5,14 @@
 #include "IModule.h"
 #include "ModuleTimer.h"
 
-// LgfxDriverはポインタのみ使用するため前方宣言（LgfxDriver.hはcppでインクルード）
-class LgfxDriver;
+// LovyanGFX前方宣言（<LovyanGFX.hpp>はcppでインクルード）
+namespace lgfx { inline namespace v1 { class LGFX_Device; } }
 
 // --- Config構造体 ---
-// ピン・バス設定は LgfxDriver.h に集約（build_flagsへの二重定義は不要）
 struct TftConfig {
+    int8_t   csPin;            // TFT CSピン
+    int8_t   dcPin;            // TFT DCピン
+    int8_t   rstPin;           // TFT RSTピン (-1で未使用)
     uint8_t  rotation;         // 画面回転 0-3 (1=横向き)
     uint32_t updateIntervalMs; // 画面更新周期 [ms]
 };
@@ -30,16 +32,16 @@ struct SystemData;
 
 class TftModule : public IModule {
 public:
-    TftModule(const TftConfig& config, LgfxDriver* lcd);
+    TftModule(const TftConfig& config, lgfx::v1::LGFX_Device* lcd);
     bool init()                   override;
     void update(SystemData& data) override;
     void deinit()                 override;
 
 private:
-    TftConfig   _config;
-    LgfxDriver* _lcd;
-    ModuleTimer _updateTimer;
-    bool        _initialized = false;
+    TftConfig              _config;
+    lgfx::v1::LGFX_Device* _lcd;
+    ModuleTimer            _updateTimer;
+    bool                   _initialized = false;
 
     void renderDisplay(const SystemData& data);
 };

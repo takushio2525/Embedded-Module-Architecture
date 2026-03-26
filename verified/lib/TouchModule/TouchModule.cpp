@@ -1,9 +1,10 @@
 // TouchModule.cpp — XPT2046タッチパネルモジュール実装
 #include "TouchModule.h"
-#include "LgfxDriver.h"
+#define LGFX_USE_V1
+#include <LovyanGFX.hpp>
 #include "SystemData.h"
 
-TouchModule::TouchModule(const TouchConfig& config, LgfxDriver* lcd)
+TouchModule::TouchModule(const TouchConfig& config, lgfx::LGFX_Device* lcd)
     : _config(config), _lcd(lcd) {}
 
 bool TouchModule::init() {

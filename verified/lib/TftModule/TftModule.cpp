@@ -1,10 +1,11 @@
 // TftModule.cpp — TFT LCD 表示モジュール実装
-// LovyanGFX ライブラリを使用（ピン設定は LgfxDriver.h で管理）
+// LovyanGFX ライブラリを使用（ピン設定は ProjectConfig.h で管理）
 #include "TftModule.h"
-#include "LgfxDriver.h"
+#define LGFX_USE_V1
+#include <LovyanGFX.hpp>
 #include "SystemData.h"
 
-TftModule::TftModule(const TftConfig& config, LgfxDriver* lcd)
+TftModule::TftModule(const TftConfig& config, lgfx::LGFX_Device* lcd)
     : _config(config), _lcd(lcd) {}
 
 bool TftModule::init() {

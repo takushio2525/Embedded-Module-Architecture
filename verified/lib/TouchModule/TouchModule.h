@@ -4,13 +4,13 @@
 #include <Arduino.h>
 #include "IModule.h"
 
-// LgfxDriverはポインタのみ使用するため前方宣言（LgfxDriver.hはcppでインクルード）
-class LgfxDriver;
+// LovyanGFX前方宣言（<LovyanGFX.hpp>はcppでインクルード）
+namespace lgfx { inline namespace v1 { class LGFX_Device; } }
 
 // --- Config構造体 ---
-// ピン・バス設定は LgfxDriver.h に集約
 struct TouchConfig {
-    // キャリブレーション等の追加設定があればここに定義
+    int8_t csPin;   // タッチCSピン
+    int8_t irqPin;  // タッチIRQピン (-1で未使用)
 };
 
 // --- Data構造体 ---
@@ -25,11 +25,11 @@ struct SystemData;
 
 class TouchModule : public IModule {
 public:
-    TouchModule(const TouchConfig& config, LgfxDriver* lcd);
+    TouchModule(const TouchConfig& config, lgfx::v1::LGFX_Device* lcd);
     bool init()                   override;
     void update(SystemData& data) override;
 
 private:
-    TouchConfig _config;
-    LgfxDriver* _lcd;
+    TouchConfig            _config;
+    lgfx::v1::LGFX_Device* _lcd;
 };

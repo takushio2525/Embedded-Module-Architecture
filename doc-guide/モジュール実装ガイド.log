@@ -1,4 +1,4 @@
-This is e-upTeX, Version 3.141592653-p4.1.2-u2.00-250202-2.6 (utf8.uptex) (TeX Live 2025) (preloaded format=uplatex 2026.2.12)  18 MAR 2026 13:28
+This is e-upTeX, Version 3.141592653-p4.1.2-u2.00-250202-2.6 (utf8.uptex) (TeX Live 2025) (preloaded format=uplatex 2026.2.12)  20 MAR 2026 07:54
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1003,7 +1003,7 @@ Overfull \hbox (9.24683pt too wide) in paragraph at lines 16--17
 [][] 
  []
 
-./sections/introduction.tex:62: ignored error: Infinite glue shrinkage found in
+./sections/introduction.tex:63: ignored error: Infinite glue shrinkage found in
  box being split [4]) (./sections/led.tex
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
 nput line 15.
@@ -1067,10 +1067,10 @@ changed.
 Here is how much of TeX's memory you used:
  29439 strings out of 469642
  569067 string characters out of 5471207
- 1518844 words of memory out of 5000000
+ 1519843 words of memory out of 5000000
  57754 multiletter control sequences out of 15000+600000
  694140 words of font info for 108 fonts, out of 8000000 for 9000
  41 hyphenation exceptions out of 8191
  98i,13n,108p,748b,2212s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on モジュール実装ガイド.dvi (29 pages, 981156 bytes).
+Output written on モジュール実装ガイド.dvi (29 pages, 981128 bytes).
