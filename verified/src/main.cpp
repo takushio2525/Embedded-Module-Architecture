@@ -3,15 +3,22 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
-#include "LgfxDriver.h"
+#define LGFX_USE_V1
+#include <LovyanGFX.hpp>
 #include "IModule.h"
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
-// バスインスタンス（グローバルスコープで生成）
-static TwoWire  mpuWire  = TwoWire(0);  // MPU6500用I2C
-static SPIClass sharedSpi = SPIClass(FSPI);  // SD用 共有SPIバス
-static LgfxDriver lcd;                       // TFT LCD + タッチ ドライバ
+// ===== バスインスタンス（グローバルスコープで生成）=====
+static TwoWire  mpuWire   = TwoWire(0);       // MPU6500用I2C
+static SPIClass sharedSpi = SPIClass(FSPI);    // SD用 共有SPIバス
+
+// ===== LovyanGFXコンポーネント =====
+// setup()でProjectConfig.hの値を使って組み立てる
+static lgfx::LGFX_Device    lcd;
+static lgfx::Panel_ILI9341  tftPanel;
+static lgfx::Bus_SPI        tftBus;
+static lgfx::Touch_XPT2046  tftTouch;
 
 // システムデータ
 SystemData systemData;
@@ -152,6 +159,61 @@ static void initModuleArray(IModule** modules, int count, const char* label) {
     }
 }
 
+// LovyanGFXコンポーネントをProjectConfig値で組み立てる
+static void setupLcd() {
+    // SPIバス設定
+    {
+        auto cfg = tftBus.config();
+        cfg.spi_host   = SPI2_HOST;   // FSPI (ESP32-S3)
+        cfg.freq_write = 40000000;    // 書き込み 40MHz
+        cfg.freq_read  = 20000000;    // 読み込み 20MHz
+        cfg.pin_mosi   = SPI_MOSI_PIN;
+        cfg.pin_miso   = SPI_MISO_PIN;
+        cfg.pin_sclk   = SPI_SCK_PIN;
+        cfg.pin_dc     = TFT_CONFIG.dcPin;
+        cfg.spi_mode   = 0;
+        cfg.use_lock   = true;        // バス排他制御を有効化
+        tftBus.config(cfg);
+        tftPanel.setBus(&tftBus);
+    }
+
+    // パネル設定 (ILI9341, 2.8インチ 320x240)
+    {
+        auto cfg = tftPanel.config();
+        cfg.pin_cs        = TFT_CONFIG.csPin;
+        cfg.pin_rst       = TFT_CONFIG.rstPin;
+        cfg.panel_width   = 240;
+        cfg.panel_height  = 320;
+        cfg.memory_width  = 240;
+        cfg.memory_height = 320;
+        cfg.offset_x      = 0;
+        cfg.offset_y      = 0;
+        cfg.readable      = true;
+        cfg.invert        = false;
+        cfg.rgb_order     = false;
+        cfg.bus_shared    = true;     // SDカードとSPIバス共有
+        tftPanel.config(cfg);
+    }
+
+    // タッチパネル設定 (XPT2046)
+    {
+        auto cfg = tftTouch.config();
+        cfg.spi_host = SPI2_HOST;     // TFTと同じSPIバス
+        cfg.freq     = 2500000;       // タッチSPI 2.5MHz
+        cfg.pin_cs   = TOUCH_CONFIG.csPin;
+        cfg.pin_int  = TOUCH_CONFIG.irqPin;
+        cfg.x_min    = 300;
+        cfg.x_max    = 3900;
+        cfg.y_min    = 200;
+        cfg.y_max    = 3700;
+        tftTouch.config(cfg);
+        tftPanel.setTouch(&tftTouch);
+    }
+
+    lcd.setPanel(&tftPanel);
+    lcd.init();
+}
+
 // ===== セットアップ =====
 
 void setup() {
@@ -164,8 +226,8 @@ void setup() {
     mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);           // I2Cバス
     sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（SDカード用）
 
-    // LovyanGFX初期化（SPIバスは sharedSpi と同じホスト SPI2_HOST を使用）
-    lcd.init();
+    // LovyanGFX組み立て＋初期化
+    setupLcd();
 
     // モジュール初期化
     initModuleArray(inputModules,  INPUT_COUNT,  "Input");

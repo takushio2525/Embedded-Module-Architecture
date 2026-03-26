@@ -21,15 +21,19 @@ constexpr int I2C_SCL_PIN = 3;
 // 外部からピンを参照する場合は SERVO_CONFIG.pin のように構造体経由でアクセスする。
 
 // TFT LCD (ILI9341, 2.8インチ)
-// ピン・バス設定は LgfxDriver.h に集約（build_flagsへの二重定義は不要）
+// LovyanGFXの組み立て（バス・パネル・タッチ）はmain.cppのsetupLcd()で実行
 const TftConfig TFT_CONFIG = {
+    .csPin           = 41,   // TFT CSピン
+    .dcPin           = 42,   // TFT DCピン
+    .rstPin          = 48,   // TFT RSTピン
     .rotation        = 1,    // 1=横向き (landscape, 320x240)
     .updateIntervalMs = 100, // 画面更新周期 100ms (10fps)
 };
 
 // タッチパネル (XPT2046)
-// ピン・バス設定は LgfxDriver.h に集約
 const TouchConfig TOUCH_CONFIG = {
+    .csPin  = 47,  // タッチCSピン
+    .irqPin = 14,  // タッチIRQピン
 };
 
 // MPU-6500 (I2C)
