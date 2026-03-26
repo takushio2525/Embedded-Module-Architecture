@@ -9,31 +9,30 @@
 
 // ===== バスインスタンス（グローバルスコープで生成）=====
 static TwoWire  mpuWire   = TwoWire(0);       // MPU6500用I2C
-static SPIClass sharedSpi = SPIClass(FSPI);    // SD用 共有SPIバス
+// SD用SPIバス（LovyanGFXがFSPIを内部管理するが、use_lock=trueで排他制御されるため共存可能）
+static SPIClass sharedSpi = SPIClass(FSPI);
 
 // システムデータ
 SystemData systemData;
 
 // ===== モジュールインスタンス =====
 
-// 出力モジュール（TftModuleはLovyanGFXコンポーネントを内部生成）
-TftModule   tftModule(TFT_CONFIG);
-ServoModule servoModule(SERVO_CONFIG);
+// 入出力モジュール（入力/出力フェーズで個別メソッドを呼び分ける）
+DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG);
+BleModule          bleModule(BLE_CONFIG);
 
-// 入力モジュール（TouchModuleはTftModule内部のLCDデバイスを参照）
-TouchModule   touchModule(TOUCH_CONFIG, tftModule.getLcd());
+// 入力モジュール
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 SdModule      sdModule(SD_CONFIG, &sharedSpi);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
-// 入出力モジュール（入力/出力フェーズで個別メソッドを呼び分ける）
-BleModule bleModule(BLE_CONFIG);
+// 出力モジュール
+ServoModule servoModule(SERVO_CONFIG);
 
 // モジュール配列
-// 注意: BleModuleは入出力両方の処理を持つため配列には含めず、
+// 注意: DisplayBoardModule/BleModuleは入出力両方の処理を持つため配列には含めず、
 //       loop()内でupdateInput()/updateOutput()を個別に呼び出す
 IModule* inputModules[] = {
-    &touchModule,
     &mpu6500Module,
     &sdModule,
     &cameraModule,
@@ -41,7 +40,6 @@ IModule* inputModules[] = {
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
 IModule* outputModules[] = {
-    &tftModule,
     &servoModule,
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
@@ -59,25 +57,25 @@ static constexpr uint32_t REINIT_INTERVAL_MS = 5000;  // 5秒ごとに再試行
 void applyPattern(SystemData& data) {
     // MPU6500データをTFT表示
     if (data.mpu.isValid) {
-        snprintf(data.tft.line1, sizeof(data.tft.line1),
+        snprintf(data.display.line1, sizeof(data.display.line1),
                  "Ax:%.2f Ay:%.2f Az:%.2f  ",
                  data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
-        snprintf(data.tft.line2, sizeof(data.tft.line2),
+        snprintf(data.display.line2, sizeof(data.display.line2),
                  "Gx:%.1f Gy:%.1f Gz:%.1f  ",
                  data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
     } else {
-        strncpy(data.tft.line1, "MPU6500: No data      ", sizeof(data.tft.line1));
-        data.tft.line2[0] = '\0';
+        strncpy(data.display.line1, "MPU6500: No data      ", sizeof(data.display.line1));
+        data.display.line2[0] = '\0';
     }
 
     // タッチでサーボ制御（X座標 0-320 → 角度 0-180）
-    if (data.touch.touchPressed) {
-        data.servo.targetAngle = map(data.touch.touchX, 0, 320, 0, 180);
-        snprintf(data.tft.line3, sizeof(data.tft.line3),
+    if (data.display.touchPressed) {
+        data.servo.targetAngle = map(data.display.touchX, 0, 320, 0, 180);
+        snprintf(data.display.line3, sizeof(data.display.line3),
                  "Touch:X=%3d Y=%3d Sv:%3d ",
-                 data.touch.touchX, data.touch.touchY, data.servo.targetAngle);
+                 data.display.touchX, data.display.touchY, data.servo.targetAngle);
     } else {
-        snprintf(data.tft.line3, sizeof(data.tft.line3),
+        snprintf(data.display.line3, sizeof(data.display.line3),
                  "Servo: %3d deg        ", data.servo.currentAngle);
     }
 
@@ -91,7 +89,7 @@ void applyPattern(SystemData& data) {
         snprintf(sdInfo, sizeof(sdInfo), "SD:%s",
                  data.sd.testPassed ? "OK" : "NG");
     }
-    snprintf(data.tft.line4, sizeof(data.tft.line4),
+    snprintf(data.display.line4, sizeof(data.display.line4),
              "%s %s BLE:%s  ", camInfo, sdInfo,
              data.ble.connected ? "ON" : "--");
 
@@ -109,7 +107,7 @@ void applyPattern(SystemData& data) {
     }
 
     // メモリ情報
-    snprintf(data.tft.line5, sizeof(data.tft.line5),
+    snprintf(data.display.line5, sizeof(data.display.line5),
              "Heap:%dK PSRAM:%dK  ",
              (int)(ESP.getFreeHeap() / 1024),
              (int)(ESP.getFreePsram() / 1024));
@@ -118,8 +116,8 @@ void applyPattern(SystemData& data) {
     if (reinitTimer.getNowTime() >= REINIT_INTERVAL_MS) {
         reinitTimer.setTime();
         IModule* allModules[] = {
-            &touchModule, &mpu6500Module, &sdModule, &cameraModule,
-            &bleModule, &tftModule, &servoModule,
+            &displayBoardModule, &mpu6500Module, &sdModule, &cameraModule,
+            &bleModule, &servoModule,
         };
         for (auto* mod : allModules) {
             if (!mod->enabled) {
@@ -149,6 +147,19 @@ static void initModuleArray(IModule** modules, int count, const char* label) {
     }
 }
 
+static void initSingleModule(IModule* mod, const char* name) {
+    const int MAX_RETRY = 3;
+    bool success = false;
+    for (int r = 0; r < MAX_RETRY; r++) {
+        if (mod->init()) { success = true; break; }
+        delay(100);
+    }
+    if (!success) {
+        Serial.printf("[System] %s: init失敗、無効化\n", name);
+        mod->enabled = false;
+    }
+}
+
 // ===== セットアップ =====
 
 void setup() {
@@ -161,25 +172,13 @@ void setup() {
     mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);                       // I2Cバス
     sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（SDカード用）
 
-    // モジュール初期化
-    // TftModuleのinit()でLovyanGFXが初期化される（SPIバスを内部で構成）
-    // 出力モジュールを先に初期化（TouchModuleがLCDデバイスを使用するため）
-    initModuleArray(outputModules, OUTPUT_COUNT, "Output");
-    initModuleArray(inputModules,  INPUT_COUNT,  "Input");
+    // 入出力モジュール初期化（配列外のため個別にinit）
+    initSingleModule(&displayBoardModule, "DisplayBoard");
+    initSingleModule(&bleModule, "BLE");
 
-    // BleModuleは配列外のため個別にinit
-    {
-        const int MAX_RETRY = 3;
-        bool success = false;
-        for (int r = 0; r < MAX_RETRY; r++) {
-            if (bleModule.init()) { success = true; break; }
-            delay(100);
-        }
-        if (!success) {
-            Serial.println("[System] BLE Module: init失敗、無効化");
-            bleModule.enabled = false;
-        }
-    }
+    // 入力・出力モジュール初期化
+    initModuleArray(inputModules,  INPUT_COUNT,  "Input");
+    initModuleArray(outputModules, OUTPUT_COUNT, "Output");
 
     bleSendTimer.setTime();
     reinitTimer.setTime();
@@ -194,6 +193,9 @@ void loop() {
         if (inputModules[i]->enabled) {
             inputModules[i]->update(systemData);
         }
+    }
+    if (displayBoardModule.enabled) {
+        displayBoardModule.updateInput(systemData);
     }
     if (bleModule.enabled) {
         bleModule.updateInput(systemData);
@@ -210,6 +212,9 @@ void loop() {
         if (outputModules[i]->enabled) {
             outputModules[i]->update(systemData);
         }
+    }
+    if (displayBoardModule.enabled) {
+        displayBoardModule.updateOutput(systemData);
     }
     if (bleModule.enabled) {
         bleModule.updateOutput(systemData);

@@ -1,40 +1,36 @@
-// TftModule.cpp — TFT LCD 表示モジュール実装
-// LovyanGFXコンポーネントを内部で生成・設定・初期化する
-#include "TftModule.h"
+// DisplayBoardModule.cpp — TFT表示ボードモジュール実装
+// LovyanGFXコンポーネントを内部で生成・設定し、LCD表示とタッチ読み取りを統合管理する
+#include "DisplayBoardModule.h"
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
 #include "SystemData.h"
 
 // LGFX内部コンポーネント（ヘッダではforward declareのみ）
-struct TftLgfxImpl {
+struct DisplayBoardLgfxImpl {
     lgfx::LGFX_Device    lcd;
     lgfx::Panel_ILI9341  panel;
     lgfx::Bus_SPI        bus;
     lgfx::Touch_XPT2046  touch;
 };
 
-TftModule::TftModule(const TftConfig& config)
-    : _config(config), _impl(new TftLgfxImpl()) {}
+DisplayBoardModule::DisplayBoardModule(const DisplayBoardConfig& config)
+    : _config(config), _impl(new DisplayBoardLgfxImpl()) {}
 
-TftModule::~TftModule() {
+DisplayBoardModule::~DisplayBoardModule() {
     delete _impl;
 }
 
-lgfx::LGFX_Device* TftModule::getLcd() {
-    return &_impl->lcd;
-}
-
-bool TftModule::init() {
+bool DisplayBoardModule::init() {
     // SPIバス設定
     {
         auto cfg = _impl->bus.config();
         cfg.spi_host   = SPI2_HOST;   // FSPI (ESP32-S3)
         cfg.freq_write = 40000000;    // 書き込み 40MHz
         cfg.freq_read  = 20000000;    // 読み込み 20MHz
-        cfg.pin_mosi   = _config.mosiPin;
-        cfg.pin_miso   = _config.misoPin;
-        cfg.pin_sclk   = _config.sckPin;
-        cfg.pin_dc     = _config.dcPin;
+        cfg.pin_mosi   = _config.spiMosiPin;
+        cfg.pin_miso   = _config.spiMisoPin;
+        cfg.pin_sclk   = _config.spiSckPin;
+        cfg.pin_dc     = _config.tftDcPin;
         cfg.spi_mode   = 0;
         cfg.use_lock   = true;        // バス排他制御を有効化（SD共有）
         _impl->bus.config(cfg);
@@ -44,8 +40,8 @@ bool TftModule::init() {
     // パネル設定 (ILI9341, 2.8インチ 320x240)
     {
         auto cfg = _impl->panel.config();
-        cfg.pin_cs        = _config.csPin;
-        cfg.pin_rst       = _config.rstPin;
+        cfg.pin_cs        = _config.tftCsPin;
+        cfg.pin_rst       = _config.tftRstPin;
         cfg.panel_width   = 240;
         cfg.panel_height  = 320;
         cfg.memory_width  = 240;
@@ -90,16 +86,34 @@ bool TftModule::init() {
     _impl->lcd.setTextColor(TFT_WHITE, TFT_BLACK);
     _impl->lcd.drawString("Initializing...", 10, 34);
 
-    Serial.println("[TFT] init OK");
+    Serial.println("[DisplayBoard] init OK");
     return true;
 }
 
-void TftModule::deinit() {
+void DisplayBoardModule::deinit() {
     _initialized = false;
-    Serial.println("[TFT] deinit");
+    Serial.println("[DisplayBoard] deinit");
 }
 
-void TftModule::update(SystemData& data) {
+void DisplayBoardModule::update(SystemData& data) {
+    updateInput(data);
+    updateOutput(data);
+}
+
+void DisplayBoardModule::updateInput(SystemData& data) {
+    if (!_initialized) return;
+
+    // タッチ読み取り
+    lgfx::touch_point_t tp;
+    int touchCount = _impl->lcd.getTouch(&tp, 1);
+    data.display.touchPressed = (touchCount > 0);
+    if (data.display.touchPressed) {
+        data.display.touchX = tp.x;
+        data.display.touchY = tp.y;
+    }
+}
+
+void DisplayBoardModule::updateOutput(SystemData& data) {
     if (!_initialized) return;
 
     if (_updateTimer.getNowTime() >= _config.updateIntervalMs) {
@@ -108,21 +122,21 @@ void TftModule::update(SystemData& data) {
     }
 }
 
-void TftModule::renderDisplay(const SystemData& data) {
+void DisplayBoardModule::renderDisplay(const SystemData& data) {
     const uint16_t lineHeight = 24;
     const uint16_t startX = 8;
     uint16_t y = 8;
 
     _impl->lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-    _impl->lcd.drawString(data.tft.line1, startX, y); y += lineHeight;
-    _impl->lcd.drawString(data.tft.line2, startX, y); y += lineHeight;
-    _impl->lcd.drawString(data.tft.line3, startX, y); y += lineHeight;
-    _impl->lcd.drawString(data.tft.line4, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.display.line1, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.display.line2, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.display.line3, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.display.line4, startX, y); y += lineHeight;
 
     // line5（メモリ情報など）
-    if (data.tft.line5[0] != '\0') {
+    if (data.display.line5[0] != '\0') {
         _impl->lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
-        _impl->lcd.drawString(data.tft.line5, startX, y);
+        _impl->lcd.drawString(data.display.line5, startX, y);
     } else {
         _impl->lcd.fillRect(startX, y, 300, lineHeight, TFT_BLACK);
     }

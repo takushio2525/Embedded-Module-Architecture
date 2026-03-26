@@ -20,25 +20,20 @@ constexpr int I2C_SCL_PIN = 3;
 // モジュール固有のピン番号はConfigリテラルに直書きする。
 // 外部からピンを参照する場合は SERVO_CONFIG.pin のように構造体経由でアクセスする。
 
-// TFT LCD (ILI9341, 2.8インチ) + タッチ (XPT2046)
-// 表示ボード上の全ハードウェア設定をTftConfigに集約
-// LovyanGFXコンポーネントの生成・初期化はTftModule内部で実行
-const TftConfig TFT_CONFIG = {
-    .mosiPin         = SPI_MOSI_PIN,  // 共有SPIバス MOSIピン
-    .misoPin         = SPI_MISO_PIN,  // 共有SPIバス MISOピン
-    .sckPin          = SPI_SCK_PIN,   // 共有SPIバス SCKピン
-    .csPin           = 41,   // TFT CSピン
-    .dcPin           = 42,   // TFT DCピン
-    .rstPin          = 48,   // TFT RSTピン
+// 表示ボード (ILI9341 + XPT2046, 2.8インチ)
+// LovyanGFXが内部でSPIバスを構成するためSPIピンをConfigに含める。
+// 外部SPIClassは使用しない（LovyanGFXのbus_shared + use_lockで排他制御）。
+const DisplayBoardConfig DISPLAY_BOARD_CONFIG = {
+    .spiMosiPin      = SPI_MOSI_PIN,  // 共有SPIバス MOSIピン
+    .spiMisoPin      = SPI_MISO_PIN,  // 共有SPIバス MISOピン
+    .spiSckPin       = SPI_SCK_PIN,   // 共有SPIバス SCKピン
+    .tftCsPin        = 41,   // TFT CSピン
+    .tftDcPin        = 42,   // TFT DCピン
+    .tftRstPin       = 48,   // TFT RSTピン
     .touchCsPin      = 47,   // タッチCSピン
     .touchIrqPin     = 14,   // タッチIRQピン
     .rotation        = 1,    // 1=横向き (landscape, 320x240)
     .updateIntervalMs = 100, // 画面更新周期 100ms (10fps)
-};
-
-// タッチパネル (XPT2046) — 動作設定
-// ハードウェアピンはTftConfig内（表示ボード上の同一デバイスのため）
-const TouchConfig TOUCH_CONFIG = {
 };
 
 // MPU-6500 (I2C)
