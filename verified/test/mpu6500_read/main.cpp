@@ -7,7 +7,7 @@
 #include "ModuleTimer.h"
 
 // ===== バスインスタンス =====
-static TwoWire mpuWire = TwoWire(0);
+static TwoWire mpuWire = TwoWire(1);  // バス0はesp_cameraのSCCBが使用
 
 // ===== モジュール・データ =====
 Mpu6500Module mpu(MPU6500_CONFIG, &mpuWire);

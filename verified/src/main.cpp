@@ -8,7 +8,7 @@
 #include "ModuleTimer.h"
 
 // ===== バスインスタンス（グローバルスコープで生成）=====
-static TwoWire  mpuWire   = TwoWire(0);       // MPU6500用I2C
+static TwoWire  mpuWire   = TwoWire(1);       // MPU6500用I2C（バス0はesp_cameraのSCCBが使用）
 // SD用SPIバス（LovyanGFXがFSPIを内部管理するが、use_lock=trueで排他制御されるため共存可能）
 static SPIClass sharedSpi = SPIClass(FSPI);
 
