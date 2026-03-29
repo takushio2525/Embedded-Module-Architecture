@@ -25,7 +25,7 @@ class ServoModule : public IModule {
 public:
     ServoModule(const ServoConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 
 private:
     ServoConfig _config;

@@ -1,6 +1,5 @@
 // DisplayBoardModule.h — 2.8インチ TFT表示ボードモジュール（ILI9341 + XPT2046）
 // 同一基板上のLCD表示（出力）とタッチ読み取り（入力）を統合管理する。
-// BleModuleと同様、updateInput()/updateOutput()で入出力フェーズを分離する。
 #pragma once
 #include <Arduino.h>
 #include "IModule.h"
@@ -50,14 +49,10 @@ class DisplayBoardModule : public IModule {
 public:
     DisplayBoardModule(const DisplayBoardConfig& config);
     ~DisplayBoardModule();
-    bool init()                   override;
-    void update(SystemData& data) override;
-    void deinit()                 override;
-
-    // 入出力フェーズ分離メソッド
-    // update()は互換性のため両方を呼ぶ。main.cppではこちらを使う。
-    void updateInput(SystemData& data);   // 入力フェーズ: タッチ読み取り
-    void updateOutput(SystemData& data);  // 出力フェーズ: 画面描画
+    bool init()                          override;
+    void updateInput(SystemData& data)   override;  // 入力フェーズ: タッチ読み取り
+    void updateOutput(SystemData& data)  override;  // 出力フェーズ: 画面描画
+    void deinit()                        override;
 
 private:
     DisplayBoardConfig    _config;

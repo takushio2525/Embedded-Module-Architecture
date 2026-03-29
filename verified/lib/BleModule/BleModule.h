@@ -23,7 +23,7 @@ struct BleData {
     uint8_t rxData[BLE_RX_BUFFER_SIZE] = {};  // 受信データ
     uint8_t rxLength      = 0;      // 受信データ長
     // 送信リクエスト（ロジックフェーズで書き込む）
-    bool    sendRequest   = false;  // true: update()でtxDataを送信
+    bool    sendRequest   = false;  // true: updateOutput()でtxDataを送信
     uint8_t txData[BLE_TX_BUFFER_SIZE] = {};  // 送信データ
     uint8_t txLength      = 0;      // 送信データ長
 };
@@ -52,14 +52,10 @@ private:
 
 public:
     BleModule(const BleConfig& config);
-    bool init() override;
-    void update(SystemData& data) override;
-    void deinit() override;
-
-    // 入出力フェーズ分離メソッド
-    // update()は互換性のため両方を呼ぶ。main.cppではこちらを使う。
-    void updateInput(SystemData& data);   // 入力フェーズ: 受信データをSystemDataに反映
-    void updateOutput(SystemData& data);  // 出力フェーズ: 送信リクエストを処理
+    bool init()                          override;
+    void updateInput(SystemData& data)   override;  // 入力フェーズ: 受信データをSystemDataに反映
+    void updateOutput(SystemData& data)  override;  // 出力フェーズ: 送信リクエストを処理
+    void deinit()                        override;
 
     // BLEコールバックから呼ばれるメソッド（別タスクで実行される）
     void onConnect();

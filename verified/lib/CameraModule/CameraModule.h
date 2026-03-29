@@ -49,8 +49,8 @@ struct SystemData;
 class CameraModule : public IModule {
 public:
     explicit CameraModule(const CameraConfig& config);
-    bool init()                    override;
-    void update(SystemData& data)  override;
+    bool init()                         override;
+    void updateInput(SystemData& data)  override;
     void deinit()                  override;
 
     // フレームバッファへのアクセス（logicフェーズでのみ使用）

@@ -54,7 +54,7 @@ bool Mpu6500Module::init() {
     return true;
 }
 
-void Mpu6500Module::update(SystemData& data) {
+void Mpu6500Module::updateInput(SystemData& data) {
     if (_sampleTimer.getNowTime() < _config.sampleIntervalMs) return;
     _sampleTimer.setTime();
 

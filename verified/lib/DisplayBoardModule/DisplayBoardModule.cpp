@@ -95,11 +95,6 @@ void DisplayBoardModule::deinit() {
     Serial.println("[DisplayBoard] deinit");
 }
 
-void DisplayBoardModule::update(SystemData& data) {
-    updateInput(data);
-    updateOutput(data);
-}
-
 void DisplayBoardModule::updateInput(SystemData& data) {
     if (!_initialized) return;
 

@@ -12,6 +12,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 各プロジェクトは完全に自己完結しており、フォルダ単体でPlatformIOプロジェクトとして使用できる。
 
+## アーキテクチャ更新フロー（現在進行中）
+
+アーキテクチャの変更は以下の順序で反映する:
+
+1. **verified/ で実装・検証** — 実機で動作確認する
+2. **CLAUDE.md を更新** — AI指示（アーキテクチャルール）を実装に合わせる
+3. **sample/ に反映** — サンプルコードを新アーキテクチャに合わせる
+4. **doc/ に反映** — LaTeX仕様書を更新する
+
+**現在のステータス**: `verified/` で `updateInput()`/`updateOutput()` 分離アーキテクチャを検証中。`sample/`・`doc/` は旧アーキテクチャのままで未着手。
+
 ## ビルドコマンド
 
 ```bash
@@ -44,7 +55,7 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 | `lib/ModuleCore/IModule.h` | `IModule` インターフェース |
 | `lib/ModuleCore/ModuleTimer.h` | `millis()` ベースのノンブロッキングタイマー |
 
-`IModule` は `SystemData` の前方宣言のみを使用し、プロジェクト固有の型に依存しない。メソッドは `init()`、`update(SystemData& data)`、`deinit()` の3つ（`deinit()` はデフォルト空実装）。
+`IModule` は `SystemData` の前方宣言のみを使用し、プロジェクト固有の型に依存しない。メソッドは `init()`、`updateInput(SystemData& data)`、`updateOutput(SystemData& data)`、`deinit()` の4つ（`updateInput`/`updateOutput`/`deinit` はデフォルト空実装）。入力のみのモジュールは `updateInput` のみ、出力のみは `updateOutput` のみ、入出力両方を持つモジュール（BLE、LCD+タッチ等）は両方をオーバーライドする。
 
 ### プロジェクト層（プロジェクト固有）
 
@@ -76,11 +87,13 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 
 `loop()` は必ず以下の順序で実行する：
 
-1. **入力フェーズ**: 全 `inputModules[]` の `update(systemData)` を順次呼び出し、センサー値を `SystemData` へ書き込む
+1. **入力フェーズ**: 全 `inputModules[]` の `updateInput(systemData)` を順次呼び出し、センサー値を `SystemData` へ書き込む
 2. **ロジックフェーズ**: `applyPattern(systemData)` 等の関数で入力データを読み、出力データを書き換える
-3. **出力フェーズ**: 全 `outputModules[]` の `update(systemData)` を順次呼び出し、ハードウェアを制御する
+3. **出力フェーズ**: 全 `outputModules[]` の `updateOutput(systemData)` を順次呼び出し、ハードウェアを制御する
 
-入力モジュールと出力モジュールはクロス参照しない（出力モジュールが入力のデータを読む等は行わない）。
+入出力両方を持つモジュール（BLE、LCD+タッチ等）は `inputModules[]` と `outputModules[]` の**両方に含める**。配列の並び順がフェーズ内の実行順序を決定する（例: BLE受信を先に、BLE送信は最後に、など順序を制御可能）。
+
+`setup()` では全ユニークモジュールを1回だけ `init()` する（両配列に含まれるモジュールの重複initを避ける）。
 
 ### 命名規則
 
@@ -104,7 +117,7 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 - コンストラクタは `const {Module}Config&` でConfigを受け取り、`_config` としてコピー保持する
 - ピン番号はハードコードせず `_config` 経由でアクセスする
 - `init()` は `bool` を返す（失敗時は `false`）
-- `update()` でエラーが発生した場合は `SystemData` のサブ構造体にエラーフラグを設定する
+- `updateInput()`/`updateOutput()` でエラーが発生した場合は `SystemData` のサブ構造体にエラーフラグを設定する
 - 周期実行にはメンバ変数として `ModuleTimer` を使い `delay()` を使用しない
 - 各 `{Module}Data` 構造体はメンバにデフォルト値を明示する（例：`bool isValid = false;`、`float temperature = -999.0f;`）
 
@@ -114,12 +127,22 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 - リソース解放が必要なモジュールのみオーバーライドする
 - スリープ突入前やモジュール停止時に呼び出す
 
+### モジュールの入出力分類
+
+各モジュールは以下の3種類に分類される。オーバーライドするメソッドで役割が明示される。
+
+| 分類 | オーバーライド | 配列 | 例 |
+|---|---|---|---|
+| 入力専用 | `updateInput()` のみ | `inputModules[]` | IMU, カメラ, SD |
+| 出力専用 | `updateOutput()` のみ | `outputModules[]` | サーボ, LED |
+| 入出力 | 両方 | 両方の配列に含める | BLE, LCD+タッチ |
+
 ### スレッドセーフティ
 
 - 3フェーズループの外（割り込み / 別タスク / BLEコールバック等）から `SystemData` に直接触らない
 - 外部からのデータは**モジュール内部バッファ + `volatile` フラグ方式**で受け渡す
   - 別タスク/割り込み → モジュール内部バッファに書き込み + `volatile` フラグを `true` にする
-  - `update()` でフラグを確認し、バッファから `SystemData` にコピーする
+  - `updateInput()` でフラグを確認し、バッファから `SystemData` にコピーする
 - 割り込みでもマルチタスクでも同じルールを適用する
 
 ### init失敗後の復帰

@@ -14,15 +14,19 @@ public:
     // 戻り値: true=成功, false=失敗
     virtual bool init() = 0;
 
-    // モジュールの更新（毎ループ呼び出される）
-    // 引数: data - プロジェクト共有データへの参照
-    virtual void update(SystemData& data) = 0;
+    // 入力フェーズ更新（センサー読み取り等）
+    // 入力を持つモジュールのみオーバーライドする
+    virtual void updateInput(SystemData& data) {}
+
+    // 出力フェーズ更新（アクチュエータ制御・画面描画等）
+    // 出力を持つモジュールのみオーバーライドする
+    virtual void updateOutput(SystemData& data) {}
 
     // モジュールの終了処理（リソース解放）
     // デフォルトは空実装。解放が必要なモジュールのみオーバーライド
     virtual void deinit() {}
 
     // 動的有効/無効化フラグ
-    // false の場合、ループ内で update() がスキップされる
+    // false の場合、ループ内で updateInput()/updateOutput() がスキップされる
     bool enabled = true;
 };

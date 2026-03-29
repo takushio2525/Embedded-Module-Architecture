@@ -37,8 +37,8 @@ struct SystemData;
 class Mpu6500Module : public IModule {
 public:
     explicit Mpu6500Module(const Mpu6500Config& config, TwoWire* wire);
-    bool init()                    override;
-    void update(SystemData& data)  override;
+    bool init()                         override;
+    void updateInput(SystemData& data)  override;
 
 private:
     Mpu6500Config _config;

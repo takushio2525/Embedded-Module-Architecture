@@ -20,7 +20,7 @@ bool SdModule::init() {
     return true;
 }
 
-void SdModule::update(SystemData& data) {
+void SdModule::updateInput(SystemData& data) {
     if (!_initialized) return;
 
     data.sd.isValid    = true;

@@ -39,7 +39,7 @@ void setup() {
 void loop() {
     // 1. 入力フェーズ
     if (mpu.enabled) {
-        mpu.update(systemData);
+        mpu.updateInput(systemData);
     }
 
     // 2. ロジックフェーズ

@@ -17,22 +17,23 @@ SystemData systemData;
 
 // ===== モジュールインスタンス =====
 
-// 入出力モジュール（入力/出力フェーズで個別メソッドを呼び分ける）
+// 入出力モジュール（両方の配列に含める）
 DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG);
 BleModule          bleModule(BLE_CONFIG);
 
-// 入力モジュール
+// 入力専用モジュール
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
 SdModule      sdModule(SD_CONFIG, &sharedSpi);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
-// 出力モジュール
+// 出力専用モジュール
 ServoModule servoModule(SERVO_CONFIG);
 
 // モジュール配列
-// 注意: DisplayBoardModule/BleModuleは入出力両方の処理を持つため配列には含めず、
-//       loop()内でupdateInput()/updateOutput()を個別に呼び出す
+// 配列の並び順 = フェーズ内の実行順序
 IModule* inputModules[] = {
+    &bleModule,           // BLE受信を先に反映
+    &displayBoardModule,  // タッチ読み取り
     &mpu6500Module,
     &sdModule,
     &cameraModule,
@@ -41,6 +42,8 @@ const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
 IModule* outputModules[] = {
     &servoModule,
+    &displayBoardModule,  // 画面描画
+    &bleModule,           // 全データ確定後にBLE送信
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
@@ -130,36 +133,6 @@ void applyPattern(SystemData& data) {
     }
 }
 
-// ===== ユーティリティ =====
-
-static void initModuleArray(IModule** modules, int count, const char* label) {
-    const int MAX_RETRY = 3;
-    for (int i = 0; i < count; i++) {
-        bool success = false;
-        for (int r = 0; r < MAX_RETRY; r++) {
-            if (modules[i]->init()) { success = true; break; }
-            delay(100);
-        }
-        if (!success) {
-            Serial.printf("[System] %s Module %d: init失敗、無効化\n", label, i);
-            modules[i]->enabled = false;
-        }
-    }
-}
-
-static void initSingleModule(IModule* mod, const char* name) {
-    const int MAX_RETRY = 3;
-    bool success = false;
-    for (int r = 0; r < MAX_RETRY; r++) {
-        if (mod->init()) { success = true; break; }
-        delay(100);
-    }
-    if (!success) {
-        Serial.printf("[System] %s: init失敗、無効化\n", name);
-        mod->enabled = false;
-    }
-}
-
 // ===== セットアップ =====
 
 void setup() {
@@ -172,13 +145,27 @@ void setup() {
     mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);                       // I2Cバス
     sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（SDカード用）
 
-    // 入出力モジュール初期化（配列外のため個別にinit）
-    initSingleModule(&displayBoardModule, "DisplayBoard");
-    initSingleModule(&bleModule, "BLE");
+    // 全モジュールの重複initを防ぐため、ユニークなモジュールのみ初期化
+    // inputModules と outputModules に重複するモジュールがあるため、
+    // 全ユニークモジュールを1回だけinit()する
+    IModule* allModules[] = {
+        &bleModule, &displayBoardModule, &mpu6500Module,
+        &sdModule, &cameraModule, &servoModule,
+    };
+    const int ALL_COUNT = sizeof(allModules) / sizeof(allModules[0]);
 
-    // 入力・出力モジュール初期化
-    initModuleArray(inputModules,  INPUT_COUNT,  "Input");
-    initModuleArray(outputModules, OUTPUT_COUNT, "Output");
+    const int MAX_RETRY = 3;
+    for (int i = 0; i < ALL_COUNT; i++) {
+        bool success = false;
+        for (int r = 0; r < MAX_RETRY; r++) {
+            if (allModules[i]->init()) { success = true; break; }
+            delay(100);
+        }
+        if (!success) {
+            Serial.printf("[System] Module %d: init失敗、無効化\n", i);
+            allModules[i]->enabled = false;
+        }
+    }
 
     bleSendTimer.setTime();
     reinitTimer.setTime();
@@ -191,14 +178,8 @@ void loop() {
     // 1. 入力フェーズ
     for (int i = 0; i < INPUT_COUNT; i++) {
         if (inputModules[i]->enabled) {
-            inputModules[i]->update(systemData);
+            inputModules[i]->updateInput(systemData);
         }
-    }
-    if (displayBoardModule.enabled) {
-        displayBoardModule.updateInput(systemData);
-    }
-    if (bleModule.enabled) {
-        bleModule.updateInput(systemData);
     }
 
     // 2. ロジックフェーズ
@@ -210,13 +191,7 @@ void loop() {
     // 3. 出力フェーズ
     for (int i = 0; i < OUTPUT_COUNT; i++) {
         if (outputModules[i]->enabled) {
-            outputModules[i]->update(systemData);
+            outputModules[i]->updateOutput(systemData);
         }
-    }
-    if (displayBoardModule.enabled) {
-        displayBoardModule.updateOutput(systemData);
-    }
-    if (bleModule.enabled) {
-        bleModule.updateOutput(systemData);
     }
 }

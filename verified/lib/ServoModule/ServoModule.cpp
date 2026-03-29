@@ -21,7 +21,7 @@ bool ServoModule::init() {
     return true;
 }
 
-void ServoModule::update(SystemData& data) {
+void ServoModule::updateOutput(SystemData& data) {
     // 目標角度を0-180に制限
     uint8_t target = constrain(data.servo.targetAngle, 0, 180);
 

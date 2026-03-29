@@ -84,12 +84,6 @@ bool BleModule::init() {
     return true;
 }
 
-void BleModule::update(SystemData& data) {
-    // IModule互換: 入力・出力の両方を実行
-    updateInput(data);
-    updateOutput(data);
-}
-
 void BleModule::updateInput(SystemData& data) {
     // 接続状態をSystemDataに反映
     data.ble.connected = _clientConnected;

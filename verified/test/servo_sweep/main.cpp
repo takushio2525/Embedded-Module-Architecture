@@ -58,6 +58,6 @@ void loop() {
 
     // 3. 出力フェーズ
     if (servo.enabled) {
-        servo.update(systemData);
+        servo.updateOutput(systemData);
     }
 }

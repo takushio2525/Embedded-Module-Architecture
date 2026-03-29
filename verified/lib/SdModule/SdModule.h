@@ -27,8 +27,8 @@ struct SystemData;
 class SdModule : public IModule {
 public:
     SdModule(const SdConfig& config, SPIClass* spi);
-    bool init()                   override;
-    void update(SystemData& data) override;
+    bool init()                        override;
+    void updateInput(SystemData& data) override;
     void deinit()                 override;
 
 private:

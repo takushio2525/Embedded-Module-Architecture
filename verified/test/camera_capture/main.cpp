@@ -35,7 +35,7 @@ void setup() {
 void loop() {
     // 1. 入力フェーズ
     if (camera.enabled) {
-        camera.update(systemData);
+        camera.updateInput(systemData);
     }
 
     // 2. ロジックフェーズ

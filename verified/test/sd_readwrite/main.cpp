@@ -34,7 +34,7 @@ void setup() {
 void loop() {
     // 1. 入力フェーズ
     if (sd.enabled) {
-        sd.update(systemData);
+        sd.updateInput(systemData);
     }
 
     // 2. ロジックフェーズ
