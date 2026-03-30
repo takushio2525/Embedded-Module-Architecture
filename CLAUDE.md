@@ -105,12 +105,10 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 
 ### 通信バスパターン（SPI / I2C）
 
-- バスインスタンス（`SPIClass`, `TwoWire`）は `main.cpp` のグローバルスコープで生成する
-- `bus.begin()` は `setup()` 内で、全モジュールの `init()` より前に呼ぶ
-- バスポインタはConfig構造体に含めず、コンストラクタの引数でモジュールに渡す
-- モジュールはバスポインタをメンバ変数（`_spi`, `_wire`等）として保持する
-- モジュールの `init()` で `bus.begin()` を呼ばない（CSピン設定等のみ）
-- SPI使用時は `beginTransaction()` / `endTransaction()` で排他制御する
+- **SPI**: `SPIClass` インスタンスを `main.cpp` のグローバルスコープで生成し、`setup()` 内で `bus.begin()` を呼ぶ。バスポインタはコンストラクタ引数でモジュールに渡す。`beginTransaction()` / `endTransaction()` で排他制御する
+- **I2C**: Arduino Wire ライブラリは使用しない（ESP-IDF 5.x で esp_camera SCCB のレガシー I2C ドライバと共存不可）。代わりに ESP-IDF レガシー I2C API（`driver/i2c.h`）を使用する。`setup()` 内で `i2c_param_config()` + `i2c_driver_install()` を呼び、I2C ポート番号（`uint8_t`）をコンストラクタ引数でモジュールに渡す
+- バスポインタ/ポート番号はConfig構造体に含めず、コンストラクタの引数でモジュールに渡す
+- モジュールの `init()` でバス初期化を呼ばない（CSピン設定等のみ）
 
 ### モジュール実装の要点
 

@@ -1,6 +1,7 @@
 // Mpu6500Module.cpp — MPU-6500 IMUセンサーモジュール実装
+// ESP-IDF レガシーI2C API使用（Arduino Wireはesp_camera SCCBと共存不可）
 #include "Mpu6500Module.h"
-#include <Wire.h>
+#include "driver/i2c.h"
 #include "SystemData.h"
 
 // MPU-6500 レジスタアドレス
@@ -21,8 +22,11 @@ static constexpr float GYRO_SCALE  = 1.0f / 131.0f;
 // MPU-6500 の WHO_AM_I 期待値
 static constexpr uint8_t WHO_AM_I_MPU6500 = 0x70;
 
-Mpu6500Module::Mpu6500Module(const Mpu6500Config& config, TwoWire* wire)
-    : _config(config), _wire(wire) {}
+// I2Cタイムアウト
+static constexpr TickType_t I2C_TIMEOUT = pdMS_TO_TICKS(100);
+
+Mpu6500Module::Mpu6500Module(const Mpu6500Config& config, uint8_t i2cPort)
+    : _config(config), _i2cPort(i2cPort) {}
 
 bool Mpu6500Module::init() {
     // デバイス確認
@@ -88,31 +92,48 @@ void Mpu6500Module::updateInput(SystemData& data) {
     data.mpu.isValid     = true;
 }
 
-// --- I2Cヘルパー ---
+// --- I2Cヘルパー（ESP-IDF レガシーAPI） ---
 
 bool Mpu6500Module::writeReg(uint8_t reg, uint8_t value) {
-    _wire->beginTransmission(_config.address);
-    _wire->write(reg);
-    _wire->write(value);
-    return (_wire->endTransmission() == 0);
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (_config.address << 1) | I2C_MASTER_WRITE, true);
+    i2c_master_write_byte(cmd, reg, true);
+    i2c_master_write_byte(cmd, value, true);
+    i2c_master_stop(cmd);
+    esp_err_t err = i2c_master_cmd_begin((i2c_port_t)_i2cPort, cmd, I2C_TIMEOUT);
+    i2c_cmd_link_delete(cmd);
+    return (err == ESP_OK);
 }
 
 uint8_t Mpu6500Module::readReg(uint8_t reg) {
-    _wire->beginTransmission(_config.address);
-    _wire->write(reg);
-    _wire->endTransmission(false);
-    _wire->requestFrom(_config.address, (uint8_t)1);
-    return _wire->available() ? _wire->read() : 0xFF;
+    uint8_t value = 0xFF;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (_config.address << 1) | I2C_MASTER_WRITE, true);
+    i2c_master_write_byte(cmd, reg, true);
+    i2c_master_start(cmd);  // リピーテッドスタート
+    i2c_master_write_byte(cmd, (_config.address << 1) | I2C_MASTER_READ, true);
+    i2c_master_read_byte(cmd, &value, I2C_MASTER_NACK);
+    i2c_master_stop(cmd);
+    esp_err_t err = i2c_master_cmd_begin((i2c_port_t)_i2cPort, cmd, I2C_TIMEOUT);
+    i2c_cmd_link_delete(cmd);
+    return (err == ESP_OK) ? value : 0xFF;
 }
 
 bool Mpu6500Module::readBurst(uint8_t startReg, uint8_t* buf, uint8_t len) {
-    _wire->beginTransmission(_config.address);
-    _wire->write(startReg);
-    if (_wire->endTransmission(false) != 0) return false;
-    _wire->requestFrom(_config.address, len);
-    if (_wire->available() < len) return false;
-    for (uint8_t i = 0; i < len; i++) {
-        buf[i] = _wire->read();
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (_config.address << 1) | I2C_MASTER_WRITE, true);
+    i2c_master_write_byte(cmd, startReg, true);
+    i2c_master_start(cmd);  // リピーテッドスタート
+    i2c_master_write_byte(cmd, (_config.address << 1) | I2C_MASTER_READ, true);
+    if (len > 1) {
+        i2c_master_read(cmd, buf, len - 1, I2C_MASTER_ACK);
     }
-    return true;
+    i2c_master_read_byte(cmd, &buf[len - 1], I2C_MASTER_NACK);
+    i2c_master_stop(cmd);
+    esp_err_t err = i2c_master_cmd_begin((i2c_port_t)_i2cPort, cmd, I2C_TIMEOUT);
+    i2c_cmd_link_delete(cmd);
+    return (err == ESP_OK);
 }

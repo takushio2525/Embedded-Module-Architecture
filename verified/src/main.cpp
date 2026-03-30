@@ -1,14 +1,15 @@
 // main.cpp — テストベンチ エントリーポイント
 // 3フェーズ実行モデル: 入力 → ロジック → 出力
 #include <Arduino.h>
-#include <Wire.h>
 #include <SPI.h>
+#include "driver/i2c.h"
 #include "IModule.h"
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
 // ===== バスインスタンス（グローバルスコープで生成）=====
-static TwoWire  mpuWire   = TwoWire(1);       // MPU6500用I2C（バス0はesp_cameraのSCCBが使用）
+// I2C: ESP-IDF レガシーAPI使用（Arduino Wireはesp_camera SCCBのレガシードライバと共存不可）
+//      setup()内でi2c_driver_install()により初期化する
 // SD用SPIバス（LovyanGFXがFSPIを内部管理するが、use_lock=trueで排他制御されるため共存可能）
 static SPIClass sharedSpi = SPIClass(FSPI);
 
@@ -22,7 +23,7 @@ DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG);
 BleModule          bleModule(BLE_CONFIG);
 
 // 入力専用モジュール
-Mpu6500Module mpu6500Module(MPU6500_CONFIG, &mpuWire);
+Mpu6500Module mpu6500Module(MPU6500_CONFIG, 1);  // I2Cポート1（ポート0はesp_camera SCCBが使用）
 SdModule      sdModule(SD_CONFIG, &sharedSpi);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
@@ -142,7 +143,17 @@ void setup() {
     Serial.println("[System] テストベンチ起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
-    mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);                       // I2Cバス
+    // I2Cバス（レガシーAPI — esp_camera SCCBとの共存のためWire不可）
+    i2c_config_t i2cConf = {};
+    i2cConf.mode = I2C_MODE_MASTER;
+    i2cConf.sda_io_num = I2C_SDA_PIN;
+    i2cConf.scl_io_num = I2C_SCL_PIN;
+    i2cConf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    i2cConf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    i2cConf.master.clk_speed = 400000;  // 400kHz
+    i2c_param_config(I2C_NUM_1, &i2cConf);
+    i2c_driver_install(I2C_NUM_1, I2C_MODE_MASTER, 0, 0, 0);
+
     sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（SDカード用）
 
     // 全モジュールの重複initを防ぐため、ユニークなモジュールのみ初期化

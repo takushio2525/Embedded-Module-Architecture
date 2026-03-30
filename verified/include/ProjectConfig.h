@@ -37,7 +37,7 @@ const DisplayBoardConfig DISPLAY_BOARD_CONFIG = {
 };
 
 // MPU-6500 (I2C)
-// I2Cバス(Wire)はmain.cppのsetup()でI2C_SDA_PIN/I2C_SCL_PINを指定して初期化
+// I2Cバスはmain.cppのsetup()でESP-IDFレガシーAPIにより初期化（Wireはesp_camera SCCBと共存不可）
 const Mpu6500Config MPU6500_CONFIG = {
     .address          = 0x68,  // AD0=LOW: 0x68 / AD0=HIGH: 0x69
     .sampleIntervalMs = 20,    // サンプリング周期 20ms (50Hz)
