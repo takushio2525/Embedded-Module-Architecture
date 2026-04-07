@@ -1,5 +1,7 @@
 // servo_sweep — サーボモーター スイープ動作テスト
 // 3フェーズモデルでModuleTimerを使い0→180→0度をスイープする
+// 書き込み＋シリアルモニター:
+//   cd verified && pio run -e test-servo -t upload && pio device monitor
 #include <Arduino.h>
 #include "IModule.h"
 #include "ProjectConfig.h"

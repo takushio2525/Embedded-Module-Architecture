@@ -1,5 +1,7 @@
 // display_touch — TFT表示 + タッチ入力テスト
 // 3フェーズモデルでタッチ座標を読み取り、画面に表示する
+// 書き込み＋シリアルモニター:
+//   cd verified && pio run -e test-display -t upload && pio device monitor
 #include <Arduino.h>
 #include "IModule.h"
 #include "ProjectConfig.h"

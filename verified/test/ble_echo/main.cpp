@@ -1,5 +1,7 @@
 // ble_echo — BLE通信 エコーバックテスト
 // 3フェーズモデルで受信データをそのまま送り返す
+// 書き込み＋シリアルモニター:
+//   cd verified && pio run -e test-ble -t upload && pio device monitor
 #include <Arduino.h>
 #include "IModule.h"
 #include "ProjectConfig.h"

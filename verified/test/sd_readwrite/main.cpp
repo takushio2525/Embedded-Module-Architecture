@@ -1,6 +1,8 @@
 // sd_readwrite — SDカード読み書きテスト
 // 3フェーズモデルでSDカードの状態をシリアル出力する
 // SdModuleはinit時にテストを実行し、結果をDataに格納する
+// 書き込み＋シリアルモニター:
+//   cd verified && pio run -e test-sd -t upload && pio device monitor
 #include <Arduino.h>
 #include <SPI.h>
 #include "IModule.h"

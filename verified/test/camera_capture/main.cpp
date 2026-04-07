@@ -1,5 +1,7 @@
 // camera_capture — OV5640カメラ キャプチャテスト
 // 3フェーズモデルでフレーム取得し、情報をシリアル出力する
+// 書き込み＋シリアルモニター:
+//   cd verified && pio run -e test-camera -t upload && pio device monitor
 #include <Arduino.h>
 #include "IModule.h"
 #include "ProjectConfig.h"

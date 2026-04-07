@@ -1,5 +1,7 @@
 // mpu6500_read — MPU-6500 IMUセンサー読み取りテスト
 // 3フェーズモデルで加速度・ジャイロ・温度をシリアル出力する
+// 書き込み＋シリアルモニター:
+//   cd verified && pio run -e test-mpu6500 -t upload && pio device monitor
 #include <Arduino.h>
 #include "driver/i2c.h"
 #include "IModule.h"
