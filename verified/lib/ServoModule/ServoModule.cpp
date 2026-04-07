@@ -2,11 +2,11 @@
 #include "ServoModule.h"
 #include "SystemData.h"
 
-// PWM設定: 50Hz（周期20ms）、8bit分解能（0-255）
+// PWM設定: 50Hz（周期20ms）、10bit分解能（0-1023）
 static constexpr uint32_t SERVO_PWM_FREQ = 50;
-static constexpr uint8_t  SERVO_PWM_RES  = 8;
+static constexpr uint8_t  SERVO_PWM_RES  = 10;
 static constexpr uint32_t SERVO_PERIOD_US = 20000;  // 1/50Hz = 20ms
-static constexpr uint32_t SERVO_DUTY_MAX  = 255;    // 2^8 - 1
+static constexpr uint32_t SERVO_DUTY_MAX  = 1023;   // 2^10 - 1
 
 ServoModule::ServoModule(const ServoConfig& config) : _config(config) {}
 
@@ -38,6 +38,6 @@ void ServoModule::updateOutput(SystemData& data) {
 uint32_t ServoModule::_angleToDuty(uint8_t angle) const {
     // 角度 → パルス幅 [μs]
     uint32_t pulseUs = map(angle, 0, 180, _config.minPulseUs, _config.maxPulseUs);
-    // パルス幅 → デューティ値（8bit）
+    // パルス幅 → デューティ値（10bit）
     return (uint32_t)((uint64_t)pulseUs * SERVO_DUTY_MAX / SERVO_PERIOD_US);
 }
