@@ -48,6 +48,7 @@ bool DisplayBoardModule::init() {
         cfg.memory_height = 320;
         cfg.offset_x      = 0;
         cfg.offset_y      = 0;
+        cfg.offset_rotation = 4;  // パネル取り付け方向の補正（ミラー反転）
         cfg.readable      = true;
         cfg.invert        = false;
         cfg.rgb_order     = false;
