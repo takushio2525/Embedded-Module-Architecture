@@ -4,15 +4,18 @@
 
 // PWM設定: 50Hz（周期20ms）、16bit分解能（0-65535）
 static constexpr uint32_t SERVO_PWM_FREQ = 50;
-static constexpr uint8_t  SERVO_PWM_RES  = 16;
-static constexpr uint32_t SERVO_PERIOD_US = 20000;  // 1/50Hz = 20ms
-static constexpr uint32_t SERVO_DUTY_MAX  = 65535;   // 2^16 - 1
+static constexpr uint8_t  SERVO_PWM_RES  = 14;       // ESP32-S3 LEDCは最大14bit
+static constexpr uint32_t SERVO_PERIOD_US = 20000;    // 1/50Hz = 20ms
+static constexpr uint32_t SERVO_DUTY_MAX  = 16383;    // 2^14 - 1
 
 ServoModule::ServoModule(const ServoConfig& config) : _config(config) {}
 
 bool ServoModule::init() {
     // ESP32 Arduino Core v3.x: ledcAttach（setup + attachが統合）
-    ledcAttach(_config.pin, SERVO_PWM_FREQ, SERVO_PWM_RES);
+    if (!ledcAttach(_config.pin, SERVO_PWM_FREQ, SERVO_PWM_RES)) {
+        Serial.printf("[Servo] ledcAttach失敗 (pin=%d)\n", _config.pin);
+        return false;
+    }
 
     // 初期角度にセット
     ledcWrite(_config.pin, _angleToDuty(_config.defaultAngle));
