@@ -119,21 +119,35 @@ void DisplayBoardModule::updateOutput(SystemData& data) {
 }
 
 void DisplayBoardModule::renderDisplay(const SystemData& data) {
-    const uint16_t lineHeight = 24;
-    const uint16_t startX = 8;
-    uint16_t y = 8;
+    const uint16_t lineHeight = 22;
+    const uint16_t startX = 4;
+    uint16_t y = 4;
 
+    // 上部: テキスト情報（タッチ座標・MPU・ステータス）
     _impl->lcd.setTextColor(TFT_WHITE, TFT_BLACK);
     _impl->lcd.drawString(data.display.line1, startX, y); y += lineHeight;
     _impl->lcd.drawString(data.display.line2, startX, y); y += lineHeight;
     _impl->lcd.drawString(data.display.line3, startX, y); y += lineHeight;
     _impl->lcd.drawString(data.display.line4, startX, y); y += lineHeight;
 
-    // line5（メモリ情報など）
+    // line5（メモリ情報など — 黄色テキスト）
     if (data.display.line5[0] != '\0') {
         _impl->lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
         _impl->lcd.drawString(data.display.line5, startX, y);
+    }
+    y += lineHeight;
+
+    // 区切り線
+    _impl->lcd.drawFastHLine(0, y, 240, TFT_DARKGREY);
+    y += 4;
+
+    // 下部: カメラJPEG画像
+    if (data.display.jpegData && data.display.jpegSize > 0) {
+        _impl->lcd.drawJpg(data.display.jpegData, data.display.jpegSize,
+                           0, y, 240, 176);
     } else {
-        _impl->lcd.fillRect(startX, y, 300, lineHeight, TFT_BLACK);
+        // カメラ無効時はプレースホルダ表示
+        _impl->lcd.setTextColor(TFT_DARKGREY, TFT_BLACK);
+        _impl->lcd.drawString("CAM: No frame", startX, y + 80);
     }
 }

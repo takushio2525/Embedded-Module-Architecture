@@ -32,7 +32,7 @@ const DisplayBoardConfig DISPLAY_BOARD_CONFIG = {
     .tftRstPin       = 48,   // TFT RSTピン
     .touchCsPin      = 47,   // タッチCSピン
     .touchIrqPin     = 14,   // タッチIRQピン
-    .rotation        = 1,    // 1=横向き (landscape, 320x240)
+    .rotation        = 0,    // 0=縦向き (portrait, 240x320)
     .updateIntervalMs = 100, // 画面更新周期 100ms (10fps)
 };
 
@@ -77,7 +77,7 @@ const CameraConfig CAMERA_CONFIG = {
     .hrefPin    = 7,    // 水平参照
     .pclkPin    = 13,   // ピクセルクロック
     .xclkFreqHz  = 20000000,   // 20MHz
-    .frameSize   = 5,          // FRAMESIZE_QVGA (320x240)
+    .frameSize   = 3,          // FRAMESIZE_HQVGA (240x176)
     .pixFormat   = 4,          // PIXFORMAT_JPEG
     .jpegQuality = 12,         // JPEG品質 (低い値=高画質)
     .fbCount     = 2,          // PSRAMへのダブルバッファ

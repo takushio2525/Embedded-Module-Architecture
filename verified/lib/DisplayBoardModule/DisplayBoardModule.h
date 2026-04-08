@@ -36,6 +36,9 @@ struct DisplayBoardData {
     char line3[48] = "";
     char line4[48] = "";
     char line5[48] = "";       // メモリ情報など（黄色テキスト）
+    // 出力: カメラJPEG画像（ロジックフェーズで設定、出力フェーズで描画）
+    const uint8_t* jpegData = nullptr;  // JPEGフレームバッファへのポインタ
+    size_t         jpegSize = 0;        // JPEGデータサイズ [bytes]
     // 入力: タッチ状態（入力フェーズで更新）
     bool     touchPressed = false;
     uint16_t touchX       = 0; // ピクセル座標

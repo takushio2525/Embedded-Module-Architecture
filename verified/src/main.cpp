@@ -1,5 +1,8 @@
-// main.cpp — テストベンチ エントリーポイント
+// main.cpp — 本実装 エントリーポイント
 // 3フェーズ実行モデル: 入力 → ロジック → 出力
+// 縦画面LCD: 上部にタッチ座標・MPU値、下部にカメラ画像を表示
+// 注意: サーボ(SG90)は電流量の問題で除外、SDカードは未テストのため除外
+//       （Configインスタンスは将来の再有効化のため残す）
 #include <Arduino.h>
 #include <SPI.h>
 #include "driver/i2c.h"
@@ -24,11 +27,11 @@ BleModule          bleModule(BLE_CONFIG);
 
 // 入力専用モジュール
 Mpu6500Module mpu6500Module(MPU6500_CONFIG, 1);  // I2Cポート1（ポート0はesp_camera SCCBが使用）
-SdModule      sdModule(SD_CONFIG, &sharedSpi);
 CameraModule  cameraModule(CAMERA_CONFIG);
 
-// 出力専用モジュール
-ServoModule servoModule(SERVO_CONFIG);
+// 未使用モジュール（Configは残すがモジュール配列には含めない）
+// SdModule      sdModule(SD_CONFIG, &sharedSpi);  // SDカード未テスト
+// ServoModule   servoModule(SERVO_CONFIG);         // SG90は電流量の問題で除外
 
 // モジュール配列
 // 配列の並び順 = フェーズ内の実行順序
@@ -36,13 +39,11 @@ IModule* inputModules[] = {
     &bleModule,           // BLE受信を先に反映
     &displayBoardModule,  // タッチ読み取り
     &mpu6500Module,
-    &sdModule,
     &cameraModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
 IModule* outputModules[] = {
-    &servoModule,
     &displayBoardModule,  // 画面描画
     &bleModule,           // 全データ確定後にBLE送信
 };
@@ -59,43 +60,50 @@ static ModuleTimer reinitTimer;
 static constexpr uint32_t REINIT_INTERVAL_MS = 5000;  // 5秒ごとに再試行
 
 void applyPattern(SystemData& data) {
-    // MPU6500データをTFT表示
-    if (data.mpu.isValid) {
+    // タッチ座標の表示
+    if (data.display.touchPressed) {
         snprintf(data.display.line1, sizeof(data.display.line1),
-                 "Ax:%.2f Ay:%.2f Az:%.2f  ",
-                 data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
+                 "Touch: X=%3d Y=%3d  ",
+                 data.display.touchX, data.display.touchY);
+    } else {
+        strncpy(data.display.line1, "Touch: ---            ",
+                sizeof(data.display.line1));
+    }
+
+    // MPU6500データの表示
+    if (data.mpu.isValid) {
         snprintf(data.display.line2, sizeof(data.display.line2),
-                 "Gx:%.1f Gy:%.1f Gz:%.1f  ",
+                 "A:%.1f %.1f %.1f  ",
+                 data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
+        snprintf(data.display.line3, sizeof(data.display.line3),
+                 "G:%.0f %.0f %.0f  ",
                  data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
     } else {
-        strncpy(data.display.line1, "MPU6500: No data      ", sizeof(data.display.line1));
-        data.display.line2[0] = '\0';
+        strncpy(data.display.line2, "MPU: No data          ",
+                sizeof(data.display.line2));
+        data.display.line3[0] = '\0';
     }
 
-    // タッチでサーボ制御（X座標 0-320 → 角度 0-180）
-    if (data.display.touchPressed) {
-        data.servo.targetAngle = map(data.display.touchX, 0, 320, 0, 180);
-        snprintf(data.display.line3, sizeof(data.display.line3),
-                 "Touch:X=%3d Y=%3d Sv:%3d ",
-                 data.display.touchX, data.display.touchY, data.servo.targetAngle);
-    } else {
-        snprintf(data.display.line3, sizeof(data.display.line3),
-                 "Servo: %3d deg        ", data.servo.currentAngle);
-    }
-
-    // カメラ + SD + BLE ステータス
-    char camInfo[16] = "CAM:--";
-    if (data.camera.isValid && data.camera.frameReady) {
-        snprintf(camInfo, sizeof(camInfo), "CAM:OK");
-    }
-    char sdInfo[16] = "SD:--";
-    if (data.sd.isValid) {
-        snprintf(sdInfo, sizeof(sdInfo), "SD:%s",
-                 data.sd.testPassed ? "OK" : "NG");
-    }
+    // ステータス行（BLE + カメラ）
     snprintf(data.display.line4, sizeof(data.display.line4),
-             "%s %s BLE:%s  ", camInfo, sdInfo,
-             data.ble.connected ? "ON" : "--");
+             "BLE:%s CAM:%s  ",
+             data.ble.connected ? "ON" : "--",
+             (data.camera.isValid && data.camera.frameReady) ? "OK" : "--");
+
+    // メモリ情報
+    snprintf(data.display.line5, sizeof(data.display.line5),
+             "Heap:%dK PSRAM:%dK  ",
+             (int)(ESP.getFreeHeap() / 1024),
+             (int)(ESP.getFreePsram() / 1024));
+
+    // カメラJPEGフレームをディスプレイDataに設定
+    if (data.camera.isValid && data.camera.frameReady) {
+        data.display.jpegData = cameraModule.getFrameBuffer();
+        data.display.jpegSize = data.camera.frameSize;
+    } else {
+        data.display.jpegData = nullptr;
+        data.display.jpegSize = 0;
+    }
 
     // BLE接続中はIMUデータをNotifyで定期送信
     if (data.ble.connected && data.mpu.isValid &&
@@ -110,18 +118,11 @@ void applyPattern(SystemData& data) {
         data.ble.sendRequest = true;
     }
 
-    // メモリ情報
-    snprintf(data.display.line5, sizeof(data.display.line5),
-             "Heap:%dK PSRAM:%dK  ",
-             (int)(ESP.getFreeHeap() / 1024),
-             (int)(ESP.getFreePsram() / 1024));
-
     // init失敗モジュールの定期再試行
     if (reinitTimer.getNowTime() >= REINIT_INTERVAL_MS) {
         reinitTimer.setTime();
         IModule* allModules[] = {
-            &displayBoardModule, &mpu6500Module, &sdModule, &cameraModule,
-            &bleModule, &servoModule,
+            &displayBoardModule, &mpu6500Module, &cameraModule, &bleModule,
         };
         for (auto* mod : allModules) {
             if (!mod->enabled) {
@@ -140,7 +141,7 @@ void setup() {
     delay(3000); // シリアルモニタ接続待ち
 
     Serial.begin(115200);
-    Serial.println("[System] テストベンチ起動");
+    Serial.println("[System] 本実装起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
     // I2Cバス（レガシーAPI — esp_camera SCCBとの共存のためWire不可）
@@ -154,14 +155,11 @@ void setup() {
     i2c_param_config(I2C_NUM_1, &i2cConf);
     i2c_driver_install(I2C_NUM_1, I2C_MODE_MASTER, 0, 0, 0);
 
-    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス（SDカード用）
+    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス
 
-    // 全モジュールの重複initを防ぐため、ユニークなモジュールのみ初期化
-    // inputModules と outputModules に重複するモジュールがあるため、
     // 全ユニークモジュールを1回だけinit()する
     IModule* allModules[] = {
-        &bleModule, &displayBoardModule, &mpu6500Module,
-        &sdModule, &cameraModule, &servoModule,
+        &bleModule, &displayBoardModule, &mpu6500Module, &cameraModule,
     };
     const int ALL_COUNT = sizeof(allModules) / sizeof(allModules[0]);
 
@@ -196,13 +194,13 @@ void loop() {
     // 2. ロジックフェーズ
     applyPattern(systemData);
 
-    // カメラフレームバッファはロジックフェーズ終了時に解放
-    cameraModule.releaseFrame();
-
     // 3. 出力フェーズ
     for (int i = 0; i < OUTPUT_COUNT; i++) {
         if (outputModules[i]->enabled) {
             outputModules[i]->updateOutput(systemData);
         }
     }
+
+    // カメラフレームバッファは出力フェーズ後に解放（描画で使用するため）
+    cameraModule.releaseFrame();
 }
