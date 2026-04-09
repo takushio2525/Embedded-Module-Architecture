@@ -11,8 +11,8 @@
 #include "ModuleTimer.h"
 
 // ===== バスインスタンス（グローバルスコープで生成）=====
-// I2C: ESP-IDF レガシーAPI使用（Arduino Wireはesp_camera SCCBのレガシードライバと共存不可）
-//      setup()内でi2c_driver_install()により初期化する
+// I2C: ESP-IDFレガシーAPI使用（Arduino Wireはesp_camera SCCBのレガシードライバと共存不可）
+//      setup()内でi2c_param_config() + i2c_driver_install()により初期化する
 // SD用SPIバス（LovyanGFXがFSPIを内部管理するが、use_lock=trueで排他制御されるため共存可能）
 static SPIClass sharedSpi = SPIClass(FSPI);
 
@@ -138,40 +138,51 @@ void applyPattern(SystemData& data) {
 // ===== セットアップ =====
 
 void setup() {
-    delay(3000); // シリアルモニタ接続待ち
-
     Serial.begin(115200);
+    delay(3000); // USB CDC 接続待ち
     Serial.println("[System] 本実装起動");
+    Serial.printf("[System] Free heap: %d, PSRAM: %d\n",
+                  ESP.getFreeHeap(), ESP.getFreePsram());
 
     // バス初期化（全モジュールのinit()より前に実行）
-    // I2Cバス（レガシーAPI — esp_camera SCCBとの共存のためWire不可）
+    // I2Cバス（ポート1、esp_camera SCCBはポート0を使用）
+    // ESP-IDFレガシーAPI使用（Arduino Wireはesp_camera SCCBと共存不可）
     i2c_config_t i2cConf = {};
     i2cConf.mode = I2C_MODE_MASTER;
     i2cConf.sda_io_num = I2C_SDA_PIN;
     i2cConf.scl_io_num = I2C_SCL_PIN;
     i2cConf.sda_pullup_en = GPIO_PULLUP_ENABLE;
     i2cConf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    i2cConf.master.clk_speed = 400000;  // 400kHz
+    i2cConf.master.clk_speed = 400000;
     i2c_param_config(I2C_NUM_1, &i2cConf);
     i2c_driver_install(I2C_NUM_1, I2C_MODE_MASTER, 0, 0, 0);
 
     sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス
 
+    Serial.println("[System] バス初期化完了");
+
     // 全ユニークモジュールを1回だけinit()する
+    // 注意: 初期化順序 — ディスプレイ → カメラ → MPU → BLE
+    //       BLEはメモリ消費が大きいため最後に初期化
     IModule* allModules[] = {
-        &bleModule, &displayBoardModule, &mpu6500Module, &cameraModule,
+        &displayBoardModule, &mpu6500Module, &cameraModule, &bleModule,
     };
     const int ALL_COUNT = sizeof(allModules) / sizeof(allModules[0]);
 
+    const char* moduleNames[] = {"Display", "MPU6500", "Camera", "BLE"};
     const int MAX_RETRY = 3;
     for (int i = 0; i < ALL_COUNT; i++) {
+        Serial.printf("[System] %s init開始... (heap=%d)\n",
+                      moduleNames[i], ESP.getFreeHeap());
         bool success = false;
         for (int r = 0; r < MAX_RETRY; r++) {
             if (allModules[i]->init()) { success = true; break; }
             delay(100);
         }
-        if (!success) {
-            Serial.printf("[System] Module %d: init失敗、無効化\n", i);
+        if (success) {
+            Serial.printf("[System] %s init成功\n", moduleNames[i]);
+        } else {
+            Serial.printf("[System] %s init失敗、無効化\n", moduleNames[i]);
             allModules[i]->enabled = false;
         }
     }
