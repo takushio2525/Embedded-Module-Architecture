@@ -144,8 +144,40 @@ void setup() {
     Serial.printf("[System] Free heap: %d, PSRAM: %d\n",
                   ESP.getFreeHeap(), ESP.getFreePsram());
 
-    // バス初期化（全モジュールのinit()より前に実行）
-    // I2Cバス（ポート1、esp_camera SCCBはポート0を使用）
+    // SPIバス初期化（全モジュールのinit()より前に実行）
+    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス
+    Serial.println("[System] SPIバス初期化完了");
+
+    // モジュール初期化（順序が重要）
+    // 1. ディスプレイ（SPIバスのみ）
+    // 2. カメラ（SCCB内部でI2Cドライバを操作するため、MPU用I2Cより先に初期化）
+    // 3. I2Cバス ポート1（カメラSCCBがI2Cドライバを破壊するため、カメラinit後に初期化）
+    // 4. MPU6500（I2Cポート1を使用）
+    // 5. BLE（メモリ消費が大きいため最後）
+
+    // フェーズ1: カメラより前のモジュール
+    IModule* preI2cModules[] = { &displayBoardModule, &cameraModule };
+    const char* preI2cNames[] = { "Display", "Camera" };
+    const int PRE_I2C_COUNT = 2;
+    const int MAX_RETRY = 3;
+
+    for (int i = 0; i < PRE_I2C_COUNT; i++) {
+        Serial.printf("[System] %s init開始... (heap=%d)\n",
+                      preI2cNames[i], ESP.getFreeHeap());
+        bool success = false;
+        for (int r = 0; r < MAX_RETRY; r++) {
+            if (preI2cModules[i]->init()) { success = true; break; }
+            delay(100);
+        }
+        if (success) {
+            Serial.printf("[System] %s init成功\n", preI2cNames[i]);
+        } else {
+            Serial.printf("[System] %s init失敗、無効化\n", preI2cNames[i]);
+            preI2cModules[i]->enabled = false;
+        }
+    }
+
+    // フェーズ2: I2Cバス初期化（カメラSCCBがI2Cドライバを破壊するため、カメラinit後に実行）
     // ESP-IDFレガシーAPI使用（Arduino Wireはesp_camera SCCBと共存不可）
     i2c_config_t i2cConf = {};
     i2cConf.mode = I2C_MODE_MASTER;
@@ -156,34 +188,26 @@ void setup() {
     i2cConf.master.clk_speed = 400000;
     i2c_param_config(I2C_NUM_1, &i2cConf);
     i2c_driver_install(I2C_NUM_1, I2C_MODE_MASTER, 0, 0, 0);
+    Serial.println("[System] I2Cバス初期化完了（カメラinit後）");
 
-    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス
+    // フェーズ3: I2C依存モジュール + BLE
+    IModule* postI2cModules[] = { &mpu6500Module, &bleModule };
+    const char* postI2cNames[] = { "MPU6500", "BLE" };
+    const int POST_I2C_COUNT = 2;
 
-    Serial.println("[System] バス初期化完了");
-
-    // 全ユニークモジュールを1回だけinit()する
-    // 注意: 初期化順序 — ディスプレイ → カメラ → MPU → BLE
-    //       BLEはメモリ消費が大きいため最後に初期化
-    IModule* allModules[] = {
-        &displayBoardModule, &mpu6500Module, &cameraModule, &bleModule,
-    };
-    const int ALL_COUNT = sizeof(allModules) / sizeof(allModules[0]);
-
-    const char* moduleNames[] = {"Display", "MPU6500", "Camera", "BLE"};
-    const int MAX_RETRY = 3;
-    for (int i = 0; i < ALL_COUNT; i++) {
+    for (int i = 0; i < POST_I2C_COUNT; i++) {
         Serial.printf("[System] %s init開始... (heap=%d)\n",
-                      moduleNames[i], ESP.getFreeHeap());
+                      postI2cNames[i], ESP.getFreeHeap());
         bool success = false;
         for (int r = 0; r < MAX_RETRY; r++) {
-            if (allModules[i]->init()) { success = true; break; }
+            if (postI2cModules[i]->init()) { success = true; break; }
             delay(100);
         }
         if (success) {
-            Serial.printf("[System] %s init成功\n", moduleNames[i]);
+            Serial.printf("[System] %s init成功\n", postI2cNames[i]);
         } else {
-            Serial.printf("[System] %s init失敗、無効化\n", moduleNames[i]);
-            allModules[i]->enabled = false;
+            Serial.printf("[System] %s init失敗、無効化\n", postI2cNames[i]);
+            postI2cModules[i]->enabled = false;
         }
     }
 
