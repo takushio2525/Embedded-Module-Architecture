@@ -3,13 +3,14 @@
 // 書き込み＋シリアルモニター:
 //   cd verified && pio run -e test-mpu6500 -t upload && pio device monitor
 #include <Arduino.h>
-#include "driver/i2c.h"
+#include <Wire.h>
 #include "IModule.h"
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
 // ===== モジュール・データ =====
-Mpu6500Module mpu(MPU6500_CONFIG, 1);  // I2Cポート1（ポート0はesp_camera SCCBが使用）
+// Wire1（I2Cポート1）を使用 — ポート0はesp_camera SCCBが使用
+Mpu6500Module mpu(MPU6500_CONFIG, Wire1);
 SystemData systemData;
 
 // シリアル出力用タイマー（見やすいよう500ms間隔で表示）
@@ -22,16 +23,8 @@ void setup() {
 
     Serial.println("[Mpu6500Test] 起動");
 
-    // I2Cバス初期化（レガシーAPI — esp_camera SCCBとの共存のためWire不可）
-    i2c_config_t i2cConf = {};
-    i2cConf.mode = I2C_MODE_MASTER;
-    i2cConf.sda_io_num = I2C_SDA_PIN;
-    i2cConf.scl_io_num = I2C_SCL_PIN;
-    i2cConf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    i2cConf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    i2cConf.master.clk_speed = 400000;
-    i2c_param_config(I2C_NUM_1, &i2cConf);
-    i2c_driver_install(I2C_NUM_1, I2C_MODE_MASTER, 0, 0, 0);
+    // I2Cバス初期化（Arduino Wire API）
+    Wire1.begin(I2C_SDA_PIN, I2C_SCL_PIN, 400000);
 
     // モジュール初期化
     if (!mpu.init()) {
