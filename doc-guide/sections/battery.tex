@@ -39,8 +39,8 @@ struct BatteryData {
 
 \subsection{リングバッファと移動平均}
 
-\begin{lstlisting}[style=cppstyle, caption={BatteryModule.cpp — update()}]
-void BatteryModule::update(SystemData& data) {
+\begin{lstlisting}[style=cppstyle, caption={BatteryModule.cpp — updateInput()}]
+void BatteryModule::updateInput(SystemData& data) {
     if (_sampleTimer.getNowTime() < _config.sampleIntervalMs) {
         return;  // 周期未到達なら何もしない（ノンブロッキング）
     }
@@ -73,6 +73,6 @@ void BatteryModule::update(SystemData& data) {
 \end{pointbox}
 
 \begin{pointbox}[周期サンプリングの定石]
-\texttt{update()}の冒頭で\texttt{getNowTime() < interval}なら即\texttt{return}するパターンは、
+\texttt{updateInput()}の冒頭で\texttt{getNowTime() < interval}なら即\texttt{return}するパターンは、
 周期実行の定石。ガード節として最初に書くことで、残りのコードのインデントが深くならない。
 \end{pointbox}

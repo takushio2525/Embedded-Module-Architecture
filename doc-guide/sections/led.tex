@@ -32,7 +32,7 @@ private:
 public:
     LedModule(const LedConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 };
 \end{lstlisting}
 
@@ -43,7 +43,7 @@ public:
 \end{pointbox}
 
 \begin{pointbox}[Data構造体のデフォルト値]
-\texttt{LedData}の\texttt{state = false}は「\texttt{update()}が1度も呼ばれていない状態でも安全」を保証する。
+\texttt{LedData}の\texttt{state = false}は「\texttt{updateOutput()}が1度も呼ばれていない状態でも安全」を保証する。
 ロジックフェーズが\texttt{state}を\texttt{true}に変更するまで、LEDは消灯したままとなる。
 \end{pointbox}
 
@@ -61,13 +61,13 @@ bool LedModule::init() {
     return true;
 }
 
-void LedModule::update(SystemData& data) {
+void LedModule::updateOutput(SystemData& data) {
     digitalWrite(_config.ledPin, data.led.state ? HIGH : LOW);
 }
 \end{lstlisting}
 
 \begin{pointbox}[出力モジュールの責務]
-\texttt{update()}は\textbf{自身のData構造体の値に従って動作するだけ}。
+\texttt{updateOutput()}は\textbf{自身のData構造体の値に従って動作するだけ}。
 「いつ点灯するか」「何の条件で消すか」などのロジックは一切書かない。
 それはロジックフェーズ（\texttt{applyPattern()}等）の仕事である。
 \end{pointbox}

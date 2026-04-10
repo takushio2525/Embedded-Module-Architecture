@@ -32,8 +32,8 @@ struct ButtonData {
 
 \subsection{デバウンスの実装}
 
-\begin{lstlisting}[style=cppstyle, caption={ButtonModule.cpp — update()}]
-void ButtonModule::update(SystemData& data) {
+\begin{lstlisting}[style=cppstyle, caption={ButtonModule.cpp — updateInput()}]
+void ButtonModule::updateInput(SystemData& data) {
     // 生の入力値を読み取り
     bool rawPressed = digitalRead(_config.pin);
     if (_config.activeLow) {

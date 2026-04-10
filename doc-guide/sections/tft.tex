@@ -25,7 +25,7 @@ struct TftData {
 
 \begin{pointbox}[出力モジュールは「何を表示するか」を決めない]
 \texttt{line1}〜\texttt{line5}はロジックフェーズが\texttt{snprintf()}で書き込む文字列。
-TftModuleの\texttt{update()}はそれを画面に描画するだけで、
+TftModuleの\texttt{updateOutput()}はそれを画面に描画するだけで、
 表示内容の判断は一切行わない。出力モジュールの責務を守っている。
 \end{pointbox}
 

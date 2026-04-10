@@ -32,10 +32,10 @@ struct ServoData {
 この分離により、ロジックフェーズが「今サーボがどの角度にいるか」を確認できる。
 \end{pointbox}
 
-\subsection{update()の実装}
+\subsection{updateOutput()の実装}
 
-\begin{lstlisting}[style=cppstyle, caption={ServoModule.cpp — update()}]
-void ServoModule::update(SystemData& data) {
+\begin{lstlisting}[style=cppstyle, caption={ServoModule.cpp — updateOutput()}]
+void ServoModule::updateOutput(SystemData& data) {
     uint8_t target = constrain(data.servo.targetAngle, 0, 180);
 
     // 変化がある場合のみPWM更新

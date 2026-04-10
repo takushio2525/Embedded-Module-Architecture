@@ -21,15 +21,15 @@ struct BuzzerData {
 
 \begin{pointbox}[リクエストフラグパターン]
 \texttt{requestPlay}は「ロジックフェーズからの指示を1回だけ処理する」ためのフラグ。
-\texttt{update()}が処理後に\texttt{false}に戻すため、次ループでは再度処理しない。
+\texttt{updateOutput()}が処理後に\texttt{false}に戻すため、次ループでは再度処理しない。
 LedModuleのように毎ループ同じ状態を出力するのではなく、
 「イベント的に1回だけ何かをする」場合にこのパターンを使う。
 \end{pointbox}
 
-\subsection{update()の実装}
+\subsection{updateOutput()の実装}
 
-\begin{lstlisting}[style=cppstyle, caption={BuzzerModule.cpp — update()}]
-void BuzzerModule::update(SystemData& data) {
+\begin{lstlisting}[style=cppstyle, caption={BuzzerModule.cpp — updateOutput()}]
+void BuzzerModule::updateOutput(SystemData& data) {
     // 再生リクエスト処理
     if (data.buzzer.requestPlay) {
         data.buzzer.requestPlay = false;  // 処理済みフラグクリア

@@ -30,8 +30,8 @@ enum class WifiState : uint8_t {
 
 \subsection{ステートマシンの実装}
 
-\begin{lstlisting}[style=cppstyle, caption={WifiModule.cpp — update()のステートマシン}]
-void WifiModule::update(SystemData& data) {
+\begin{lstlisting}[style=cppstyle, caption={WifiModule.cpp — updateInput()のステートマシン}]
+void WifiModule::updateInput(SystemData& data) {
     // ロジックフェーズからのリクエスト処理
     if (data.wifi.requestConnect) {
         data.wifi.requestConnect = false;
@@ -89,7 +89,7 @@ WiFi接続は通常数秒かかるが、\texttt{delay()}で待たない。
 \begin{pointbox}[リクエストフラグパターン]
 \texttt{requestConnect}はロジックフェーズからの「接続して」という指示。
 BuzzerModuleの\texttt{requestPlay}と同じパターンで、
-\texttt{update()}が処理後に\texttt{false}に戻す。
+\texttt{updateInput()}が処理後に\texttt{false}に戻す。
 \end{pointbox}
 
 \subsection{ロジックフェーズでの使用例}

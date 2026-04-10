@@ -24,24 +24,24 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Config/Data構造体}{7}{subsection.3.1}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {4}{\ignorespaces ButtonModule.h — Config/Data}}{7}{lstlisting.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2}デバウンスの実装}{7}{subsection.3.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}{\ignorespaces ButtonModule.cpp — update()}}{7}{lstlisting.5}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}{\ignorespaces ButtonModule.cpp — updateInput()}}{7}{lstlisting.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}ロジックフェーズでの使用例}{8}{subsection.3.3}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {6}{\ignorespaces ロジックフェーズでのButtonData参照}}{8}{lstlisting.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {4}【基本】BatteryModule — ADC + 移動平均フィルタ}{8}{section.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Config/Data構造体}{9}{subsection.4.1}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {7}{\ignorespaces BatteryModule.h — Config/Data}}{9}{lstlisting.7}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}リングバッファと移動平均}{9}{subsection.4.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}{\ignorespaces BatteryModule.cpp — update()}}{9}{lstlisting.8}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}{\ignorespaces BatteryModule.cpp — updateInput()}}{9}{lstlisting.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {5}【基本】ServoModule — PWM出力パターン}{10}{section.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Config/Data構造体}{10}{subsection.5.1}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {9}{\ignorespaces ServoModule.h — Config/Data}}{10}{lstlisting.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}update()の実装}{11}{subsection.5.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {10}{\ignorespaces ServoModule.cpp — update()}}{11}{lstlisting.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}updateOutput()の実装}{11}{subsection.5.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {10}{\ignorespaces ServoModule.cpp — updateOutput()}}{11}{lstlisting.10}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {6}【基本】BuzzerModule — deinit()パターン}{11}{section.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Data構造体のリクエストパターン}{11}{subsection.6.1}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {11}{\ignorespaces BuzzerModule.h — Data}}{11}{lstlisting.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}update()の実装}{12}{subsection.6.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {12}{\ignorespaces BuzzerModule.cpp — update()}}{12}{lstlisting.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}updateOutput()の実装}{12}{subsection.6.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {12}{\ignorespaces BuzzerModule.cpp — updateOutput()}}{12}{lstlisting.12}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.3}deinit()の実装}{12}{subsection.6.3}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {13}{\ignorespaces BuzzerModule.cpp — deinit()}}{12}{lstlisting.13}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {7}【中級】Mpu6500Module — I2Cバスパターン}{13}{section.7}\protected@file@percent }
@@ -74,7 +74,7 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {12.2}親モジュールからの制御委譲}{20}{subsection.12.2}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {25}{\ignorespaces ChassisModule.cpp — init()/deinit()で内部モジュールを管理}}{20}{lstlisting.25}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {26}{\ignorespaces ChassisModule.cpp — init()/deinit()（続き）}}{20}{lstlisting.26}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {27}{\ignorespaces ChassisModule.cpp — update()でベクトル合成→各モーターをdrive()}}{20}{lstlisting.27}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {27}{\ignorespaces ChassisModule.cpp — updateOutput()でベクトル合成→各モーターをdrive()}}{20}{lstlisting.27}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {13}【応用】BleModule — スレッドセーフティパターン}{21}{section.13}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {13.1}内部バッファとvolatileフラグ}{21}{subsection.13.1}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {28}{\ignorespaces BleModule.h — 内部バッファ}}{21}{lstlisting.28}\protected@file@percent }
@@ -82,19 +82,19 @@
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {29}{\ignorespaces BleModule.cpp — データ受け渡しの流れ}}{22}{lstlisting.29}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {13.3}BLEコールバックの登録}{22}{subsection.13.3}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {30}{\ignorespaces BleModule.cpp — コールバッククラス}}{22}{lstlisting.30}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {13.4}送信の流れ（ロジックフェーズ→update()）}{23}{subsection.13.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {13.4}送信の流れ（ロジックフェーズ→updateOutput()）}{23}{subsection.13.4}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {31}{\ignorespaces ロジックフェーズでの送信リクエスト}}{23}{lstlisting.31}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {14}【応用】WifiModule — ステートマシンパターン}{23}{section.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {14.1}状態定義}{23}{subsection.14.1}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {32}{\ignorespaces WifiModule.h — 状態定義}}{23}{lstlisting.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.1}状態定義}{24}{subsection.14.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {32}{\ignorespaces WifiModule.h — 状態定義}}{24}{lstlisting.32}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {14.2}ステートマシンの実装}{24}{subsection.14.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {33}{\ignorespaces WifiModule.cpp — update()のステートマシン}}{24}{lstlisting.33}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {33}{\ignorespaces WifiModule.cpp — updateInput()のステートマシン}}{24}{lstlisting.33}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {14.3}ロジックフェーズでの使用例}{25}{subsection.14.3}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {34}{\ignorespaces ロジックフェーズでのWiFi制御}}{25}{lstlisting.34}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {15}【応用】EncoderModule — 割り込み連携パターン}{26}{section.15}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {15.1}割り込みハンドラの設計}{26}{subsection.15.1}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {35}{\ignorespaces EncoderModule.h — 割り込み関連}}{26}{lstlisting.35}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {15.2}ISR→volatile→update()の流れ}{27}{subsection.15.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.2}ISR→volatile→updateInput()の流れ}{27}{subsection.15.2}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {36}{\ignorespaces EncoderModule.cpp — ISRとupdate()}}{27}{lstlisting.36}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {15.3}deinit()で割り込みを解除}{28}{subsection.15.3}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {37}{\ignorespaces EncoderModule.cpp — deinit()}}{28}{lstlisting.37}\protected@file@percent }

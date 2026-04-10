@@ -23,7 +23,7 @@
 class DriveMotorModule : public IModule {
 public:
     // SystemData経由の制御（単体使用時）
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 
     // SystemData非経由の直接制御（統合モジュールから使用）
     void drive(float power);
@@ -31,10 +31,10 @@ public:
 };
 \end{lstlisting}
 
-\begin{pointbox}[update()とdrive()の使い分け]
-\texttt{update()}はSystemDataの\texttt{DriveMotorData.power}を読んで\texttt{drive()}を呼ぶラッパー。
+\begin{pointbox}[updateOutput()とdrive()の使い分け]
+\texttt{updateOutput()}はSystemDataの\texttt{DriveMotorData.power}を読んで\texttt{drive()}を呼ぶラッパー。
 統合モジュールの内部部品として使う場合は\texttt{drive()}を直接呼び、
-\texttt{update()}は空実装（呼ばれない）となる。
+\texttt{updateOutput()}は空実装（呼ばれない）となる。
 この設計により、同じモジュールコードを単体でも統合でも使い回せる。
 \end{pointbox}
 
@@ -50,7 +50,7 @@ void DriveMotorModule::drive(float power) {
         (_lastDir == REVERSE && newDir == FORWARD)) {
         brake();
         _lastDir = STOP;
-        return;  // 次のupdate()で実際の方向転換が行われる
+        return;  // 次のupdateOutput()で実際の方向転換が行われる
     }
     // ... 実際のPWM制御 ...
 }

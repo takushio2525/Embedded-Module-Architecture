@@ -5,7 +5,7 @@
 \begin{itemize}
     \item ハードウェア割り込み（ISR）とvolatile変数の連携
     \item IRAM\_ATTR による割り込みハンドラのRAM配置
-    \item ISR→volatile変数→update()→SystemDataのデータフロー
+    \item ISR→volatile変数→updateInput()→SystemDataのデータフロー
     \item deinit()による割り込みの解除
 \end{itemize}
 \end{patternbox}
@@ -21,7 +21,7 @@ private:
     // ISRが更新する変数（volatile必須）
     volatile int32_t _isrCount = 0;
 
-    // update()内で使う前回値
+    // updateInput()内で使う前回値
     int32_t _prevCount = 0;
 
     // ISRはstatic関数でなければattachInterruptに渡せない
@@ -69,7 +69,7 @@ attachInterrupt(pin, _isrHandlerA, RISING);
 \end{itemize}
 \end{cautionbox}
 
-\subsection{ISR→volatile→update()の流れ}
+\subsection{ISR→volatile→updateInput()の流れ}
 
 \begin{lstlisting}[style=cppstyle, caption={EncoderModule.cpp — ISRとupdate()}]
 // ISRハンドラ（IRAM_ATTR = RAM配置、高速アクセス）
@@ -88,8 +88,8 @@ void IRAM_ATTR EncoderModule::_onPulseA() {
     }
 }
 
-// update()はメインタスクの3フェーズループ内で呼ばれる
-void EncoderModule::update(SystemData& data) {
+// updateInput()は入力フェーズで呼ばれる
+void EncoderModule::updateInput(SystemData& data) {
     // volatile変数を一度だけ読み取り
     int32_t currentCount = _isrCount;
 
@@ -115,7 +115,7 @@ void EncoderModule::update(SystemData& data) {
 \begin{pointbox}[volatile変数を一度だけ読み取る]
 \texttt{int32\_t currentCount = \_isrCount;}で値をローカル変数にコピーしてから使う。
 volatile変数を関数内で複数回参照すると、参照のたびに値が変わる可能性がある。
-一度だけ読み取ることで、同一update()内での値の一貫性を保証する。
+一度だけ読み取ることで、同一updateInput()内での値の一貫性を保証する。
 \end{pointbox}
 
 \begin{pointbox}[BleModuleとの共通パターン]
