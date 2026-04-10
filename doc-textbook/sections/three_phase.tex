@@ -43,7 +43,7 @@ void loop() {
     // 1. 入力フェーズ — センサー値をSystemDataに書き込む
     for (int i = 0; i < INPUT_COUNT; i++) {
         if (inputModules[i]->enabled) {
-            inputModules[i]->update(systemData);
+            inputModules[i]->updateInput(systemData);
         }
     }
 
@@ -53,7 +53,7 @@ void loop() {
     // 3. 出力フェーズ — 判断結果に従い制御する
     for (int i = 0; i < OUTPUT_COUNT; i++) {
         if (outputModules[i]->enabled) {
-            outputModules[i]->update(systemData);
+            outputModules[i]->updateOutput(systemData);
         }
     }
 }
@@ -71,10 +71,10 @@ void loop() {
 \begin{lstlisting}
 void loop() {
     // 出力が先！
-    led.update(systemData);   // 前回のデータで光ってしまう
+    led.updateOutput(systemData);   // 前回のデータで光ってしまう
 
     // 入力が後
-    tempSensor.update(systemData);  // 今回のデータを読む
+    tempSensor.updateInput(systemData);  // 今回のデータを読む
 
     applyLogic(systemData);  // 今回のデータで判断するが...
     // → LEDにはもう反映されない（次のloopまで待つ）

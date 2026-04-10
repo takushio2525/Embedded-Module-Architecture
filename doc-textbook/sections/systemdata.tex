@@ -13,7 +13,7 @@ private:
     LedModule* _led;  // LEDモジュールを直接持っている！
 
 public:
-    void update() {
+    void run() {
         float temp = readSensor();
         if (temp > 30.0) {
             _led->turnOn();  // 直接操作
@@ -118,7 +118,7 @@ struct SystemData;  // 前方宣言
 
 \subsection{なぜ必要なの？}
 
-IModule.hは \texttt{update(SystemData\& data)} を宣言していますが、SystemDataの中身を知る必要はありません（ポインタや参照で受け取るだけなので）。
+IModule.hは \texttt{updateInput(SystemData\& data)} や \texttt{updateOutput(SystemData\& data)} を宣言していますが、SystemDataの中身を知る必要はありません（参照で受け取るだけなので）。
 
 もしIModule.hが \texttt{SystemData.h} をインクルードすると、こんな問題が起きます。
 
@@ -185,7 +185,8 @@ struct SystemData;  // 「こういう型がある」とだけ宣言
 
 class IModule {
 public:
-    virtual void update(SystemData& data) = 0;
+    virtual void updateInput(SystemData& data) {}
+    virtual void updateOutput(SystemData& data) {}
     // 参照で受け取るだけなので、中身を知らなくてOK
 };
 \end{lstlisting}

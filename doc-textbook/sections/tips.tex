@@ -18,10 +18,10 @@ bool TempSensorModule::init() {
 }
 \end{lstlisting}
 
-\texttt{update()}でエラーが起きた場合は、Dataのフラグで通知します。
+\texttt{updateInput()}/\texttt{updateOutput()}でエラーが起きた場合は、Dataのフラグで通知します。
 
 \begin{lstlisting}
-void TempSensorModule::update(SystemData& data) {
+void TempSensorModule::updateInput(SystemData& data) {
     int raw = analogRead(_config.analogPin);
     if (raw < 0) {
         data.temp.isValid = false;  // エラーフラグ
@@ -72,7 +72,7 @@ public:
 SPI使用時は排他制御を忘れないでください。
 
 \begin{lstlisting}
-void update(SystemData& data) {
+void updateOutput(SystemData& data) {
     _spi->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
     // SPI通信
     _spi->endTransaction();
@@ -132,8 +132,8 @@ Config変更はロジックフェーズでのみ行います。
 
 \begin{badexample}{入力フェーズでConfig変更}
 \begin{lstlisting}
-// BLEモジュールのupdate()内で直接変更 → 危険！
-void BleModule::update(SystemData& data) {
+// BLEモジュールのupdateInput()内で直接変更 → 危険！
+void BleModule::updateInput(SystemData& data) {
     if (newConfigReceived) {
         ledModule._config.pin = newPin;  // 他モジュールを直接操作
     }
@@ -144,7 +144,7 @@ void BleModule::update(SystemData& data) {
 \begin{goodexample}{SystemData経由でロジックフェーズに渡す}
 \begin{lstlisting}
 // BLEモジュール — 受信データをSystemDataに書くだけ
-void BleModule::update(SystemData& data) {
+void BleModule::updateInput(SystemData& data) {
     if (newConfigReceived) {
         data.ble.requestedLedPin = newPin;
         data.ble.configUpdateRequested = true;
@@ -210,7 +210,7 @@ error: 'bool XxxModule::init()' marked 'override', but does not
 override any member functions
 \end{lstlisting}
 
-\texttt{IModule} を継承していないか、メソッドのシグネチャ（引数・戻り値）が合っていません。\texttt{: public IModule} の継承と、\texttt{init()}/\texttt{update()} の引数が正しいか確認してください。
+\texttt{IModule} を継承していないか、メソッドのシグネチャ（引数・戻り値）が合っていません。\texttt{: public IModule} の継承と、\texttt{init()}/\texttt{updateInput()}/\texttt{updateOutput()} の引数が正しいか確認してください。
 
 \begin{notebox}[エラーメッセージの読み方]
 コンパイルエラーは上から順に読みます。最初のエラーが原因で後続のエラーが連鎖的に発生することが多いため、まず最初の1つを修正してから再ビルドしてください。

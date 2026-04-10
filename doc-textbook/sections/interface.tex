@@ -44,8 +44,9 @@ public:
     bool enabled = true;
 
     virtual bool init() = 0;
-    virtual void update(SystemData& data) = 0;
-    virtual void deinit() {}   // デフォルト空実装
+    virtual void updateInput(SystemData& data) {}
+    virtual void updateOutput(SystemData& data) {}
+    virtual void deinit() {}
     virtual ~IModule() {}
 };
 \end{lstlisting}
@@ -59,7 +60,9 @@ public:
 
 \subsection{= 0（純粋仮想関数）とは}
 
-\texttt{= 0}は「この関数は子クラスで必ず実装してね。実装しないとコンパイルエラーにするよ」という意味です。つまり、IModuleを継承するクラスは \texttt{init()} と \texttt{update()} を必ず書かなくてはいけません。
+\texttt{= 0}は「この関数は子クラスで必ず実装してね。実装しないとコンパイルエラーにするよ」という意味です。IModuleでは \texttt{init()} だけが \texttt{= 0} なので、必ず実装が必要です。
+
+一方、\texttt{updateInput()} や \texttt{updateOutput()} は \texttt{\{\}}（空の中括弧）で「何もしないデフォルト実装」が書かれています。入力モジュールは \texttt{updateInput()} を、出力モジュールは \texttt{updateOutput()} をオーバーライドします。両方を持つモジュール（BLE等）は両方をオーバーライドします。
 
 \subsection{配列で回せるメリット}
 
@@ -81,17 +84,10 @@ for (int i = 0; i < 3; i++) {
         modules[i]->enabled = false;
     }
 }
-
-// まとめて更新
-void loop() {
-    for (int i = 0; i < 3; i++) {
-        if (modules[i]->enabled) {
-            modules[i]->update(systemData);
-        }
-    }
-}
 \end{lstlisting}
 \end{goodexample}
+
+更新は入力モジュールと出力モジュールで配列を分け、それぞれ \texttt{updateInput()} と \texttt{updateOutput()} を呼びます。この仕組みは第5章「3フェーズモデル」で詳しく解説します。
 
 \texttt{LedModule}も\texttt{TempSensorModule}も\texttt{MotorModule}も、すべて\texttt{IModule*}として統一的に扱えます。新しいモジュールを追加しても、for文はそのままです。
 
@@ -101,7 +97,7 @@ void loop() {
 class LedModule : public IModule {
 public:
     bool init() override { /* ... */ }      // OK
-    void update(SystemData& data) override; // OK
+    void updateOutput(SystemData& data) override; // OK
 };
 \end{lstlisting}
 \end{notebox}
@@ -124,11 +120,12 @@ for (int i = 0; i < MODULE_COUNT; i++) {
 }
 
 void loop() {
-    for (int i = 0; i < MODULE_COUNT; i++) {
-        if (modules[i]->enabled) {    // 無効なモジュールはスキップ
-            modules[i]->update(systemData);
+    for (int i = 0; i < INPUT_COUNT; i++) {
+        if (inputModules[i]->enabled) {    // 無効なモジュールはスキップ
+            inputModules[i]->updateInput(systemData);
         }
     }
+    // ... 出力モジュールも同様にenabledチェック
 }
 \end{lstlisting}
 
