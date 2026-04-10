@@ -1,5 +1,5 @@
 // EncoderModule.h — ロータリーエンコーダ入力モジュール（割り込み連携）
-// ハードウェア割り込みでパルスをカウントし、update()でSystemDataにコピーする
+// ハードウェア割り込みでパルスをカウントし、updateInput()でSystemDataにコピーする
 #pragma once
 #include <Arduino.h>
 #include "IModule.h"
@@ -45,6 +45,6 @@ private:
 public:
     EncoderModule(const EncoderConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateInput(SystemData& data) override;
     void deinit() override;
 };

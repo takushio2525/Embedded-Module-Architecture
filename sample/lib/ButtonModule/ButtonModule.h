@@ -32,5 +32,5 @@ private:
 public:
     ButtonModule(const ButtonConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateInput(SystemData& data) override;
 };

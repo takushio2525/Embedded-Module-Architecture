@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 各プロジェクトは完全に自己完結しており、フォルダ単体でPlatformIOプロジェクトとして使用できる。
 
-## アーキテクチャ更新フロー（現在進行中）
+## アーキテクチャ更新フロー
 
 アーキテクチャの変更は以下の順序で反映する:
 
@@ -21,7 +21,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **sample/ に反映** — サンプルコードを新アーキテクチャに合わせる
 4. **doc/ に反映** — LaTeX仕様書を更新する
 
-**現在のステータス**: `verified/` で `updateInput()`/`updateOutput()` 分離アーキテクチャを検証中。`sample/`・`doc/` は旧アーキテクチャのままで未着手。
+**現在のステータス**: `updateInput()`/`updateOutput()` 分離アーキテクチャで全体統一済み（verified/ → sample/ → doc/ → CLAUDE.md）。
+
+### sample/ と verified/ の技術差異
+
+| 項目 | sample/ | verified/ | 理由 |
+|---|---|---|---|
+| I2C | Arduino Wire (`TwoWire*`) | ESP-IDF レガシー I2C API (`driver/i2c.h`) | esp_camera の SCCB が Wire と共存不可のため |
+| LCD | TFT_eSPI | LovyanGFX | verified/ はタッチ統合が必要だったため |
+| Arduino Core | v2.x (`ledcSetup`/`ledcAttachPin`) | v3.x (`ledcAttach`) | verified/ は最新プラットフォームで検証 |
+
+doc/ と sample/ では Arduino Wire を標準として記載する。ESP-IDF I2C API は ESP32 + esp_camera 使用時の例外対応として扱う。
 
 ## ビルドコマンド
 
@@ -106,7 +116,7 @@ DevContainer内でVSCode + LaTeX Workshopを使いコンパイル。
 ### 通信バスパターン（SPI / I2C）
 
 - **SPI**: `SPIClass` インスタンスを `main.cpp` のグローバルスコープで生成し、`setup()` 内で `bus.begin()` を呼ぶ。バスポインタはコンストラクタ引数でモジュールに渡す。`beginTransaction()` / `endTransaction()` で排他制御する
-- **I2C**: Arduino Wire ライブラリは使用しない（ESP-IDF 5.x で esp_camera SCCB のレガシー I2C ドライバと共存不可）。代わりに ESP-IDF レガシー I2C API（`driver/i2c.h`）を使用する。`setup()` 内で `i2c_param_config()` + `i2c_driver_install()` を呼び、I2C ポート番号（`uint8_t`）をコンストラクタ引数でモジュールに渡す
+- **I2C**: Arduino Wire ライブラリ（`TwoWire*`）を標準とする。`TwoWire` インスタンスを `main.cpp` のグローバルスコープで生成し、`setup()` 内で `wire.begin(SDA, SCL)` を呼ぶ。バスポインタはコンストラクタ引数でモジュールに渡す。ただし ESP32 + esp_camera 使用時は Wire が SCCB のレガシー I2C ドライバと共存不可のため、ESP-IDF レガシー I2C API（`driver/i2c.h`）を使用する（verified/ がこのケース）
 - バスポインタ/ポート番号はConfig構造体に含めず、コンストラクタの引数でモジュールに渡す
 - モジュールの `init()` でバス初期化を呼ばない（CSピン設定等のみ）
 

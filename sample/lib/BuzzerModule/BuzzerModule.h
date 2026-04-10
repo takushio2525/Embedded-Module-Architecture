@@ -33,6 +33,6 @@ private:
 public:
     BuzzerModule(const BuzzerConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
     void deinit() override;
 };

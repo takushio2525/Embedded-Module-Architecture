@@ -35,7 +35,7 @@ private:
 public:
     DriveMotorModule(const DriveMotorConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 
     // ChassisModuleなど外部から直接制御する用（SystemData非経由）
     void drive(float power);

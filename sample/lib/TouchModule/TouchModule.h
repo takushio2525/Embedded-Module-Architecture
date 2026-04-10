@@ -26,7 +26,7 @@ class TouchModule : public IModule {
 public:
     TouchModule(const TouchConfig& config, TFT_eSPI* tft);
     bool init()                   override;
-    void update(SystemData& data) override;
+    void updateInput(SystemData& data) override;
 
 private:
     TouchConfig _config;

@@ -50,11 +50,11 @@ class CameraModule : public IModule {
 public:
     explicit CameraModule(const CameraConfig& config);
     bool init()                    override;
-    void update(SystemData& data)  override;
+    void updateInput(SystemData& data)  override;
     void deinit()                  override;
 
     // フレームバッファへのアクセス（logicフェーズでのみ使用）
-    // 戻り値: フレームバッファポインタ（次のupdate()呼び出しまで有効）
+    // 戻り値: フレームバッファポインタ（次のupdateInput()呼び出しまで有効）
     // 使用後は releaseFrame() を呼ぶこと
     const uint8_t* getFrameBuffer() const;
     void           releaseFrame();

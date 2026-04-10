@@ -11,7 +11,7 @@ bool TouchModule::init() {
     return true;
 }
 
-void TouchModule::update(SystemData& data) {
+void TouchModule::updateInput(SystemData& data) {
     uint16_t x, y;
     data.touch.touchPressed = _tft->getTouch(&x, &y);
     if (data.touch.touchPressed) {

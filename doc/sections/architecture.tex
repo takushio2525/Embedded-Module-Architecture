@@ -67,29 +67,23 @@ void applyPattern(SystemData& data) {
 void setup() {
     Serial.begin(115200);
 
-    // 全入力モジュールを初期化（失敗時はリトライ後に無効化）
+    // 全モジュールを初期化（両配列に含まれるモジュールの重複initを避ける）
+    IModule* allModules[] = {
+        &tempModule, &swModule,
+        &ledModule, &motorModule,
+    };
+    const int ALL_COUNT = sizeof(allModules) / sizeof(allModules[0]);
+
     const int MAX_RETRY = 3;
-    for (int i = 0; i < INPUT_COUNT; i++) {
+    for (int i = 0; i < ALL_COUNT; i++) {
         bool success = false;
         for (int r = 0; r < MAX_RETRY; r++) {
-            if (inputModules[i]->init()) { success = true; break; }
+            if (allModules[i]->init()) { success = true; break; }
             delay(100);
         }
         if (!success) {
-            Serial.printf("Input Module %d: init failed, disabled\n", i);
-            inputModules[i]->enabled = false;
-        }
-    }
-    // 全出力モジュールを初期化
-    for (int i = 0; i < OUTPUT_COUNT; i++) {
-        bool success = false;
-        for (int r = 0; r < MAX_RETRY; r++) {
-            if (outputModules[i]->init()) { success = true; break; }
-            delay(100);
-        }
-        if (!success) {
-            Serial.printf("Output Module %d: init failed, disabled\n", i);
-            outputModules[i]->enabled = false;
+            Serial.printf("[System] Module %d: init failed, disabled\n", i);
+            allModules[i]->enabled = false;
         }
     }
 }
@@ -98,7 +92,7 @@ void loop() {
     // 1. 入力フェーズ：センサー値をSystemDataに書き込む
     for (int i = 0; i < INPUT_COUNT; i++) {
         if (inputModules[i]->enabled) {
-            inputModules[i]->update(systemData);
+            inputModules[i]->updateInput(systemData);
         }
     }
     // 2. ロジックフェーズ：入力→出力のSystemData変換
@@ -106,7 +100,7 @@ void loop() {
     // 3. 出力フェーズ：SystemDataの値に従いハードウェア制御
     for (int i = 0; i < OUTPUT_COUNT; i++) {
         if (outputModules[i]->enabled) {
-            outputModules[i]->update(systemData);
+            outputModules[i]->updateOutput(systemData);
         }
     }
 }
@@ -180,7 +174,7 @@ private:
 public:
     LedModule(const LedConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 };
 
 // --- LedModule.cpp（実装：SystemData.hで完全な定義を取得） ---
@@ -195,7 +189,7 @@ bool LedModule::init() {
     return true;
 }
 
-void LedModule::update(SystemData& data) {
+void LedModule::updateOutput(SystemData& data) {
     digitalWrite(_config.ledPin, data.led.state ? HIGH : LOW);
 }
 \end{lstlisting}
@@ -282,7 +276,7 @@ private:
 public:
     LedModule(const LedConfig& config);  // 実装は.cppで
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 };
 
 // ProjectConfig.h 内 — プロジェクトのピンアサインを集約
@@ -354,7 +348,7 @@ public:
         return true;
     }
 
-    void update(SystemData& data) override {
+    void updateInput(SystemData& data) override {
         if (_readTimer.getNowTime() >= _config.interval) {
             _readTimer.setTime();
             // beginTransaction/endTransactionで排他制御
@@ -407,7 +401,7 @@ public:
         return true;
     }
 
-    void update(SystemData& data) override {
+    void updateInput(SystemData& data) override {
         if (_readTimer.getNowTime() >= _config.interval) {
             _readTimer.setTime();
             _wire->beginTransmission(_config.address);
@@ -504,7 +498,7 @@ const BadSpiConfig BAD_CONFIG = { .spi = &spi, .csPin = 5 };
 \subsubsection{Data構造体のデフォルト値ルール}
 
 各\texttt{\{Module\}Data}構造体のメンバには、必ずデフォルト値を明示する。
-これにより、\texttt{update()}が1度も呼ばれていない状態でも安全にデータを参照できる。
+これにより、\texttt{updateInput()}/\texttt{updateOutput()}が1度も呼ばれていない状態でも安全にデータを参照できる。
 
 \begin{funcblock}{デフォルト値の指針}
 \begin{itemize}
@@ -516,19 +510,19 @@ const BadSpiConfig BAD_CONFIG = { .spi = &spi, .csPin = 5 };
 
 \subsubsection{データアクセスルール}
 
-\texttt{update()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスする。
+\texttt{updateInput()}/\texttt{updateOutput()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスする。
 他モジュールのサブ構造体への読み書きは\textbf{禁止}とする。
 モジュール間のデータ連携が必要な場合は、必ず\textbf{ロジックフェーズ}を経由する。
 
 \begin{lstlisting}[style=cppstyle, caption={データアクセスルールの例}]
 // OK: 自モジュールのサブ構造体のみアクセス
-void TempSensorModule::update(SystemData& data) {
+void TempSensorModule::updateInput(SystemData& data) {
     data.temp.temperature = analogRead(_config.tempPin);
     data.temp.isValid = true;
 }
 
 // NG: 他モジュールのサブ構造体にアクセスしている
-void TempSensorModule::update(SystemData& data) {
+void TempSensorModule::updateInput(SystemData& data) {
     data.temp.temperature = analogRead(_config.tempPin);
     data.led.state = true;  // 禁止：LEDはロジックフェーズで制御する
 }
@@ -547,8 +541,8 @@ void TempSensorModule::update(SystemData& data) {
 \texttt{IModule}の\texttt{enabled}フラグにより、実行時のモジュール有効・無効切り替えを実現する。
 
 \begin{itemize}
-    \item \texttt{enabled = true}（デフォルト）: 通常通り\texttt{update()}が呼ばれる
-    \item \texttt{enabled = false}: ループ内で\texttt{update()}がスキップされる
+    \item \texttt{enabled = true}（デフォルト）: 通常通り\texttt{updateInput()}/\texttt{updateOutput()}が呼ばれる
+    \item \texttt{enabled = false}: ループ内で\texttt{updateInput()}/\texttt{updateOutput()}がスキップされる
     \item BLE等の外部通信からモジュールの\texttt{enabled}を切り替えることで、動的な制御が可能
 \end{itemize}
 
@@ -556,13 +550,13 @@ void TempSensorModule::update(SystemData& data) {
 void loop() {
     for (int i = 0; i < INPUT_COUNT; i++) {
         if (inputModules[i]->enabled) {
-            inputModules[i]->update(systemData);
+            inputModules[i]->updateInput(systemData);
         }
     }
     applyPattern(systemData);
     for (int i = 0; i < OUTPUT_COUNT; i++) {
         if (outputModules[i]->enabled) {
-            outputModules[i]->update(systemData);
+            outputModules[i]->updateOutput(systemData);
         }
     }
 }
@@ -593,12 +587,12 @@ for (int i = 0; i < INPUT_COUNT; i++) {
 }
 \end{lstlisting}
 
-\paragraph{update()エラー時}
+\paragraph{updateInput()/updateOutput()エラー時}
 Data構造体内のエラーフラグ（\texttt{hasError}等）を\texttt{true}に設定する。
-モジュールは次の\texttt{update()}サイクルで再試行し、成功時にモジュール自身がエラーフラグを\texttt{false}にクリアする。
+モジュールは次の\texttt{updateInput()}/\texttt{updateOutput()}サイクルで再試行し、成功時にモジュール自身がエラーフラグを\texttt{false}にクリアする。
 
-\begin{lstlisting}[style=cppstyle, caption={update()エラーフラグの運用例}]
-void I2cSensorModule::update(SystemData& data) {
+\begin{lstlisting}[style=cppstyle, caption={updateInput()エラーフラグの運用例}]
+void I2cSensorModule::updateInput(SystemData& data) {
     if (_readTimer.getNowTime() >= _config.interval) {
         _readTimer.setTime();
         if (readSensor()) {
@@ -675,7 +669,7 @@ Config構造体は\textbf{初期値}として扱う。
 Configの変更（セッター呼び出し）は\textbf{ロジックフェーズでのみ}行う。
 BLE等の外部からの変更要求は\texttt{SystemData}経由でロジックフェーズに渡し、
 ロジックフェーズ内でセッターを呼び出す。
-これにより、\texttt{update()}実行中にConfigが変わるデータ不整合を防ぐ。
+これにより、\texttt{updateInput()}/\texttt{updateOutput()}実行中にConfigが変わるデータ不整合を防ぐ。
 \end{cautionbox}
 
 \begin{lstlisting}[style=cppstyle, caption={Config値の実行時変更例}]
@@ -691,8 +685,8 @@ public:
         _config.interval = interval;
     }
 
-    // update()は変更後の値を使用する
-    void update(SystemData& data) override {
+    // updateInput()は変更後の値を使用する
+    void updateInput(SystemData& data) override {
         if (_readTimer.getNowTime() >= _config.interval) {
             // ...
         }

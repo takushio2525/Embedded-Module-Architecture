@@ -25,7 +25,7 @@ bool EncoderModule::init() {
     return true;
 }
 
-void EncoderModule::update(SystemData& data) {
+void EncoderModule::updateInput(SystemData& data) {
     // volatile変数を一度だけ読み取り（割り込みとの競合を最小化）
     int32_t currentCount = _isrCount;
 

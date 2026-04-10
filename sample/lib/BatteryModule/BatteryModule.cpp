@@ -12,7 +12,7 @@ bool BatteryModule::init() {
     return true;
 }
 
-void BatteryModule::update(SystemData& data) {
+void BatteryModule::updateInput(SystemData& data) {
     if (_sampleTimer.getNowTime() < _config.sampleIntervalMs) {
         return;
     }

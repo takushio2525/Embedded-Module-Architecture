@@ -17,7 +17,7 @@ bool BuzzerModule::init() {
     return true;
 }
 
-void BuzzerModule::update(SystemData& data) {
+void BuzzerModule::updateOutput(SystemData& data) {
     // 再生リクエスト処理
     if (data.buzzer.requestPlay) {
         data.buzzer.requestPlay = false;

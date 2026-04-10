@@ -27,5 +27,6 @@
 2.8 & 2026-03-17 & Shiozawa & 関連ドキュメントの相互参照を概要に追加。日付・Rev番号を全ドキュメントと同期 \\
 2.9 & 2026-03-18 & Shiozawa & ESP32固有の記述をArduino/組み込み汎用に変更。サブタイトル・表紙・概要・背景セクション等を汎用化 \\
 3.0 & 2026-03-22 & Shiozawa & ピン定義ルールを追加。モジュール固有ピンはConfig構造体リテラルに直書きし、constexpr単体定数を廃止。共有バスピンのみ単体定数を許可 \\
+3.1 & 2026-04-10 & Shiozawa & 検証済みプロジェクト（verified/）のフィードバック反映。IModuleの\texttt{update()}を\texttt{updateInput()}/\texttt{updateOutput()}に分離。入出力分離ルールを「別モジュール」から「単一モジュール両方オーバーライド」に変更。setup()の重複init回避パターンを追加。sample/の全モジュール・doc/の全コード例を新アーキテクチャに統一 \\
 \bottomrule
 \end{tabularx}

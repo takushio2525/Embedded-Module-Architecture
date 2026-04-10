@@ -24,5 +24,5 @@ private:
 public:
     LedModule(const LedConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 };

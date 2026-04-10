@@ -20,9 +20,11 @@
     ハードウェアの初期化、ピンモード設定、ModuleTimerの\texttt{setTime()}呼び出しを行う。
     失敗時は\texttt{false}を返し、呼び出し側でエラーハンドリングを行う。
 
-    \item \textbf{update()ループ}（\texttt{loop()}内） \\
+    \item \textbf{updateInput()/updateOutput()ループ}（\texttt{loop()}内） \\
     毎ループ呼び出される。\texttt{SystemData}の参照を受け取り、ModuleTimerの\texttt{getNowTime()}で経過時間を確認し、
-    必要なタイミングでのみ実処理を実行する。
+    必要なタイミングでのみ実処理を実行する。入力モジュールは\texttt{updateInput()}のみ、
+    出力モジュールは\texttt{updateOutput()}のみをオーバーライドする。
+    入出力両方を持つモジュールは両方をオーバーライドする。
 
     \item \textbf{deinit()呼び出し}（必要時） \\
     スリープ突入前やモジュール停止時に呼び出す。ペリフェラルの解放、GPIO状態のリセット等のクリーンアップ処理を行う。
@@ -35,18 +37,18 @@
 この順序を守ることで、モジュール間の暗黙的な依存関係を排除し、各モジュールの独立性を保つ。
 
 \begin{enumerate}
-    \item \textbf{入力フェーズ} — センサー・スイッチ等の入力系モジュールの\texttt{update()}を実行。
+    \item \textbf{入力フェーズ} — 全\texttt{inputModules[]}の\texttt{updateInput()}を実行。
     ハードウェアから値を読み取り、自身の\texttt{SystemData}サブ構造体に書き込む。
     \item \textbf{ロジックフェーズ} — 入力系の\texttt{SystemData}を読み取り、
     出力系の\texttt{SystemData}を書き換える制御ロジックを実行する。
-    \item \textbf{出力フェーズ} — LED・モーター等の出力系モジュールの\texttt{update()}を実行。
+    \item \textbf{出力フェーズ} — 全\texttt{outputModules[]}の\texttt{updateOutput()}を実行。
     自身の\texttt{SystemData}サブ構造体の値に従ってハードウェアを制御する。
 \end{enumerate}
 
 \begin{notebox}[3フェーズの原則]
 各モジュールは「それ単体で動作する道具」である。\\
 入力モジュールは「値を読んでSystemDataに書く」だけ、出力モジュールは「SystemDataの値に従って動作する」だけ。\\
-モジュールのupdate()内で他モジュールのSystemDataを参照してはならない。\\
+モジュールの\texttt{updateInput()}/\texttt{updateOutput()}内で他モジュールのSystemDataを参照してはならない。\\
 「何をどう制御するか」の判断はロジックフェーズの責務である。
 \end{notebox}
 
@@ -73,7 +75,7 @@ void loop() {
     // 1. 入力フェーズ
     for (int i = 0; i < INPUT_COUNT; i++) {
         if (inputModules[i]->enabled) {
-            inputModules[i]->update(systemData);
+            inputModules[i]->updateInput(systemData);
         }
     }
     // 2. ロジックフェーズ
@@ -81,7 +83,7 @@ void loop() {
     // 3. 出力フェーズ
     for (int i = 0; i < OUTPUT_COUNT; i++) {
         if (outputModules[i]->enabled) {
-            outputModules[i]->update(systemData);
+            outputModules[i]->updateOutput(systemData);
         }
     }
 }
@@ -89,18 +91,35 @@ void loop() {
 
 \subsubsection{入出力分離ルール}
 
-1つのデバイスが入力と出力の両方の機能を持つ場合、それぞれを\textbf{別モジュールとして実装}する。
+1つのデバイスが入力と出力の両方の機能を持つ場合、\textbf{1つのモジュールで\texttt{updateInput()}と\texttt{updateOutput()}の両方をオーバーライド}し、
+\texttt{inputModules[]}と\texttt{outputModules[]}の\textbf{両方の配列に含める}。
 
 \begin{tabularx}{\textwidth}{l l l}
 \toprule
-\textbf{デバイス} & \textbf{入力モジュール} & \textbf{出力モジュール} \\
+\textbf{デバイス} & \textbf{updateInput()の処理} & \textbf{updateOutput()の処理} \\
 \midrule
-エンコーダ付きモーター & EncoderModule（回転数取得） & MotorModule（モーター制御） \\
-タッチ＋振動デバイス & TouchModule（タッチ検出） & HapticModule（振動出力） \\
+BLE通信 & データ受信（内部バッファ→SystemData） & データ送信（SystemData→BLE） \\
+LCD＋タッチ & タッチ座標取得 & 画面描画 \\
 \bottomrule
 \end{tabularx}
 
-これにより、各モジュールの責務が「入力のみ」または「出力のみ」に限定され、モジュールの独立性が保たれる。
+\begin{lstlisting}[style=cppstyle, caption={入出力モジュールの配列配置}]
+// 入出力モジュールは両方の配列に含める
+IModule* inputModules[] = {
+    &bleModule,    // BLE受信を先に反映
+    &touchModule,
+    &mpu6500Module,
+};
+
+IModule* outputModules[] = {
+    &ledModule,
+    &tftModule,
+    &bleModule,    // 全データ確定後にBLE送信
+};
+\end{lstlisting}
+
+メソッド分離により、入力処理と出力処理が構造的に分かれるため、1つのモジュールが両方の責務を持っても安全に動作する。
+\texttt{setup()}では全ユニークモジュールを1回だけ\texttt{init()}する（両配列に含まれるモジュールの重複initを避ける）。
 
 \subsubsection{アンチパターン}
 
@@ -108,7 +127,7 @@ void loop() {
 
 \begin{lstlisting}[style=cppstyle, caption={アンチパターン：出力モジュール内でロジックを持つ（禁止）}]
 // NG: LEDモジュール内で温度を判断している
-void LedModule::update(SystemData& data) {
+void LedModule::updateOutput(SystemData& data) {
     // 他モジュールのSystemDataを読んではならない
     if (data.temp.temperature > 30.0) {
         data.led.state = true;
@@ -119,7 +138,7 @@ void LedModule::update(SystemData& data) {
 
 \begin{lstlisting}[style=cppstyle, caption={正しい実装：出力モジュールは自身のSystemDataのみ参照}]
 // OK: LEDモジュールは自身のデータだけを見る
-void LedModule::update(SystemData& data) {
+void LedModule::updateOutput(SystemData& data) {
     // 自身のサブ構造体の値に従って動作するだけ
     digitalWrite(_config.ledPin, data.led.state);
 }
@@ -160,7 +179,7 @@ WiFi接続のタイムアウト \\
 \begin{lstlisting}[style=cppstyle, caption={3フェーズモデルによるデータフロー}]
 // --- 入力フェーズ ---
 // 温度センサーモジュール：ハードウェアから値を読み、自身のデータに書く
-void TempSensorModule::update(SystemData& data) {
+void TempSensorModule::updateInput(SystemData& data) {
     if (_readTimer.getNowTime() >= _config.interval) {
         _readTimer.setTime();
         data.temp.temperature = analogRead(_config.tempPin);
@@ -180,7 +199,7 @@ void applyPattern(SystemData& data) {
 
 // --- 出力フェーズ ---
 // LEDモジュール：自身のデータに従って出力するだけ
-void LedModule::update(SystemData& data) {
+void LedModule::updateOutput(SystemData& data) {
     digitalWrite(_config.ledPin, data.led.state);
 }
 \end{lstlisting}
@@ -222,7 +241,7 @@ void loop() {
         // 1. 入力フェーズ
         for (int i = 0; i < INPUT_COUNT; i++) {
             if (inputModules[i]->enabled) {
-                inputModules[i]->update(systemData);
+                inputModules[i]->updateInput(systemData);
             }
         }
         // 2. ロジックフェーズ
@@ -230,7 +249,7 @@ void loop() {
         // 3. 出力フェーズ
         for (int i = 0; i < OUTPUT_COUNT; i++) {
             if (outputModules[i]->enabled) {
-                outputModules[i]->update(systemData);
+                outputModules[i]->updateOutput(systemData);
             }
         }
     }
@@ -268,8 +287,8 @@ public:
         _dataReceived = true;             // フラグを立てる
     }
 
-    // update()は3フェーズループ内で呼ばれる
-    void update(SystemData& sysData) override {
+    // updateInput()は入力フェーズで呼ばれる
+    void updateInput(SystemData& sysData) override {
         if (_dataReceived) {
             // フラグが立っていたらバッファからSystemDataへコピー
             memcpy(sysData.ble.rxData, _rxBuffer, _rxLength);
@@ -278,7 +297,15 @@ public:
             _dataReceived = false;        // フラグをクリア
         }
     }
-    // ...
+
+    // updateOutput()は出力フェーズで呼ばれる
+    void updateOutput(SystemData& sysData) override {
+        if (sysData.ble.sendRequest) {
+            // SystemDataの送信データをBLEで送信
+            // ...
+            sysData.ble.sendRequest = false;
+        }
+    }
 };
 \end{lstlisting}
 
@@ -305,8 +332,8 @@ void onBleReceive(SystemData& data, uint8_t* payload) {
 \subsection{内部バッファパターン}
 
 カメラ等の重い処理を持つモジュールでは、メインループで取得したデータを
-クラス内バッファに保存し、\texttt{update()}呼び出し時に\texttt{SystemData}へコピーする。
-これにより、\texttt{update()}自体は軽量な処理に留まる。
+クラス内バッファに保存し、\texttt{updateInput()}呼び出し時に\texttt{SystemData}へコピーする。
+これにより、\texttt{updateInput()}自体は軽量な処理に留まる。
 
 \begin{lstlisting}[style=cppstyle, caption={内部バッファパターンの実装例}]
 // CameraModule.h
@@ -346,8 +373,8 @@ public:
         }
     }
 
-    // update()は軽量：バッファからSystemDataへコピーするだけ
-    void update(SystemData& data) override {
+    // updateInput()は軽量：バッファからSystemDataへコピーするだけ
+    void updateInput(SystemData& data) override {
         if (_bufferReady) {
             data.camera.frame = _buffer;
             data.camera.frameSize = _bufferSize;
@@ -362,55 +389,82 @@ public:
 \begin{enumerate}
     \item \texttt{loop()}のメイン処理で\texttt{capture()}を呼び、重い処理を実行
     \item 処理完了時にクラス内バッファにデータを保存し、\texttt{\_bufferReady = true}にセット
-    \item タイマー割り込みの3フェーズループで\texttt{update()}が呼ばれる
-    \item \texttt{update()}はバッファから\texttt{SystemData}へコピーするだけ（軽量）
+    \item タイマー割り込みの3フェーズループで\texttt{updateInput()}が呼ばれる
+    \item \texttt{updateInput()}はバッファから\texttt{SystemData}へコピーするだけ（軽量）
 \end{enumerate}
 \end{funcblock}
 
 \subsection{モジュール実装テンプレート}
 
-新規モジュールを追加する際の標準テンプレート：
+新規モジュールを追加する際の標準テンプレート。入力専用・出力専用・入出力の3パターンを示す。
 
-\begin{lstlisting}[style=cppstyle, caption={モジュール実装テンプレート}]
-// ExampleModule.h
+\begin{lstlisting}[style=cppstyle, caption={入力モジュールテンプレート}]
+// SensorModule.h
 #pragma once
 #include "IModule.h"
 #include "ModuleTimer.h"
 
-// --- Config構造体（ピンアサイン・設定） ---
-struct ExampleConfig {
-    uint8_t inputPin;         // 入力ピン
-    unsigned long interval;   // 更新間隔(ms)
+struct SensorConfig {
+    uint8_t inputPin;
+    unsigned long interval;   // 読み取り間隔(ms)
 };
 
-// --- Data構造体（メンバにデフォルト値を明示） ---
-struct ExampleData {
+struct SensorData {
     int value = 0;
-    bool hasError = false;
+    bool isValid = false;
 };
 
-// IModule を継承
-class ExampleModule : public IModule {
+class SensorModule : public IModule {
 private:
-    ExampleConfig _config;     // Configをメンバとして保持
-    ModuleTimer _updateTimer;  // タイマー
-
+    SensorConfig _config;
+    ModuleTimer _readTimer;
 public:
-    // コンストラクタ: Config構造体をconst参照で受け取る
-    ExampleModule(const ExampleConfig& config)
+    SensorModule(const SensorConfig& config)
         : _config(config) {}
 
     bool init() override {
         pinMode(_config.inputPin, INPUT);
-        _updateTimer.setTime();  // タイマー初期化
+        _readTimer.setTime();
         return true;
     }
 
-    void update(SystemData& data) override {
-        if (_updateTimer.getNowTime() >= _config.interval) {
-            _updateTimer.setTime();
-            // data.example.value = ...;  // 更新処理
+    void updateInput(SystemData& data) override {
+        if (_readTimer.getNowTime() >= _config.interval) {
+            _readTimer.setTime();
+            data.sensor.value = analogRead(_config.inputPin);
+            data.sensor.isValid = true;
         }
+    }
+};
+\end{lstlisting}
+
+\begin{lstlisting}[style=cppstyle, caption={出力モジュールテンプレート}]
+// ActuatorModule.h
+#pragma once
+#include "IModule.h"
+
+struct ActuatorConfig {
+    uint8_t outputPin;
+};
+
+struct ActuatorData {
+    int power = 0;
+};
+
+class ActuatorModule : public IModule {
+private:
+    ActuatorConfig _config;
+public:
+    ActuatorModule(const ActuatorConfig& config)
+        : _config(config) {}
+
+    bool init() override {
+        pinMode(_config.outputPin, OUTPUT);
+        return true;
+    }
+
+    void updateOutput(SystemData& data) override {
+        analogWrite(_config.outputPin, data.actuator.power);
     }
 };
 \end{lstlisting}

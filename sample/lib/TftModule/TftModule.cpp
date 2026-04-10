@@ -38,7 +38,7 @@ void TftModule::deinit() {
     Serial.println("[TFT] deinit");
 }
 
-void TftModule::update(SystemData& data) {
+void TftModule::updateOutput(SystemData& data) {
     if (!_initialized) return;
 
     if (_updateTimer.getNowTime() >= _config.updateIntervalMs) {

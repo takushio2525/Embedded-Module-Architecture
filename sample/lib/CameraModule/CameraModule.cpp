@@ -61,7 +61,7 @@ void CameraModule::deinit() {
     Serial.println("[Camera] deinit");
 }
 
-void CameraModule::update(SystemData& data) {
+void CameraModule::updateInput(SystemData& data) {
     // 前フレームを解放
     releaseFrame();
 

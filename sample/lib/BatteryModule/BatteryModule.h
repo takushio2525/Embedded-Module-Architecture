@@ -46,5 +46,5 @@ private:
 public:
     BatteryModule(const BatteryConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateInput(SystemData& data) override;
 };

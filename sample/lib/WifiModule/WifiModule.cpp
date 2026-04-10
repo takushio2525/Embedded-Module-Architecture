@@ -12,21 +12,8 @@ bool WifiModule::init() {
     return true;
 }
 
-void WifiModule::update(SystemData& data) {
-    // ロジックフェーズからのリクエスト処理
-    if (data.wifi.requestConnect) {
-        data.wifi.requestConnect = false;
-        if (_state == WifiState::DISCONNECTED || _state == WifiState::FAILED) {
-            _retryCount = 0;
-            _startConnect();
-        }
-    }
-    if (data.wifi.requestDisconnect) {
-        data.wifi.requestDisconnect = false;
-        _disconnect();
-    }
-
-    // ステートマシン
+void WifiModule::updateInput(SystemData& data) {
+    // ステートマシン（WiFi状態の監視・自動再接続）
     switch (_state) {
         case WifiState::DISCONNECTED:
             // 何もしない（接続リクエスト待ち）
@@ -66,7 +53,7 @@ void WifiModule::update(SystemData& data) {
             break;
 
         case WifiState::FAILED:
-            // 接続リクエストで復帰可能（上部で処理済み）
+            // 接続リクエストで復帰可能（updateOutputで処理）
             break;
     }
 
@@ -87,6 +74,21 @@ void WifiModule::update(SystemData& data) {
     } else {
         data.wifi.rssi    = 0;
         data.wifi.localIp = 0;
+    }
+}
+
+void WifiModule::updateOutput(SystemData& data) {
+    // ロジックフェーズからのリクエスト処理
+    if (data.wifi.requestConnect) {
+        data.wifi.requestConnect = false;
+        if (_state == WifiState::DISCONNECTED || _state == WifiState::FAILED) {
+            _retryCount = 0;
+            _startConnect();
+        }
+    }
+    if (data.wifi.requestDisconnect) {
+        data.wifi.requestDisconnect = false;
+        _disconnect();
     }
 }
 

@@ -84,7 +84,7 @@ bool BleModule::init() {
     return true;
 }
 
-void BleModule::update(SystemData& data) {
+void BleModule::updateInput(SystemData& data) {
     // 接続状態をSystemDataに反映
     data.ble.connected = _clientConnected;
 
@@ -95,7 +95,9 @@ void BleModule::update(SystemData& data) {
         data.ble.newDataIn = true;
         _dataReceived = false;  // フラグクリア
     }
+}
 
+void BleModule::updateOutput(SystemData& data) {
     // 送信リクエスト処理
     if (data.ble.sendRequest && _clientConnected && _txChar) {
         _txChar->setValue(data.ble.txData, data.ble.txLength);

@@ -11,6 +11,6 @@ bool LedModule::init() {
     return true;
 }
 
-void LedModule::update(SystemData& data) {
+void LedModule::updateOutput(SystemData& data) {
     digitalWrite(_config.ledPin, data.led.state ? HIGH : LOW);
 }

@@ -17,7 +17,7 @@ bool ButtonModule::init() {
     return true;
 }
 
-void ButtonModule::update(SystemData& data) {
+void ButtonModule::updateInput(SystemData& data) {
     // 生の入力値を読み取り、activeLowの場合は反転
     bool rawPressed = digitalRead(_config.pin);
     if (_config.activeLow) {

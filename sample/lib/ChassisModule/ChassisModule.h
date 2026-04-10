@@ -28,7 +28,7 @@ struct ChassisData {
     float lateralSpeed  = 0.0f;  // 横移動速度 [-100 ~ 100]（正:右, 負:左）
     float rotationSpeed = 0.0f;  // 回転速度 [-100 ~ 100]（正:右回転, 負:左回転）
 
-    // 出力（update後に更新、デバッグ用）
+    // 出力（updateOutput後に更新、デバッグ用）
     float motorOutputs[CHASSIS_MOTOR_COUNT] = {};  // 各モーター実出力値
 };
 
@@ -50,6 +50,6 @@ private:
 public:
     ChassisModule(const ChassisConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
     void deinit() override;
 };

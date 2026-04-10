@@ -60,7 +60,7 @@ bool ChassisModule::init() {
 
 // ===== 更新 =====
 
-void ChassisModule::update(SystemData& data) {
+void ChassisModule::updateOutput(SystemData& data) {
     // 入力速度を取得
     float speeds[3] = {
         data.chassis.forwardSpeed,

@@ -35,15 +35,16 @@ ChassisModule  chassisModule(CHASSIS_CONFIG);
 BuzzerModule   buzzerModule(BUZZER_CONFIG);
 
 // モジュール配列
+// 配列の並び順 = フェーズ内の実行順序
 IModule* inputModules[] = {
+    &bleModule,       // BLE受信を先に反映
+    &wifiModule,      // WiFi状態監視
     &touchModule,
     &mpu6500Module,
     &cameraModule,
     &buttonModule,
     &batteryModule,
     &encoderModule,
-    &bleModule,
-    &wifiModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
@@ -53,6 +54,8 @@ IModule* outputModules[] = {
     &servoModule,
     &chassisModule,
     &buzzerModule,
+    &bleModule,       // 全データ確定後にBLE送信
+    &wifiModule,      // 接続/切断リクエスト処理
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
@@ -129,9 +132,16 @@ void setup() {
     mpuWire.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
     tftDriver.init();  // TFT_eSPIドライバ初期化（TouchModuleも共有するため先に実行）
 
-    // モジュール初期化
-    initModuleArray(inputModules,  INPUT_COUNT,  "Input");
-    initModuleArray(outputModules, OUTPUT_COUNT, "Output");
+    // モジュール初期化（両配列に含まれるモジュールの重複initを避ける）
+    IModule* allModules[] = {
+        &touchModule, &mpu6500Module, &cameraModule,
+        &buttonModule, &batteryModule, &encoderModule,
+        &bleModule, &wifiModule,
+        &ledModule, &tftModule, &servoModule,
+        &chassisModule, &buzzerModule,
+    };
+    const int ALL_COUNT = sizeof(allModules) / sizeof(allModules[0]);
+    initModuleArray(allModules, ALL_COUNT, "Module");
 
     blinkTimer.setTime();
     Serial.println("[System] 起動完了");
@@ -143,20 +153,20 @@ void loop() {
     // 1. 入力フェーズ
     for (int i = 0; i < INPUT_COUNT; i++) {
         if (inputModules[i]->enabled) {
-            inputModules[i]->update(systemData);
+            inputModules[i]->updateInput(systemData);
         }
     }
 
     // 2. ロジックフェーズ
     applyPattern(systemData);
 
-    // カメラフレームバッファは logicフェーズ終了時に解放
-    cameraModule.releaseFrame();
-
     // 3. 出力フェーズ
     for (int i = 0; i < OUTPUT_COUNT; i++) {
         if (outputModules[i]->enabled) {
-            outputModules[i]->update(systemData);
+            outputModules[i]->updateOutput(systemData);
         }
     }
+
+    // カメラフレームバッファは出力フェーズ後に解放（描画で使用するため）
+    cameraModule.releaseFrame();
 }

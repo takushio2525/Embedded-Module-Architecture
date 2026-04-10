@@ -27,16 +27,20 @@ public:
     // 戻り値: true=成功, false=失敗
     virtual bool init() = 0;
 
-    // モジュールの更新（毎ループ呼び出される）
-    // 引数: data - プロジェクト共有データへの参照
-    virtual void update(SystemData& data) = 0;
+    // 入力フェーズ更新（センサー読み取り等）
+    // 入力を持つモジュールのみオーバーライドする
+    virtual void updateInput(SystemData& data) {}
+
+    // 出力フェーズ更新（アクチュエータ制御・画面描画等）
+    // 出力を持つモジュールのみオーバーライドする
+    virtual void updateOutput(SystemData& data) {}
 
     // モジュールの終了処理（リソース解放）
     // デフォルトは空実装。解放が必要なモジュールのみオーバーライド
     virtual void deinit() {}
 
     // 動的有効/無効化フラグ
-    // false の場合、ループ内で update() がスキップされる
+    // false の場合、ループ内で updateInput()/updateOutput() がスキップされる
     bool enabled = true;
 };
 \end{lstlisting}
@@ -44,12 +48,12 @@ public:
 \begin{notebox}[前方宣言によるプロジェクト非依存性]
 \texttt{IModule.h}は\texttt{SystemData}を前方宣言のみで参照しているため、
 \texttt{SystemData.h}を\texttt{\#include}する必要がない。\\
-\texttt{update()}の引数は参照型（\texttt{SystemData\&}）であるため、前方宣言だけで十分であり、
+\texttt{updateInput()}/\texttt{updateOutput()}の引数は参照型（\texttt{SystemData\&}）であるため、前方宣言だけで十分であり、
 どのプロジェクトにもそのままコピーして流用できる。
 \end{notebox}
 
 \begin{cautionbox}[データアクセスルール]
-\texttt{update()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスすること。
+\texttt{updateInput()}/\texttt{updateOutput()}内では、\textbf{自モジュールのサブ構造体のみ}にアクセスすること。
 他モジュールのサブ構造体への読み書きは禁止とする。
 モジュール間のデータ連携が必要な場合は、必ずロジックフェーズを経由する。
 \end{cautionbox}
@@ -73,7 +77,7 @@ public:
 \bottomrule
 \end{tabularx}
 
-\subsubsection{update(SystemData\& data)}
+\subsubsection{updateInput(SystemData\& data)}
 
 \begin{tabularx}{\textwidth}{l X}
 \toprule
@@ -81,11 +85,41 @@ public:
 \midrule
 引数 & \texttt{SystemData\&} — プロジェクト共有データへの参照（nullにならない） \\
 戻り値 & \texttt{void} \\
-呼び出しタイミング & \texttt{loop()}内で毎ループ呼び出される \\
-責務 & センサー読み取り、出力制御、共有データの更新 \\
+呼び出しタイミング & \texttt{loop()}内の入力フェーズで毎ループ呼び出される \\
+責務 & センサー読み取り、外部データ受信、自身のData構造体への書き込み \\
+デフォルト実装 & 空（何もしない）。入力を持つモジュールのみオーバーライドする \\
 エラー時 & 共有データ内のサブ構造体にエラーフラグを設定 \\
 \bottomrule
 \end{tabularx}
+
+\subsubsection{updateOutput(SystemData\& data)}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数 & \texttt{SystemData\&} — プロジェクト共有データへの参照（nullにならない） \\
+戻り値 & \texttt{void} \\
+呼び出しタイミング & \texttt{loop()}内の出力フェーズで毎ループ呼び出される \\
+責務 & アクチュエータ制御、画面描画、データ送信 \\
+デフォルト実装 & 空（何もしない）。出力を持つモジュールのみオーバーライドする \\
+エラー時 & 共有データ内のサブ構造体にエラーフラグを設定 \\
+\bottomrule
+\end{tabularx}
+
+\begin{notebox}[モジュールの入出力分類]
+各モジュールは、オーバーライドするメソッドに応じて3種類に分類される。
+
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{分類} & \textbf{オーバーライド} & \textbf{配列} & \textbf{例} \\
+\midrule
+入力専用 & \texttt{updateInput()} のみ & \texttt{inputModules[]} & IMU, カメラ, ボタン \\
+出力専用 & \texttt{updateOutput()} のみ & \texttt{outputModules[]} & サーボ, LED, ブザー \\
+入出力 & 両方 & 両方の配列に含める & BLE, LCD+タッチ \\
+\bottomrule
+\end{tabularx}
+\end{notebox}
 
 \subsubsection{deinit()}
 
@@ -108,14 +142,14 @@ public:
 \midrule
 型 & \texttt{bool} — デフォルト値\texttt{true} \\
 用途 & 実行時にモジュールを動的に有効化・無効化する \\
-動作 & \texttt{false}の場合、ループ内で\texttt{update()}がスキップされる \\
+動作 & \texttt{false}の場合、ループ内で\texttt{updateInput()}/\texttt{updateOutput()}がスキップされる \\
 設定タイミング & \texttt{init()}失敗時の無効化、BLE等の外部通信からの切り替え、ロジックフェーズでの制御 \\
 \bottomrule
 \end{tabularx}
 
 \subsubsection{使用例}
 
-\begin{lstlisting}[style=cppstyle, caption={モジュール実装の例（ヘッダー）}]
+\begin{lstlisting}[style=cppstyle, caption={出力モジュールの例（ヘッダー）}]
 // LedModule.h
 #pragma once
 #include <Arduino.h>
@@ -134,7 +168,7 @@ struct LedData {
 
 // SystemDataの前方宣言はIModule.h内で行われている
 
-// IModuleを継承
+// IModuleを継承（出力専用のためupdateOutput()のみオーバーライド）
 class LedModule : public IModule {
 private:
     LedConfig _config;  // Configをメンバとして保持
@@ -142,11 +176,11 @@ public:
     // コンストラクタでConfig構造体を受け取る
     LedModule(const LedConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
 };
 \end{lstlisting}
 
-\begin{lstlisting}[style=cppstyle, caption={モジュール実装の例（実装ファイル）}]
+\begin{lstlisting}[style=cppstyle, caption={出力モジュールの例（実装ファイル）}]
 // LedModule.cpp
 #include "LedModule.h"
 #include "SystemData.h"  // SystemDataの完全な定義を取得
@@ -160,7 +194,7 @@ bool LedModule::init() {
 }
 
 // data はポインタではなく参照なので、ドット演算子でアクセス
-void LedModule::update(SystemData& data) {
+void LedModule::updateOutput(SystemData& data) {
     digitalWrite(_config.ledPin, data.led.state);
 }
 \end{lstlisting}
@@ -243,7 +277,7 @@ bool init() override {
     return true;
 }
 
-void update(SystemData& data) override {
+void updateInput(SystemData& data) override {
     if (readTimer.getNowTime() >= 1000) {
         readTimer.setTime();  // リセット
         data.temp.temperature = readSensor();
@@ -254,7 +288,7 @@ void update(SystemData& data) override {
 \begin{lstlisting}[style=cppstyle, caption={デバウンスパターン}]
 ModuleTimer debounce;
 
-void update(SystemData& data) override {
+void updateInput(SystemData& data) override {
     bool rawInput = digitalRead(BUTTON_PIN);
 
     if (rawInput != lastRawInput) {
@@ -283,7 +317,7 @@ void update(SystemData& data) override {
 \textbf{定義ファイル:} \texttt{include/SystemData.h}（プロジェクト固有）
 
 各モジュールの\texttt{Data}構造体を集約した共有データ構造体。
-\texttt{IModule}の\texttt{update()}メソッドの引数型として使用される。
+\texttt{IModule}の\texttt{updateInput()}/\texttt{updateOutput()}メソッドの引数型として使用される。
 モジュールの\texttt{.cpp}ファイルからインクルードされる。
 \end{apibox}
 
@@ -296,7 +330,7 @@ void update(SystemData& data) override {
     \item 共有バスピン（\texttt{SPI\_MOSI\_PIN}等）は特定モジュールに属さないため、\texttt{constexpr}単体定数として定義してよい
     \item \texttt{SystemData}構造体は\texttt{SystemData.h}に分離し、プロジェクトで使用するモジュールのData構造体をメンバとして持つ
     \item モジュールの\texttt{.cpp}は\texttt{SystemData.h}をインクルードする（\texttt{ProjectConfig.h}はインクルードしない）
-    \item モジュールは\texttt{update()}内で、\textbf{自身のData構造体のみ}にアクセスする（他モジュールのData構造体への読み書きは禁止）
+    \item モジュールは\texttt{updateInput()}/\texttt{updateOutput()}内で、\textbf{自身のData構造体のみ}にアクセスする（他モジュールのData構造体への読み書きは禁止）
 \end{enumerate}
 
 \begin{lstlisting}[style=cppstyle, caption={SystemData.h構成例}]
@@ -406,7 +440,7 @@ public:
         return true;
     }
 
-    void update(SystemData& data) override {
+    void updateInput(SystemData& data) override {
         if (_readTimer.getNowTime() >= _config.interval) {
             _readTimer.setTime();
             data.temp.temperature = analogRead(_config.tempPin);

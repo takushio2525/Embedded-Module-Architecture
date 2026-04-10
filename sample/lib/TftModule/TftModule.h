@@ -33,7 +33,7 @@ class TftModule : public IModule {
 public:
     TftModule(const TftConfig& config, TFT_eSPI* tft);
     bool init()                   override;
-    void update(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
     void deinit()                 override;
 
 private:

@@ -50,6 +50,7 @@ private:
 public:
     WifiModule(const WifiConfig& config);
     bool init() override;
-    void update(SystemData& data) override;
+    void updateInput(SystemData& data) override;
+    void updateOutput(SystemData& data) override;
     void deinit() override;
 };
