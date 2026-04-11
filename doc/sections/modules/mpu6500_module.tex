@@ -1,0 +1,154 @@
+% Mpu6500Module — MPU-6500 IMUセンサーモジュール
+\subsection{Mpu6500Module}
+
+\begin{apibox}{Mpu6500Module --- MPU-6500 IMUセンサーモジュール}
+\textbf{定義ファイル:} \texttt{lib/Mpu6500Module/Mpu6500Module.h / .cpp}\\
+\textbf{分類:} 入力モジュール（\texttt{updateInput()}のみオーバーライド）\\
+\textbf{対象デバイス:} MPU-6500（I2C接続、6軸 IMU）
+
+MPU-6500から3軸加速度・3軸ジャイロ・温度を取得するモジュール。
+ライブラリ非依存のレジスタ直接アクセスで実装されており、Wireによるバースト読み出しを行う。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item I2Cバースト読み出しによるセンサーデータ取得（14バイト一括）
+    \item 加速度 $\pm$2g / ジャイロ $\pm$250$^{\circ}$/s のフルスケール
+    \item 周期的サンプリング（\texttt{ModuleTimer}ベース）
+    \item WHO\_AM\_Iレジスタによるデバイス検証（\texttt{init()}内）
+    \item 外部からI2Cバスインスタンス（\texttt{TwoWire*}）を注入する設計
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{Mpu6500Config}
+I2C接続とサンプリングのパラメータを定義する。
+
+\begin{longtable}{l l l p{4.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{address}          & \texttt{uint8\_t}  & 0x68 / 0x69    & I2Cスレーブアドレス。AD0=LOW: \texttt{0x68}、AD0=HIGH: \texttt{0x69} \\
+\texttt{sdaPin}           & \texttt{int8\_t}   & ---            & I2C SDAピン番号 \\
+\texttt{sclPin}           & \texttt{int8\_t}   & ---            & I2C SCLピン番号 \\
+\texttt{sampleIntervalMs} & \texttt{uint32\_t} & 例: 20         & サンプリング周期 [ms] \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+\begin{notebox}[I2Cバス注入パターン]
+I2Cバスインスタンス（\texttt{TwoWire*}）はConfig構造体には含めず、コンストラクタの引数で渡す。
+バスの初期化（\texttt{Wire.begin(sda, scl)}）は\texttt{main.cpp}の\texttt{setup()}内で行い、
+モジュールの\texttt{init()}ではバス初期化を呼ばない。
+\texttt{sdaPin}/\texttt{sclPin}は\texttt{setup()}側でバス初期化時に参照する用途で保持する。
+\end{notebox}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{Mpu6500Data}
+IMUセンサーの計測値を保持する。すべての値は物理単位に変換済み。
+
+\begin{longtable}{l l l p{4.8cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{accelX}      & \texttt{float} & \texttt{0.0f}     & X軸加速度 [g] \\
+\texttt{accelY}      & \texttt{float} & \texttt{0.0f}     & Y軸加速度 [g] \\
+\texttt{accelZ}      & \texttt{float} & \texttt{0.0f}     & Z軸加速度 [g] \\
+\texttt{gyroX}       & \texttt{float} & \texttt{0.0f}     & X軸角速度 [deg/s] \\
+\texttt{gyroY}       & \texttt{float} & \texttt{0.0f}     & Y軸角速度 [deg/s] \\
+\texttt{gyroZ}       & \texttt{float} & \texttt{0.0f}     & Z軸角速度 [deg/s] \\
+\texttt{temperature} & \texttt{float} & \texttt{-999.0f}  & チップ温度 [$^{\circ}$ C] \\
+\texttt{isValid}     & \texttt{bool}  & \texttt{false}    & WHO\_AM\_I検証が成功し、データ読み取りが有効であれば\texttt{true} \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{Mpu6500Module(const Mpu6500Config\& config, TwoWire* wire)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{Mpu6500Config}へのconst参照 \\
+       & \texttt{wire} --- I2Cバスインスタンスへのポインタ（\texttt{main.cpp}で生成） \\
+動作   & Configを\texttt{\_config}にコピー、\texttt{wire}をメンバに保持 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値     & \texttt{bool} --- WHO\_AM\_I検証成功で\texttt{true}、失敗で\texttt{false} \\
+動作       & WHO\_AM\_Iレジスタ（\texttt{0x75}）を読み取り、期待値（\texttt{0x70}）と照合。一致すればスリープ解除、加速度・ジャイロのフルスケール設定を行う \\
+失敗条件   & WHO\_AM\_Iの値が不一致（センサー未接続、アドレス誤り等） \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateInput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+書き込み先     & \texttt{data.mpu} \\
+タイミング制御 & \texttt{ModuleTimer}で\texttt{\_config.sampleIntervalMs}ごとに実行 \\
+動作           & レジスタ\texttt{0x3B}から14バイトをバースト読み出し。加速度（16384 LSB/g）・温度・ジャイロ（131 LSB/(deg/s)）を物理単位に変換して書き込む \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{notebox}[スケールファクタ]
+デフォルト設定（加速度 $\pm$2g / ジャイロ $\pm$250$^{\circ}$/s）でのスケールファクタ:
+
+\begin{tabularx}{\textwidth}{l l l}
+\toprule
+\textbf{軸} & \textbf{スケール} & \textbf{変換式} \\
+\midrule
+加速度 & 16384 LSB/g          & $accel [g] = rawValue / 16384.0$ \\
+ジャイロ & 131 LSB/(deg/s)    & $gyro [deg/s] = rawValue / 131.0$ \\
+温度   & ---                   & $temp [{}^{\circ}C] = rawValue / 340.0 + 36.53$ \\
+\bottomrule
+\end{tabularx}
+\end{notebox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={Mpu6500Moduleの使用例}]
+// ProjectConfig.h
+const Mpu6500Config MPU6500_CONFIG = {
+    .address          = 0x68,  // AD0=LOW
+    .sdaPin           = 41,    // I2C SDA
+    .sclPin           = 42,    // I2C SCL
+    .sampleIntervalMs = 20,    // 50Hz
+};
+
+// main.cpp
+#include <Wire.h>
+TwoWire i2cBus = TwoWire(0);
+Mpu6500Module mpu(MPU6500_CONFIG, &i2cBus);
+
+void setup() {
+    i2cBus.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
+    mpu.init();
+}
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    if (data.mpu.isValid) {
+        float tilt = atan2(data.mpu.accelX, data.mpu.accelZ);
+        // 傾きに応じた制御
+    }
+}
+\end{lstlisting}

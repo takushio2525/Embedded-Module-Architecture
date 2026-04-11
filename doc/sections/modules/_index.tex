@@ -1,0 +1,97 @@
+% モジュールリファレンス
+\section{モジュールリファレンス}\label{sec:module-ref}
+
+本章では、サンプル実装（\texttt{sample/}）で提供される各モジュールのAPI仕様を記述する。
+各モジュールは第\ref{sec:api}節で定義した\texttt{IModule}インターフェースに準拠し、
+Config構造体・Data構造体・ライフサイクルメソッドの統一パターンに従う。
+
+\begin{notebox}[本章の位置づけ]
+第\ref{sec:api}節がフレームワークの設計パターンとルールを定義するのに対し、
+本章は各モジュールの具体的なAPI仕様（Config/Dataメンバ、メソッド動作、制約事項）を記述する。
+ライブラリリファレンスに相当する位置づけである。
+\end{notebox}
+
+\begin{longtable}{l l l p{5.5cm}}
+\toprule
+\textbf{モジュール} & \textbf{分類} & \textbf{対象デバイス} & \textbf{概要} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{モジュール} & \textbf{分類} & \textbf{対象デバイス} & \textbf{概要} \\
+\midrule
+\endhead
+ButtonModule       & 入力   & 汎用               & ボタン入力（デバウンス付き） \\
+BatteryModule      & 入力   & ADC                & バッテリー電圧監視（移動平均フィルタ） \\
+EncoderModule      & 入力   & ロータリーエンコーダ & パルスカウント + RPM計算 \\
+Mpu6500Module      & 入力   & MPU-6500 (I2C)     & 6軸IMU（加速度 + ジャイロ + 温度） \\
+CameraModule       & 入力   & OV5640 (DVP)       & カメラフレーム取得 \\
+\midrule
+LedModule          & 出力   & LED                & LED ON/OFF制御 \\
+BuzzerModule       & 出力   & ブザー              & PWMトーン再生（時間指定付き） \\
+ServoModule        & 出力   & サーボモーター       & 角度制御（PWM） \\
+DriveMotorModule   & 出力   & DCモーター          & Hブリッジ単体駆動 \\
+\midrule
+BleModule          & 入出力 & ESP32 BLE          & BLE通信（GATT Server） \\
+WifiModule         & 入出力 & ESP32 WiFi         & WiFi接続管理（ステートマシン） \\
+DisplayBoardModule & 入出力 & TFT + タッチ        & LCD表示 + タッチ入力 \\
+\midrule
+ChassisModule      & 統合   & 4輪足回り           & ベクトル合成による多輪駆動制御 \\
+\bottomrule
+\end{longtable}
+
+% ─────────────────────────────────────────────
+% 入力モジュール
+% ─────────────────────────────────────────────
+\bigskip
+\noindent\textcolor{headerblue}{\textbf{\Large 入力モジュール}}
+\vspace{-0.3em}
+
+\noindent\textcolor{accentblue}{\rule{\textwidth}{1.0pt}}
+\medskip
+
+\input{sections/modules/button_module}
+\input{sections/modules/battery_module}
+\input{sections/modules/encoder_module}
+\input{sections/modules/mpu6500_module}
+\input{sections/modules/camera_module}
+
+% ─────────────────────────────────────────────
+% 出力モジュール
+% ─────────────────────────────────────────────
+\bigskip
+\noindent\textcolor{headerblue}{\textbf{\Large 出力モジュール}}
+\vspace{-0.3em}
+
+\noindent\textcolor{accentblue}{\rule{\textwidth}{1.0pt}}
+\medskip
+
+\input{sections/modules/led_module}
+\input{sections/modules/buzzer_module}
+\input{sections/modules/servo_module}
+\input{sections/modules/drive_motor_module}
+
+% ─────────────────────────────────────────────
+% 入出力モジュール
+% ─────────────────────────────────────────────
+\bigskip
+\noindent\textcolor{headerblue}{\textbf{\Large 入出力モジュール}}
+\vspace{-0.3em}
+
+\noindent\textcolor{accentblue}{\rule{\textwidth}{1.0pt}}
+\medskip
+
+\input{sections/modules/ble_module}
+\input{sections/modules/wifi_module}
+\input{sections/modules/display_board_module}
+
+% ─────────────────────────────────────────────
+% 機能統合モジュール
+% ─────────────────────────────────────────────
+\bigskip
+\noindent\textcolor{headerblue}{\textbf{\Large 機能統合モジュール}}
+\vspace{-0.3em}
+
+\noindent\textcolor{accentblue}{\rule{\textwidth}{1.0pt}}
+\medskip
+
+\input{sections/modules/chassis_module}

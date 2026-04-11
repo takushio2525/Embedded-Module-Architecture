@@ -1,0 +1,213 @@
+% ChassisModule — 4輪統合足回り制御モジュール
+\subsection{ChassisModule}
+
+\begin{apibox}{ChassisModule --- 4輪統合足回り制御モジュール}
+\textbf{定義ファイル:} \texttt{lib/ChassisModule/ChassisModule.h / .cpp}\\
+\textbf{分類:} 機能統合モジュール（\texttt{updateOutput()}のみオーバーライド）\\
+\textbf{対象デバイス:} 4輪駆動足回り（オムニ/メカナム/4WD）
+
+内部で4つのDriveMotorModuleを保持し、前進・横移動・回転の3軸ベクトルを
+ホイールパターンに応じた方向行列で各モーター出力に合成する統合モジュール。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item 4つのDriveMotorModuleの内部管理（生成・init・drive呼び出し）
+    \item 3種類のホイールパターン対応（OMNI / MECANUM / FOURWD）
+    \item 3軸ベクトル（前進・横移動・回転）から4輪出力への合成
+    \item 出力リミッタ（\texttt{maxOutputPercent}で最大出力を制限）
+    \item 各モーターの実出力値をデバッグ用に保持
+\end{itemize}
+
+% --- 定数 ---
+\begin{funcblock}{定数}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{名前} & \textbf{値} & \textbf{説明} \\
+\midrule
+\texttt{CHASSIS\_MOTOR\_COUNT} & \texttt{4} & モーター数（固定） \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+% --- 列挙型 ---
+\subsubsection{列挙型}
+
+\begin{funcblock}{WheelPattern}
+ホイール配置パターンを定義する。パターンによりベクトル合成の方向行列が異なる。
+
+\begin{longtable}{l l p{6.0cm}}
+\toprule
+\textbf{値} & \textbf{名前} & \textbf{説明} \\
+\midrule
+\endhead
+0 & \texttt{OMNI}    & オムニホイール。全方向移動 + 回転が可能 \\
+1 & \texttt{MECANUM} & メカナムホイール。全方向移動 + 回転が可能（ローラー角度が異なる） \\
+2 & \texttt{FOURWD}  & 4輪駆動。前後移動 + 回転のみ（横移動不可） \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{ChassisConfig}
+4輪足回りの構成を定義する。
+
+\begin{longtable}{l l l p{4.0cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{motors[4]}        & \texttt{DriveMotorConfig[]} & ---         & 各モーターの設定。[0]:左前、[1]:右前、[2]:左後、[3]:右後 \\
+\texttt{wheelPattern}     & \texttt{WheelPattern}       & ---         & ホイールパターン \\
+\texttt{maxOutputPercent}  & \texttt{float}             & 例: 90.0    & 最大出力割合 [\%]。合成後の出力をこの値でスケーリング \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{ChassisData}
+足回りの制御入力とデバッグ用出力を保持する。
+
+\begin{longtable}{l l l p{4.0cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\multicolumn{4}{l}{\textbf{--- 入力（ロジックフェーズで設定） ---}} \\
+\texttt{forwardSpeed}  & \texttt{float} & \texttt{0.0f} & 前進速度 [$-100$\textasciitilde$100$]。正:前進、負:後退 \\
+\texttt{lateralSpeed}  & \texttt{float} & \texttt{0.0f} & 横移動速度 [$-100$\textasciitilde$100$]。正:右、負:左 \\
+\texttt{rotationSpeed} & \texttt{float} & \texttt{0.0f} & 回転速度 [$-100$\textasciitilde$100$]。正:右回転、負:左回転 \\
+\midrule
+\multicolumn{4}{l}{\textbf{--- 出力（updateOutput後に更新、デバッグ用） ---}} \\
+\texttt{motorOutputs[4]} & \texttt{float[]} & \texttt{\{0\}} & 各モーターの実出力値 [\%]。[0]:左前、[1]:右前、[2]:左後、[3]:右後 \\
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{ChassisModule(const ChassisConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{ChassisConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー。4つのDriveMotorModuleを\texttt{config.motors[i]}から内部生成し、ポインタ配列\texttt{\_motors[]}にセット \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 4モーター全ての\texttt{init()}が成功で\texttt{true}、1つでも失敗で\texttt{false} \\
+動作     & 内部の4つのDriveMotorModuleの\texttt{init()}を順次呼び出す \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateOutput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+読み取り元     & \texttt{data.chassis} \\
+タイミング制御 & 毎ループ実行 \\
+動作           & ホイールパターンに応じた方向行列を取得し、\texttt{forwardSpeed}・\texttt{lateralSpeed}・\texttt{rotationSpeed}を合成して各モーター出力を計算。出力リミッタ適用後、各DriveMotorModuleの\texttt{drive()}を呼び出す。\texttt{motorOutputs[]}にデバッグ値を書き込む \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void deinit()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & 全モーターを停止（\texttt{drive(0)}）させる \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+% --- ベクトル合成 ---
+\begin{notebox}[ベクトル合成と方向行列]
+各モーターの出力は以下の式で計算される:
+
+\vspace{0.3em}
+$output_i = M_{i,0} \times forward + M_{i,1} \times lateral + M_{i,2} \times rotation$
+\vspace{0.3em}
+
+\noindent ここで $M$ はホイールパターンに応じた $4 \times 3$ の方向行列である。
+
+\medskip
+\textbf{OMNI（オムニホイール）の方向行列:}
+\begin{center}
+\begin{tabular}{l r r r}
+\toprule
+& \textbf{前進} & \textbf{横移動} & \textbf{回転} \\
+\midrule
+左前 [0] & $+1$ & $-1$ & $-1$ \\
+右前 [1] & $+1$ & $+1$ & $+1$ \\
+左後 [2] & $+1$ & $+1$ & $-1$ \\
+右後 [3] & $+1$ & $-1$ & $+1$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+合成後の出力は絶対値の最大値が100を超える場合、全体を正規化して$\pm 100$以内に収める。
+その後、\texttt{maxOutputPercent}でスケーリングする。
+\end{notebox}
+
+\begin{cautionbox}[DriveMotorModuleの管理]
+ChassisModuleが内部で4つのDriveMotorModuleインスタンスを保持し、\texttt{init()}・\texttt{drive()}を呼び出す。
+個別のDriveMotorModuleを\texttt{outputModules[]}に登録してはならない（二重制御になる）。
+\end{cautionbox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={ChassisModuleの使用例}]
+// ProjectConfig.h
+const ChassisConfig CHASSIS_CONFIG = {
+    .motors = {
+        {.in1Pin=4, .in2Pin=16, .pwmPin=17,
+         .pwmChannel=2, .pwmFreqHz=1220,
+         .minPowerThreshold=5.0f},  // 左前
+        {.in1Pin=26, .in2Pin=25, .pwmPin=33,
+         .pwmChannel=3, .pwmFreqHz=1220,
+         .minPowerThreshold=5.0f},  // 右前
+        {.in1Pin=18, .in2Pin=19, .pwmPin=23,
+         .pwmChannel=4, .pwmFreqHz=1220,
+         .minPowerThreshold=5.0f},  // 左後
+        {.in1Pin=13, .in2Pin=14, .pwmPin=27,
+         .pwmChannel=5, .pwmFreqHz=1220,
+         .minPowerThreshold=5.0f},  // 右後
+    },
+    .wheelPattern     = WheelPattern::OMNI,
+    .maxOutputPercent = 90.0f,
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    // BLE受信データから操作指令を反映
+    if (data.ble.newDataIn) {
+        data.chassis.forwardSpeed  = (int8_t)data.ble.rxData[0];
+        data.chassis.lateralSpeed  = (int8_t)data.ble.rxData[1];
+        data.chassis.rotationSpeed = (int8_t)data.ble.rxData[2];
+        data.ble.newDataIn = false;
+    }
+}
+\end{lstlisting}

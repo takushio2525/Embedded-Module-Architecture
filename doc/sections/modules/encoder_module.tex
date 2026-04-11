@@ -1,0 +1,142 @@
+% EncoderModule — ロータリーエンコーダ入力モジュール
+\subsection{EncoderModule}
+
+\begin{apibox}{EncoderModule --- ロータリーエンコーダ入力モジュール}
+\textbf{定義ファイル:} \texttt{lib/EncoderModule/EncoderModule.h / .cpp}\\
+\textbf{分類:} 入力モジュール（\texttt{updateInput()}のみオーバーライド）\\
+\textbf{対象デバイス:} インクリメンタル型ロータリーエンコーダ（2相出力）
+
+ハードウェア割り込みでA相パルスをカウントし、B相の状態から回転方向を判定する。
+周期的にRPM（回転速度）を計算して\texttt{SystemData}に反映する。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item ハードウェア割り込み（A相）によるパルスカウント
+    \item B相によるCW/CCW方向判定
+    \item 周期的RPM計算（\texttt{ModuleTimer}ベース）
+    \item 累積パルス数の保持（正:CW、負:CCW）
+    \item \texttt{deinit()}による割り込み解除
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{EncoderConfig}
+エンコーダの接続ピンと計測パラメータを定義する。
+
+\begin{longtable}{l l l p{4.8cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{pinA}             & \texttt{uint8\_t}       & ---       & エンコーダA相ピン（割り込み対応ピンを使用すること） \\
+\texttt{pinB}             & \texttt{uint8\_t}       & ---       & エンコーダB相ピン \\
+\texttt{pulsesPerRev}     & \texttt{uint16\_t}      & 例: 20    & 1回転あたりのパルス数 \\
+\texttt{sampleIntervalMs} & \texttt{unsigned long}  & 例: 50    & RPM計算間隔 [ms] \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{EncoderData}
+エンコーダの計測結果を保持する。
+
+\begin{longtable}{l l l p{5.0cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{count}   & \texttt{int32\_t} & \texttt{0}     & 累積パルス数。正:CW（時計回り）、負:CCW（反時計回り） \\
+\texttt{rpm}     & \texttt{float}    & \texttt{0.0f}  & 回転速度 [rpm] \\
+\texttt{isValid} & \texttt{bool}     & \texttt{false} & RPM計算が1回以上行われたら\texttt{true} \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{EncoderModule(const EncoderConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{EncoderConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 常に\texttt{true} \\
+動作     & A相・B相ピンを\texttt{INPUT\_PULLUP}で設定。A相にRISINGエッジの割り込みハンドラを登録。シングルインスタンス参照（\texttt{\_instance}）を自身に設定 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateInput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+書き込み先     & \texttt{data.encoder} \\
+タイミング制御 & \texttt{ModuleTimer}で\texttt{\_config.sampleIntervalMs}ごとにRPMを計算 \\
+動作           & ISRが更新した\texttt{volatile}カウンタを読み取り、前回値との差分からRPMを計算。\texttt{count}・\texttt{rpm}・\texttt{isValid}を更新 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void deinit()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & A相ピンの割り込みを\texttt{detachInterrupt()}で解除する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{notebox}[RPM計算式]
+RPM計算は以下の式で行う:
+
+\vspace{0.3em}
+$$RPM = \frac{\Delta count}{pulsesPerRev} \times \frac{60000}{sampleIntervalMs}$$
+\vspace{0.3em}
+
+\noindent ここで $\Delta count$ はサンプリング間隔内のパルス数変化量である。
+\end{notebox}
+
+\begin{cautionbox}[シングルインスタンス制約]
+\texttt{attachInterrupt()}にstatic関数を渡すため、内部で\texttt{static EncoderModule* \_instance}を使用している。
+同時に使用できるEncoderModuleのインスタンスは\textbf{1つのみ}である。
+複数エンコーダが必要な場合はISRディスパッチの仕組みを拡張する必要がある。
+\end{cautionbox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={EncoderModuleの使用例}]
+// ProjectConfig.h
+const EncoderConfig ENCODER_CONFIG = {
+    .pinA             = 39,  // GPIO39: A相
+    .pinB             = 40,  // GPIO40: B相
+    .pulsesPerRev     = 20,  // 1回転20パルス
+    .sampleIntervalMs = 50,  // 50msごとに速度計算
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    if (data.encoder.isValid) {
+        float speed = data.encoder.rpm;
+        // 回転速度に応じた制御
+    }
+}
+\end{lstlisting}

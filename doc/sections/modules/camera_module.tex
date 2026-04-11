@@ -1,0 +1,194 @@
+% CameraModule — OV5640カメラモジュール
+\subsection{CameraModule}
+
+\begin{apibox}{CameraModule --- OV5640カメラモジュール}
+\textbf{定義ファイル:} \texttt{lib/CameraModule/CameraModule.h / .cpp}\\
+\textbf{分類:} 入力モジュール（\texttt{updateInput()}のみオーバーライド）\\
+\textbf{対象デバイス:} OV5640（ESP32-S3 DVP接続）
+
+ESP32-S3のDVPインターフェース経由でOV5640カメラからフレームを取得するモジュール。
+\texttt{esp\_camera}ライブラリを使用し、フレームバッファの取得・解放を管理する。
+フレームの生データは\texttt{SystemData}には格納せず、専用メソッドでアクセスする。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item DVP 16ピンインターフェースによるカメラ接続
+    \item JPEG/RAWフォーマット対応（\texttt{pixFormat}で選択）
+    \item フレームバッファの取得・解放API（\texttt{getFrameBuffer()} / \texttt{releaseFrame()}）
+    \item フレームメタデータ（解像度・サイズ）の\texttt{SystemData}への書き込み
+    \item \texttt{deinit()}によるカメラリソース解放
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{CameraConfig}
+DVPピンアサインとカメラ動作パラメータを定義する。
+
+\begin{longtable}{l l l p{4.2cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\small 次ページに続く} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{4}{l}{\textbf{--- DVPピンアサイン ---}} \\
+\texttt{pwdnPin}    & \texttt{int8\_t} & -1で未使用         & POWER DOWNピン \\
+\texttt{resetPin}   & \texttt{int8\_t} & -1で未使用         & ハードウェアRESETピン \\
+\texttt{xclkPin}    & \texttt{int8\_t} & ---                & XCLKクロック出力ピン \\
+\texttt{siodPin}    & \texttt{int8\_t} & ---                & SCCB SDA（カメラ設定用I2C） \\
+\texttt{siocPin}    & \texttt{int8\_t} & ---                & SCCB SCL \\
+\texttt{d0Pin}--\texttt{d7Pin} & \texttt{int8\_t} & --- & データバス D0--D7（8ピン） \\
+\texttt{vsyncPin}   & \texttt{int8\_t} & ---                & 垂直同期ピン \\
+\texttt{hrefPin}    & \texttt{int8\_t} & ---                & 水平参照ピン \\
+\texttt{pclkPin}    & \texttt{int8\_t} & ---                & ピクセルクロックピン \\
+\midrule
+\multicolumn{4}{l}{\textbf{--- カメラ動作設定 ---}} \\
+\texttt{xclkFreqHz}  & \texttt{int}     & 通常: 20000000   & XCLKクロック周波数 [Hz] \\
+\texttt{frameSize}   & \texttt{uint8\_t} & 例: 5 (QVGA)    & フレームサイズ（\texttt{framesize\_t}の値） \\
+\texttt{pixFormat}   & \texttt{uint8\_t} & 例: 4 (JPEG)    & ピクセルフォーマット（\texttt{pixformat\_t}の値） \\
+\texttt{jpegQuality} & \texttt{int}     & 0--63（低い=高画質）& JPEG圧縮品質 \\
+\texttt{fbCount}     & \texttt{size\_t} & 推奨: 2          & フレームバッファ数 \\
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{CameraData}
+フレームのメタデータを保持する。フレームの生データ（ピクセルバッファ）は含まない。
+
+\begin{longtable}{l l l p{4.8cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{isValid}    & \texttt{bool}     & \texttt{false} & カメラ初期化が成功していれば\texttt{true} \\
+\texttt{frameReady} & \texttt{bool}     & \texttt{false} & 新しいフレームが取得済みであれば\texttt{true} \\
+\texttt{width}      & \texttt{uint16\_t} & \texttt{0}    & フレーム幅 [px] \\
+\texttt{height}     & \texttt{uint16\_t} & \texttt{0}    & フレーム高さ [px] \\
+\texttt{frameSize}  & \texttt{size\_t}  & \texttt{0}     & フレームデータサイズ [bytes] \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+\begin{cautionbox}[フレームデータのアクセス方法]
+フレームの生データ（ピクセルバッファ）は大容量のためSystemDataには格納しない。
+ロジックフェーズで\texttt{getFrameBuffer()}を呼び出してポインタを取得し、
+使用後は必ず\texttt{releaseFrame()}で解放すること。
+解放しないとフレームバッファが枯渇し、次のフレーム取得がブロックされる。
+\end{cautionbox}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{CameraModule(const CameraConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{CameraConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値     & \texttt{bool} --- カメラ初期化成功で\texttt{true}、失敗で\texttt{false} \\
+動作       & Configからesp\_cameraの設定構造体を構築し、\texttt{esp\_camera\_init()}を呼び出す \\
+失敗条件   & カメラ未接続、ピン設定誤り、PSRAMメモリ不足等 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateInput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+書き込み先     & \texttt{data.camera} \\
+タイミング制御 & 毎ループ実行 \\
+動作           & 前回のフレームが保持中であれば解放し、新しいフレームを\texttt{esp\_camera\_fb\_get()}で取得。メタデータ（幅、高さ、サイズ）を\texttt{data.camera}に書き込む \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{const uint8\_t* getFrameBuffer() const}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & フレームデータへのポインタ。フレーム未取得時は\texttt{nullptr} \\
+用途     & ロジックフェーズでフレームデータにアクセスする（BLE送信、SD保存、画像処理等） \\
+有効期間 & 次の\texttt{updateInput()}呼び出しまで、または\texttt{releaseFrame()}呼び出しまで \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void releaseFrame()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & 保持中のフレームバッファを\texttt{esp\_camera\_fb\_return()}で解放する。フレーム未保持時は何もしない \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void deinit()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & 保持中のフレームを解放し、\texttt{esp\_camera\_deinit()}でカメラリソースを解放する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{cautionbox}[PSRAMの必要性]
+\texttt{fbCount}を2以上に設定する場合、PSRAMが必要である。
+PSRAMがない環境では\texttt{fbCount = 1}に制限し、フレームサイズも小さくする必要がある。
+\texttt{platformio.ini}で\texttt{board\_build.psram = enabled}を設定すること。
+\end{cautionbox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={CameraModuleの使用例}]
+// ProjectConfig.h
+const CameraConfig CAMERA_CONFIG = {
+    .pwdnPin = -1, .resetPin = -1, .xclkPin = 15,
+    .siodPin = 4,  .siocPin = 5,
+    .d0Pin = 11, .d1Pin = 9, .d2Pin = 8, .d3Pin = 10,
+    .d4Pin = 12, .d5Pin = 18, .d6Pin = 17, .d7Pin = 16,
+    .vsyncPin = 6, .hrefPin = 7, .pclkPin = 13,
+    .xclkFreqHz  = 20000000,
+    .frameSize   = 5,   // QVGA (320x240)
+    .pixFormat   = 4,   // JPEG
+    .jpegQuality = 12,
+    .fbCount     = 2,   // ダブルバッファ（PSRAM必須）
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    if (data.camera.frameReady) {
+        const uint8_t* buf = camera.getFrameBuffer();
+        size_t len = data.camera.frameSize;
+        // BLE送信やSD保存などの処理
+        camera.releaseFrame();
+    }
+}
+\end{lstlisting}

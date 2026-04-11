@@ -1,0 +1,202 @@
+% BleModule — BLE通信モジュール
+\subsection{BleModule}
+
+\begin{apibox}{BleModule --- BLE通信モジュール}
+\textbf{定義ファイル:} \texttt{lib/BleModule/BleModule.h / .cpp}\\
+\textbf{分類:} 入出力モジュール（\texttt{updateInput()} + \texttt{updateOutput()}）\\
+\textbf{対象デバイス:} ESP32 BLE（GATT Server）
+
+BLE GATT Serverとして動作し、RX/TX Characteristicを使用してデータの受信・送信を行う。
+BLEコールバックは別タスクで実行されるため、volatileフラグ方式でスレッドセーフにデータを受け渡す。
+\end{apibox}
+
+\begin{cautionbox}[スレッドセーフティ]
+BLEのコールバック（\texttt{onConnect}、\texttt{onDisconnect}、\texttt{onReceive}）はFreeRTOSの別タスクで実行される。
+コールバックから\texttt{SystemData}に直接書き込むことは禁止。
+内部バッファ + \texttt{volatile}フラグ方式で\texttt{updateInput()}を経由してデータを受け渡す。
+\end{cautionbox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item BLE GATT Serverの初期化・アドバタイズ開始
+    \item RX Characteristic経由のデータ受信（コールバック→内部バッファ→SystemData）
+    \item TX Characteristic経由のデータ送信（SystemData→notify）
+    \item 接続状態の監視と切断時の自動リアドバタイズ
+    \item \texttt{deinit()}によるBLEリソース解放
+\end{itemize}
+
+% --- 定数 ---
+\begin{funcblock}{定数}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{名前} & \textbf{値} & \textbf{説明} \\
+\midrule
+\texttt{BLE\_RX\_BUFFER\_SIZE} & \texttt{128} & 受信バッファサイズ [bytes] \\
+\texttt{BLE\_TX\_BUFFER\_SIZE} & \texttt{128} & 送信バッファサイズ [bytes] \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{BleConfig}
+BLEサービスの識別情報を定義する。
+
+\begin{longtable}{l l l p{4.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{deviceName}  & \texttt{const char*} & ---  & BLEデバイス名（アドバタイズ時に表示） \\
+\texttt{serviceUuid} & \texttt{const char*} & ---  & GATTサービスUUID文字列 \\
+\texttt{rxCharUuid}  & \texttt{const char*} & ---  & RX Characteristic UUID（クライアント→デバイス方向） \\
+\texttt{txCharUuid}  & \texttt{const char*} & ---  & TX Characteristic UUID（デバイス→クライアント方向） \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{BleData}
+BLE通信の状態と送受信データを保持する。
+
+\begin{longtable}{l l l p{3.8cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\small 次ページに続く} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{4}{l}{\textbf{--- 接続状態 ---}} \\
+\texttt{connected}   & \texttt{bool}    & \texttt{false} & BLE接続状態 \\
+\midrule
+\multicolumn{4}{l}{\textbf{--- 受信（入力フェーズで更新） ---}} \\
+\texttt{newDataIn}   & \texttt{bool}    & \texttt{false} & 新規受信データあり。ロジックフェーズで参照後クリアする \\
+\texttt{rxData[128]} & \texttt{uint8\_t[]} & \texttt{\{\}} & 受信データバッファ \\
+\texttt{rxLength}    & \texttt{uint8\_t} & \texttt{0}    & 受信データ長 [bytes] \\
+\midrule
+\multicolumn{4}{l}{\textbf{--- 送信（ロジックフェーズで設定） ---}} \\
+\texttt{sendRequest} & \texttt{bool}    & \texttt{false} & 送信リクエスト。\texttt{true}で\texttt{updateOutput()}がデータを送信 \\
+\texttt{txData[128]} & \texttt{uint8\_t[]} & \texttt{\{\}} & 送信データバッファ \\
+\texttt{txLength}    & \texttt{uint8\_t} & \texttt{0}    & 送信データ長 [bytes] \\
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{BleModule(const BleConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{BleConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値     & \texttt{bool} --- 常に\texttt{true} \\
+動作       & BLEデバイス初期化、GATTサーバー作成、サービス・Characteristic登録、コールバック設定、アドバタイズ開始 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateInput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+書き込み先     & \texttt{data.ble} \\
+タイミング制御 & 毎ループ実行 \\
+動作           & \texttt{volatile}フラグ\texttt{\_dataReceived}を確認。\texttt{true}なら内部バッファから\texttt{data.ble.rxData}にコピーし、\texttt{newDataIn = true}に設定。接続状態を\texttt{data.ble.connected}に反映 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateOutput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+読み取り元     & \texttt{data.ble} \\
+タイミング制御 & 毎ループ実行 \\
+動作           & \texttt{sendRequest}が\texttt{true}かつ接続中であれば、\texttt{txData}をTX Characteristicにnotifyで送信。\texttt{sendRequest}を\texttt{false}にクリア \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void deinit()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & BLEアドバタイズを停止し、BLEデバイスを終了処理する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void onConnect() / void onDisconnect() / void onReceive(const uint8\_t* payload, uint8\_t length)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+呼び出し元 & BLEコールバック（別タスクで実行される） \\
+動作       & \texttt{onConnect}: \texttt{\_clientConnected = true}。\texttt{onDisconnect}: \texttt{\_clientConnected = false}、リアドバタイズ開始。\texttt{onReceive}: 内部バッファにコピーし\texttt{\_dataReceived = true} \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{notebox}[volatileフラグ方式のデータフロー]
+BLEコールバック（別タスク）からSystemDataへのデータ受け渡しは以下の流れで行う:
+
+\begin{enumerate}
+    \item \textbf{コールバック}: 受信データを内部バッファ\texttt{\_rxBuffer}にコピーし、\texttt{volatile bool \_dataReceived = true}
+    \item \textbf{updateInput()}: \texttt{\_dataReceived}を確認。\texttt{true}なら内部バッファから\texttt{data.ble.rxData}にコピーし、\texttt{\_dataReceived = false}にリセット
+    \item \textbf{ロジックフェーズ}: \texttt{data.ble.newDataIn}を確認して受信データを処理
+\end{enumerate}
+\end{notebox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={BleModuleの使用例}]
+// ProjectConfig.h
+const BleConfig BLE_CONFIG = {
+    .deviceName  = "ESP32-Module",
+    .serviceUuid = "12345678-1234-1234-1234-123456789abc",
+    .rxCharUuid  = "12345678-1234-1234-1234-123456789abd",
+    .txCharUuid  = "12345678-1234-1234-1234-123456789abe",
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    // 受信データの処理
+    if (data.ble.newDataIn) {
+        // rxDataを解析
+        data.ble.newDataIn = false;  // フラグクリア
+    }
+    // センサーデータのBLE送信
+    if (data.ble.connected && data.mpu.isValid) {
+        memcpy(data.ble.txData, &data.mpu.accelX,
+               sizeof(float));
+        data.ble.txLength    = sizeof(float);
+        data.ble.sendRequest = true;
+    }
+}
+\end{lstlisting}

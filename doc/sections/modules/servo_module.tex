@@ -1,0 +1,129 @@
+% ServoModule — サーボモーター制御モジュール
+\subsection{ServoModule}
+
+\begin{apibox}{ServoModule --- サーボモーター制御モジュール}
+\textbf{定義ファイル:} \texttt{lib/ServoModule/ServoModule.h / .cpp}\\
+\textbf{分類:} 出力モジュール（\texttt{updateOutput()}のみオーバーライド）\\
+\textbf{対象デバイス:} PWMサーボモーター（SG90等）
+
+LEDCによるPWMパルス幅制御でサーボモーターの角度を設定するモジュール。
+角度（0--180$^{\circ}$）からパルス幅（$\mu$s）への変換を内部で行う。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item 角度指定（0--180$^{\circ}$）によるサーボ制御
+    \item パルス幅範囲のカスタマイズ（\texttt{minPulseUs} / \texttt{maxPulseUs}）
+    \item 角度変化時のみPWM更新（不要な書き込みを抑制）
+    \item 初期角度の設定（\texttt{defaultAngle}）
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{ServoConfig}
+サーボのPWMパラメータを定義する。
+
+\begin{longtable}{l l l p{4.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{pin}          & \texttt{uint8\_t}  & ---       & サーボ信号出力GPIOピン番号 \\
+\texttt{pwmChannel}   & \texttt{uint8\_t}  & 0--15     & LEDCチャネル番号。他モジュールと重複しないこと \\
+\texttt{minPulseUs}   & \texttt{uint16\_t} & 例: 500   & 0$^{\circ}$ 時のパルス幅 [$\mu$s] \\
+\texttt{maxPulseUs}   & \texttt{uint16\_t} & 例: 2500  & 180$^{\circ}$ 時のパルス幅 [$\mu$s] \\
+\texttt{defaultAngle} & \texttt{uint8\_t}  & 例: 90    & 初期角度 [度]（0--180） \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{ServoData}
+サーボの目標角度と現在角度を保持する。
+
+\begin{longtable}{l l l p{5.0cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{targetAngle}  & \texttt{uint8\_t} & \texttt{90} & 目標角度 [度]（0--180）。ロジックフェーズで設定 \\
+\texttt{currentAngle} & \texttt{uint8\_t} & \texttt{90} & 現在のPWM出力に対応する角度 [度]（0--180） \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{ServoModule(const ServoConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{ServoConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 常に\texttt{true} \\
+動作     & LEDCチャネルを50Hz（サーボ標準）で初期設定し、\texttt{defaultAngle}に対応するパルス幅を出力する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateOutput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+読み取り元     & \texttt{data.servo} \\
+タイミング制御 & 毎ループ実行（ただし角度変化なしの場合はPWM更新をスキップ） \\
+動作           & \texttt{targetAngle}と\texttt{currentAngle}を比較し、変化があれば角度をパルス幅に変換してPWMデューティを更新。\texttt{currentAngle}を更新 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{notebox}[角度→パルス幅変換]
+角度からパルス幅への変換は以下の線形補間で行う:
+
+\vspace{0.3em}
+$$pulseWidth = minPulseUs + \frac{angle}{180} \times (maxPulseUs - minPulseUs)$$
+\vspace{0.3em}
+
+\noindent SG90の場合（500--2500$\mu$s）: 90$^{\circ}$ $\rightarrow$ 1500$\mu$s（中央）
+\end{notebox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={ServoModuleの使用例}]
+// ProjectConfig.h
+const ServoConfig SERVO_CONFIG = {
+    .pin          = 1,     // GPIO1: サーボ信号
+    .pwmChannel   = 0,     // LEDCチャネル0
+    .minPulseUs   = 500,   // SG90: 500us
+    .maxPulseUs   = 2500,  // SG90: 2500us
+    .defaultAngle = 90,    // 初期角度 90度（中央）
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    // IMUの傾きに応じてサーボ角度を設定
+    if (data.mpu.isValid) {
+        float tilt = atan2(data.mpu.accelX, data.mpu.accelZ);
+        data.servo.targetAngle = constrain(
+            map(tilt * 57.3, -45, 45, 0, 180), 0, 180
+        );
+    }
+}
+\end{lstlisting}
