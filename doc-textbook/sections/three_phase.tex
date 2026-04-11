@@ -48,7 +48,7 @@ void loop() {
     }
 
     // 2. ロジックフェーズ — データを見て判断する
-    applyLogic(systemData);
+    applyPattern(systemData);
 
     // 3. 出力フェーズ — 判断結果に従い制御する
     for (int i = 0; i < OUTPUT_COUNT; i++) {
@@ -76,7 +76,7 @@ void loop() {
     // 入力が後
     tempSensor.updateInput(systemData);  // 今回のデータを読む
 
-    applyLogic(systemData);  // 今回のデータで判断するが...
+    applyPattern(systemData);  // 今回のデータで判断するが...
     // → LEDにはもう反映されない（次のloopまで待つ）
 }
 \end{lstlisting}
@@ -103,9 +103,9 @@ void loop() {
 
 ロジックフェーズは「入力データを見て、出力データを決める」場所です。
 
-\begin{goodexample}{applyLogic()の例}
+\begin{goodexample}{applyPattern()の例}
 \begin{lstlisting}
-void applyLogic(SystemData& data) {
+void applyPattern(SystemData& data) {
     // 温度が30度を超えたらLEDを点灯
     if (data.temp.temperature > 30.0) {
         data.led.state = true;
@@ -132,7 +132,7 @@ void applyLogic(SystemData& data) {
 \begin{itemize}
   \item \texttt{LedModule} — LEDの制御（約20行）
   \item \texttt{TempSensorModule} — 温度の読み取り（約20行）
-  \item \texttt{applyLogic()} — ルール（約5行）
+  \item \texttt{applyPattern()} — ルール（約5行）
   \item \texttt{main.cpp} — 配列定義 + 3フェーズループ（約30行）
 \end{itemize}
 

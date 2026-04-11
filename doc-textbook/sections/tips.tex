@@ -88,7 +88,7 @@ void updateOutput(SystemData& data) {
 
 \begin{lstlisting}
 // ロジックフェーズ内
-void applyLogic(SystemData& data) {
+void applyPattern(SystemData& data) {
     // 無効化されたモジュールの再init（10秒ごと）
     static ModuleTimer retryTimer;
     if (retryTimer.getNowTime() >= 10000) {
@@ -152,7 +152,7 @@ void BleModule::updateInput(SystemData& data) {
 }
 
 // ロジックフェーズ — ここでConfig変更を実行
-void applyLogic(SystemData& data) {
+void applyPattern(SystemData& data) {
     if (data.ble.configUpdateRequested) {
         // 安全にConfig変更を適用
         data.ble.configUpdateRequested = false;

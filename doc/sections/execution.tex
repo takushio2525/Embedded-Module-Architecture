@@ -14,7 +14,7 @@
     \item \textbf{バス初期化}（\texttt{setup()}内の最初） \\
     SPI・I2C等の通信バスを使用する場合、\texttt{SPI.begin()}や\texttt{Wire.begin()}等のバス初期化を
     全モジュールの\texttt{init()}より前に実行する。
-    バスインスタンスは\texttt{main.cpp}のグローバルスコープで生成し、Config構造体のポインタ経由でモジュールに渡す。
+    バスインスタンスは\texttt{main.cpp}のグローバルスコープで生成し、コンストラクタ引数でモジュールに渡す。
 
     \item \textbf{init()呼び出し}（\texttt{setup()}内） \\
     ハードウェアの初期化、ピンモード設定、ModuleTimerの\texttt{setTime()}呼び出しを行う。
