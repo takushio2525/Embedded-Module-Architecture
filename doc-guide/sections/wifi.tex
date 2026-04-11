@@ -105,14 +105,14 @@ void applyPattern(SystemData& data) {
     // WiFi接続状態に応じた表示
     switch (data.wifi.state) {
         case WifiState::CONNECTING:
-            snprintf(data.tft.line1, 48, "WiFi: Connecting...");
+            snprintf(data.display.line1, 48, "WiFi: Connecting...");
             break;
         case WifiState::CONNECTED:
-            snprintf(data.tft.line1, 48,
+            snprintf(data.display.line1, 48,
                      "WiFi: OK (RSSI=%d)", data.wifi.rssi);
             break;
         case WifiState::FAILED:
-            snprintf(data.tft.line1, 48,
+            snprintf(data.display.line1, 48,
                      "WiFi: Failed (%d retries)",
                      data.wifi.retryCount);
             break;

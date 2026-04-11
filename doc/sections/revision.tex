@@ -2,10 +2,20 @@
 \section*{改訂履歴}
 \addcontentsline{toc}{section}{改訂履歴}
 
-\begin{tabularx}{\textwidth}{c c c X}
+\begin{longtable}{c c c p{0.5\textwidth}}
 \toprule
 \textbf{版} & \textbf{日付} & \textbf{著者} & \textbf{変更内容} \\
 \midrule
+\endfirsthead
+\toprule
+\textbf{版} & \textbf{日付} & \textbf{著者} & \textbf{変更内容} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\small 次ページに続く} \\
+\endfoot
+\bottomrule
+\endlastfoot
 1.0 & 2026-03-11 & Shiozawa & 初版作成。IModule、ModuleTimer、SystemDataパターンの設計仕様を定義 \\
 1.1 & 2026-03-11 & Shiozawa & IModuleをテンプレート化（IModule<T>）。コア層の汎用性向上、参照渡しに変更 \\
 1.2 & 2026-03-11 & Shiozawa & 背景・目的セクション更新。共同開発の課題、部品化・規格統一の目的を追記 \\
@@ -28,5 +38,5 @@
 2.9 & 2026-03-18 & Shiozawa & ESP32固有の記述をArduino/組み込み汎用に変更。サブタイトル・表紙・概要・背景セクション等を汎用化 \\
 3.0 & 2026-03-22 & Shiozawa & ピン定義ルールを追加。モジュール固有ピンはConfig構造体リテラルに直書きし、constexpr単体定数を廃止。共有バスピンのみ単体定数を許可 \\
 3.1 & 2026-04-10 & Shiozawa & 検証済みプロジェクト（verified/）のフィードバック反映。IModuleの\texttt{update()}を\texttt{updateInput()}/\texttt{updateOutput()}に分離。入出力分離ルールを「別モジュール」から「単一モジュール両方オーバーライド」に変更。setup()の重複init回避パターンを追加。sample/の全モジュール・doc/の全コード例を新アーキテクチャに統一 \\
-\bottomrule
-\end{tabularx}
+3.2 & 2026-04-11 & Shiozawa & 表紙のコード検証状況を明確化（sample/未検証・verified/検証済み）。既知の制約に「既存ライブラリの内部バスインスタンス」を追加。sample/のTftModule+TouchModuleをDisplayBoardModuleに統合 \\
+\end{longtable}

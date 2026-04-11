@@ -1,4 +1,4 @@
-This is e-upTeX, Version 3.141592653-p4.1.2-u2.00-250202-2.6 (utf8.uptex) (TeX Live 2025) (preloaded format=uplatex 2026.2.12)  10 APR 2026 23:34
+This is e-upTeX, Version 3.141592653-p4.1.2-u2.00-250202-2.6 (utf8.uptex) (TeX Live 2025) (preloaded format=uplatex 2026.2.12)  11 APR 2026 11:33
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1003,7 +1003,7 @@ Overfull \hbox (9.24683pt too wide) in paragraph at lines 16--17
 [][] 
  []
 
-./sections/introduction.tex:63: ignored error: Infinite glue shrinkage found in
+./sections/introduction.tex:62: ignored error: Infinite glue shrinkage found in
  box being split [4]) (./sections/led.tex
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
 nput line 15.
@@ -1030,8 +1030,8 @@ LaTeX Font Info:    Font shape `JY2/gt/m/n' will be
  [5]) (./sections/button.tex [6]
 [7]) (./sections/battery.tex [8] [9]) (./sections/servo.tex [10])
 (./sections/buzzer.tex [11] [12]) (./sections/mpu6500.tex [13])
-(./sections/touch.tex [14]) (./sections/tft.tex [15]) (./sections/camera.tex
-[16]) (./sections/drivemotor.tex [17] [18]) (./sections/chassis.tex [19]
+(./sections/display_board.tex [14] [15]) (./sections/camera.tex [16] [17])
+(./sections/drivemotor.tex [18]) (./sections/chassis.tex [19]
 LaTeX Font Info:    Trying to load font information for OMS+cmtt on input line 
 59.
 LaTeX Font Info:    No file OMScmtt.fd. on input line 59.
@@ -1047,8 +1047,8 @@ Underfull \hbox (badness 1728) in paragraph at lines 96--99
 ラスの継承を要求するため 、 内部クラスでラ ップして
  []
 
-) (./sections/wifi.tex [23] [24] [25]) (./sections/encoder.tex [26] [27])
-[28] 
+) (./sections/wifi.tex [23] [24] [25]) (./sections/encoder.tex [26] [27]
+[28]) [29] 
 enddocument/afterlastpage (AED): lastpage setting LastPage.
 (./モジュール実装ガイド.aux)
  ***********
@@ -1062,15 +1062,15 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
 Package rerunfilecheck Info: File `モジュール実装ガイド.out' has not 
 changed.
-(rerunfilecheck)             Checksum: 7631F0EB7DFECA677295295288466484;10533.
+(rerunfilecheck)             Checksum: 0C583EC539FA6F2C42DF4829A0746ACA;10469.
  ) 
 Here is how much of TeX's memory you used:
- 29441 strings out of 469642
- 569111 string characters out of 5471207
- 1521844 words of memory out of 5000000
- 57756 multiletter control sequences out of 15000+600000
+ 29416 strings out of 469642
+ 568721 string characters out of 5471207
+ 1519844 words of memory out of 5000000
+ 57734 multiletter control sequences out of 15000+600000
  694140 words of font info for 108 fonts, out of 8000000 for 9000
  41 hyphenation exceptions out of 8191
  98i,13n,108p,748b,2212s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on モジュール実装ガイド.dvi (29 pages, 983548 bytes).
+Output written on モジュール実装ガイド.dvi (30 pages, 988940 bytes).

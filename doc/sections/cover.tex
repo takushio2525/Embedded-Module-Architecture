@@ -1,5 +1,5 @@
 % 表紙
-\begin{titlepage}
+\thispagestyle{empty}
 \begin{center}
 \vspace*{20mm}
 
@@ -20,8 +20,7 @@
 \begin{tabular}{ll}
     \textbf{バージョン} & \docversion \\[4pt]
     \textbf{作成日} & \docdate \\[4pt]
-    \textbf{著者} & \docauthor \\[4pt]
-    \textbf{ステータス} & 改訂中 \\
+    \textbf{著者} & \docauthor \\
 \end{tabular}
 
 \vspace{20mm}
@@ -32,6 +31,7 @@
   colframe=accentblue,
   arc=2mm,
   width=14cm,
+  before={\par\noindent},
 ]
     \centering
     本ドキュメントは、Arduinoフレームワーク対応マイコン全般で使える\\
@@ -48,15 +48,16 @@
   colframe=warnred!70,
   arc=2mm,
   width=14cm,
+  before={\par\noindent},
 ]
     \centering
-    {\bfseries\color{warnred!70} 重要}\\[4pt]
-    本リポジトリに実装されているコードは、\\
-    アーキテクチャの設計パターンを示すための\textbf{サンプル実装}です。\\
-    \textbf{実機での動作検証は行っていません。}\\
+    {\bfseries\color{warnred!70} コードの検証状況}\\[4pt]
+    \texttt{sample/} — 設計パターンの構造説明用サンプル実装です。\\
+    \textbf{実機での動作検証は行っていません。}\\[2pt]
+    \texttt{verified/} — \textbf{実機で動作確認済み}のプロジェクトです。\\[4pt]
     実プロジェクトに適用する際は十分なテストを行ってください。
 \end{tcolorbox}
 
 \vfill
 \end{center}
-\end{titlepage}
+\clearpage

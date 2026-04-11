@@ -106,15 +106,15 @@ LCD＋タッチ & タッチ座標取得 & 画面描画 \\
 \begin{lstlisting}[style=cppstyle, caption={入出力モジュールの配列配置}]
 // 入出力モジュールは両方の配列に含める
 IModule* inputModules[] = {
-    &bleModule,    // BLE受信を先に反映
-    &touchModule,
+    &bleModule,           // BLE受信を先に反映
+    &displayBoardModule,  // タッチ読み取り
     &mpu6500Module,
 };
 
 IModule* outputModules[] = {
     &ledModule,
-    &tftModule,
-    &bleModule,    // 全データ確定後にBLE送信
+    &displayBoardModule,  // 画面描画
+    &bleModule,           // 全データ確定後にBLE送信
 };
 \end{lstlisting}
 

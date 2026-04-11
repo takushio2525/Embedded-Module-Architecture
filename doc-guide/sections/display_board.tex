@@ -1,0 +1,119 @@
+% DisplayBoardModule
+\section{【中級】DisplayBoardModule — 入出力統合 + ライブラリ内部管理}
+
+\begin{patternbox}{DisplayBoardModule で学べるパターン}
+\begin{itemize}
+    \item 入出力統合モジュール（updateInput + updateOutput の両方をオーバーライド）
+    \item 外部ライブラリ（TFT\_eSPI）をモジュール内部にカプセル化する方法
+    \item ModuleTimerによるFPS制御（更新頻度の制限）
+    \item Data構造体で入力データ（タッチ座標）と出力データ（表示テキスト）を統合管理
+\end{itemize}
+\end{patternbox}
+
+\subsection{なぜ1モジュールに統合するのか}
+
+TFTディスプレイボードは「タッチ入力」と「LCD出力」の2機能を持つが、
+ハードウェア上は同じSPIバスを共有する1枚の基板であり、同じドライバオブジェクト（TFT\_eSPI）で管理される。
+このような場合、BleModuleと同じく\textbf{1つのモジュールで入出力の両方をオーバーライド}する方式が適切である。
+
+\begin{pointbox}[入出力統合の判断基準]
+「入力と出力を別モジュールに分けるか、1モジュールに統合するか」は、
+\textbf{ハードウェアの単位}で判断する。
+同一基板・同一ドライバで管理されるデバイスは統合し、
+物理的に独立したデバイスは別モジュールにする。
+BleModuleの送受信統合と同じ考え方。
+\end{pointbox}
+
+\subsection{ライブラリの内部管理パターン}
+
+\begin{lstlisting}[style=cppstyle, caption={DisplayBoardModule.h — TFT\_eSPIの前方宣言}]
+class TFT_eSPI;  // ヘッダへの依存を防ぐ
+
+class DisplayBoardModule : public IModule {
+private:
+    DisplayBoardConfig _config;
+    TFT_eSPI*          _tft;    // 内部で生成・管理
+public:
+    DisplayBoardModule(const DisplayBoardConfig& config);
+    ~DisplayBoardModule();
+    bool init()                          override;
+    void updateInput(SystemData& data)   override;
+    void updateOutput(SystemData& data)  override;
+    void deinit()                        override;
+};
+\end{lstlisting}
+
+\begin{lstlisting}[style=cppstyle, caption={DisplayBoardModule.cpp — コンストラクタでTFT\_eSPIを生成}]
+#include <TFT_eSPI.h>
+
+DisplayBoardModule::DisplayBoardModule(const DisplayBoardConfig& config)
+    : _config(config), _tft(new TFT_eSPI()) {}
+
+DisplayBoardModule::~DisplayBoardModule() {
+    delete _tft;
+}
+\end{lstlisting}
+
+\begin{pointbox}[外部バスパターンとの違い]
+Mpu6500Moduleは\texttt{main.cpp}でI2Cバスを生成し、コンストラクタ引数で渡した（外部バスパターン）。
+DisplayBoardModuleではTFT\_eSPIが内部でSPIバスを管理するため、外部から渡す必要がない。
+SPIピン設定は\texttt{platformio.ini}のbuild\_flagsでコンパイル時に決定される。
+\end{pointbox}
+
+\begin{cautionbox}[既存ライブラリの制約]
+TFT\_eSPIやLovyanGFXのように、ライブラリ内部でバスインスタンスを保持するライブラリでは、
+アーキテクチャの「外部からバスポインタを渡す」パターンをそのまま適用できない。
+この場合、ライブラリごとモジュール内部にカプセル化し、Config構造体や
+build\_flagsで設定を渡す方式で対応する。
+\end{cautionbox}
+
+\subsection{Data構造体の入出力統合}
+
+\begin{lstlisting}[style=cppstyle, caption={DisplayBoardModule.h — Data}]
+struct DisplayBoardData {
+    // 出力: 表示テキスト（ロジックフェーズが書き込む）
+    char line1[48] = "";
+    char line2[48] = "";
+    char line3[48] = "";
+    char line4[48] = "";
+    char line5[48] = "";       // 黄色テキスト
+    // 入力: タッチ状態（入力フェーズで更新）
+    bool     touchPressed = false;
+    uint16_t touchX       = 0; // ピクセル座標
+    uint16_t touchY       = 0;
+};
+\end{lstlisting}
+
+\begin{pointbox}[入力と出力のデータを1つのData構造体に]
+\texttt{DisplayBoardData}はタッチ入力（\texttt{touchPressed}等）と
+表示出力（\texttt{line1}等）の両方を含む。
+入力フェーズでタッチ座標が書き込まれ、ロジックフェーズでそれを参照して
+表示テキストを設定し、出力フェーズで画面に描画する。
+BleModuleの\texttt{BleData}（受信データ+送信データ）と同じ構成。
+\end{pointbox}
+
+\subsection{ロジックフェーズでの表示内容設定}
+
+\begin{lstlisting}[style=cppstyle, caption={main.cpp — applyPattern()での表示設定}]
+void applyPattern(SystemData& data) {
+    // MPU-6500データを表示用にフォーマット
+    if (data.mpu.isValid) {
+        snprintf(data.display.line1, sizeof(data.display.line1),
+                 "Ax:%.2f Ay:%.2f Az:%.2f",
+                 data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
+    }
+    // タッチ座標を表示用にフォーマット
+    if (data.display.touchPressed) {
+        snprintf(data.display.line5, sizeof(data.display.line5),
+                 "Touch: %3d, %3d",
+                 data.display.touchX, data.display.touchY);
+    }
+}
+\end{lstlisting}
+
+\begin{pointbox}[3フェーズモデルのデータフロー]
+入力フェーズでDisplayBoardModuleが\texttt{data.display.touchPressed/X/Y}に値を書き込み、
+ロジックフェーズでMPUデータやタッチ座標を文字列に変換して\texttt{data.display.line1}等に書き込み、
+出力フェーズでDisplayBoardModuleが画面に描画する。
+入力→ロジック→出力の典型的なデータフローの実例。
+\end{pointbox}

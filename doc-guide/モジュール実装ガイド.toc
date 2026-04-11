@@ -24,30 +24,30 @@
 \contentsline {section}{\numberline {7}【中級】Mpu6500Module — I2Cバスパターン}{13}{section.7}%
 \contentsline {subsection}{\numberline {7.1}バスポインタの受け取り}{13}{subsection.7.1}%
 \contentsline {subsection}{\numberline {7.2}main.cppでのバス管理}{14}{subsection.7.2}%
-\contentsline {section}{\numberline {8}【中級】TouchModule — バスオブジェクト共有パターン}{14}{section.8}%
-\contentsline {subsection}{\numberline {8.1}ドライバオブジェクトの共有}{14}{subsection.8.1}%
-\contentsline {section}{\numberline {9}【中級】TftModule — SPI共有 + 複合デバイスの分離}{15}{section.9}%
-\contentsline {subsection}{\numberline {9.1}Data構造体のテキストバッファ}{15}{subsection.9.1}%
-\contentsline {subsection}{\numberline {9.2}ロジックフェーズでの表示内容設定}{16}{subsection.9.2}%
-\contentsline {section}{\numberline {10}【中級】CameraModule — PSRAMバッファ + フレーム管理}{16}{section.10}%
-\contentsline {subsection}{\numberline {10.1}Configの大量ピン管理}{16}{subsection.10.1}%
-\contentsline {subsection}{\numberline {10.2}フレームバッファの管理}{17}{subsection.10.2}%
-\contentsline {section}{\numberline {11}【応用】DriveMotorModule — PWM 2ピン制御 + 統合部品}{18}{section.11}%
-\contentsline {subsection}{\numberline {11.1}2つの使い方}{18}{subsection.11.1}%
-\contentsline {subsection}{\numberline {11.2}逆転保護}{18}{subsection.11.2}%
-\contentsline {section}{\numberline {12}【応用】ChassisModule — 機能統合パターン}{19}{section.12}%
-\contentsline {subsection}{\numberline {12.1}内部モジュールの保持}{19}{subsection.12.1}%
-\contentsline {subsection}{\numberline {12.2}親モジュールからの制御委譲}{20}{subsection.12.2}%
-\contentsline {section}{\numberline {13}【応用】BleModule — スレッドセーフティパターン}{21}{section.13}%
-\contentsline {subsection}{\numberline {13.1}内部バッファとvolatileフラグ}{21}{subsection.13.1}%
-\contentsline {subsection}{\numberline {13.2}コールバック→内部バッファ→SystemData}{22}{subsection.13.2}%
-\contentsline {subsection}{\numberline {13.3}BLEコールバックの登録}{22}{subsection.13.3}%
-\contentsline {subsection}{\numberline {13.4}送信の流れ（ロジックフェーズ→updateOutput()）}{23}{subsection.13.4}%
-\contentsline {section}{\numberline {14}【応用】WifiModule — ステートマシンパターン}{23}{section.14}%
-\contentsline {subsection}{\numberline {14.1}状態定義}{24}{subsection.14.1}%
-\contentsline {subsection}{\numberline {14.2}ステートマシンの実装}{24}{subsection.14.2}%
-\contentsline {subsection}{\numberline {14.3}ロジックフェーズでの使用例}{25}{subsection.14.3}%
-\contentsline {section}{\numberline {15}【応用】EncoderModule — 割り込み連携パターン}{26}{section.15}%
-\contentsline {subsection}{\numberline {15.1}割り込みハンドラの設計}{26}{subsection.15.1}%
-\contentsline {subsection}{\numberline {15.2}ISR→volatile→updateInput()の流れ}{27}{subsection.15.2}%
-\contentsline {subsection}{\numberline {15.3}deinit()で割り込みを解除}{28}{subsection.15.3}%
+\contentsline {section}{\numberline {8}【中級】DisplayBoardModule — 入出力統合 + ライブラリ内部管理}{14}{section.8}%
+\contentsline {subsection}{\numberline {8.1}なぜ1モジュールに統合するのか}{14}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}ライブラリの内部管理パターン}{15}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Data構造体の入出力統合}{15}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}ロジックフェーズでの表示内容設定}{16}{subsection.8.4}%
+\contentsline {section}{\numberline {9}【中級】CameraModule — PSRAMバッファ + フレーム管理}{16}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Configの大量ピン管理}{17}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}フレームバッファの管理}{17}{subsection.9.2}%
+\contentsline {section}{\numberline {10}【応用】DriveMotorModule — PWM 2ピン制御 + 統合部品}{18}{section.10}%
+\contentsline {subsection}{\numberline {10.1}2つの使い方}{18}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}逆転保護}{19}{subsection.10.2}%
+\contentsline {section}{\numberline {11}【応用】ChassisModule — 機能統合パターン}{19}{section.11}%
+\contentsline {subsection}{\numberline {11.1}内部モジュールの保持}{19}{subsection.11.1}%
+\contentsline {subsection}{\numberline {11.2}親モジュールからの制御委譲}{20}{subsection.11.2}%
+\contentsline {section}{\numberline {12}【応用】BleModule — スレッドセーフティパターン}{21}{section.12}%
+\contentsline {subsection}{\numberline {12.1}内部バッファとvolatileフラグ}{21}{subsection.12.1}%
+\contentsline {subsection}{\numberline {12.2}コールバック→内部バッファ→SystemData}{22}{subsection.12.2}%
+\contentsline {subsection}{\numberline {12.3}BLEコールバックの登録}{23}{subsection.12.3}%
+\contentsline {subsection}{\numberline {12.4}送信の流れ（ロジックフェーズ→updateOutput()）}{23}{subsection.12.4}%
+\contentsline {section}{\numberline {13}【応用】WifiModule — ステートマシンパターン}{24}{section.13}%
+\contentsline {subsection}{\numberline {13.1}状態定義}{24}{subsection.13.1}%
+\contentsline {subsection}{\numberline {13.2}ステートマシンの実装}{24}{subsection.13.2}%
+\contentsline {subsection}{\numberline {13.3}ロジックフェーズでの使用例}{25}{subsection.13.3}%
+\contentsline {section}{\numberline {14}【応用】EncoderModule — 割り込み連携パターン}{26}{section.14}%
+\contentsline {subsection}{\numberline {14.1}割り込みハンドラの設計}{26}{subsection.14.1}%
+\contentsline {subsection}{\numberline {14.2}ISR→volatile→updateInput()の流れ}{27}{subsection.14.2}%
+\contentsline {subsection}{\numberline {14.3}deinit()で割り込みを解除}{28}{subsection.14.3}%

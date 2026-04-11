@@ -50,14 +50,13 @@ ServoModule & 出力 & 【基本】 & PWM制御（LEDC） \\
 BuzzerModule & 出力 & 【基本】 & deinit()によるリソース解放 \\
 \midrule
 Mpu6500Module & 入力 & 【中級】 & I2Cバスパターン + レジスタ直接アクセス \\
-TouchModule & 入力 & 【中級】 & バスオブジェクト共有（TFT\_eSPIドライバ） \\
-TftModule & 出力 & 【中級】 & SPI共有 + 複合デバイスの分離 \\
+DisplayBoardModule & 入出力 & 【中級】 & 入出力統合 + ライブラリ内部管理 \\
 CameraModule & 入力 & 【中級】 & PSRAMバッファ + フレーム管理 \\
 \midrule
 DriveMotorModule & 出力 & 【応用】 & PWM 2ピン制御 + 統合モジュール部品 \\
 ChassisModule & 出力 & 【応用】 & 機能統合系（内部にモジュールを持つ） \\
-BleModule & 入力 & 【応用】 & スレッドセーフティ（volatileフラグ方式） \\
-WifiModule & 入力 & 【応用】 & ステートマシン内蔵 \\
+BleModule & 入出力 & 【応用】 & スレッドセーフティ（volatileフラグ方式） \\
+WifiModule & 入出力 & 【応用】 & ステートマシン内蔵 \\
 EncoderModule & 入力 & 【応用】 & ハードウェア割り込み連携 \\
 \bottomrule
 \end{longtable}

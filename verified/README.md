@@ -29,7 +29,7 @@ ESP32-S3 CAM搭載ロボットで実機テスト済みのプロジェクト。
 | I2C | Arduino Wire (`TwoWire*`) | ESP-IDF レガシー I2C API | esp_camera の SCCB が Wire と共存不可 |
 | LCD | TFT_eSPI | LovyanGFX | タッチ統合 + SPI共有排他制御 |
 | Arduino Core | v2.x (`ledcSetup`/`ledcAttachPin`) | v3.x (`ledcAttach`) | 最新プラットフォームで検証 |
-| TFT+タッチ | TftModule + TouchModule に分離 | DisplayBoardModule に統合 | LovyanGFXが一元管理 |
+| TFT+タッチ | DisplayBoardModule（TFT\_eSPI内部管理） | DisplayBoardModule（LovyanGFX内部管理） | 同じ統合アーキテクチャ、ライブラリが異なる |
 
 ## ビルド
 

@@ -1,8 +1,7 @@
 // SystemData.h — モジュール間共有データ構造体
 #pragma once
 #include "LedModule.h"
-#include "TouchModule.h"
-#include "TftModule.h"
+#include "DisplayBoardModule.h"
 #include "Mpu6500Module.h"
 #include "CameraModule.h"
 #include "ServoModule.h"
@@ -16,17 +15,16 @@
 
 // ===== システムデータ =====
 struct SystemData {
-    LedData        led;
-    TouchData      touch;
-    TftData        tft;
-    Mpu6500Data    mpu;
-    CameraData     camera;
-    ServoData      servo;
-    ChassisData    chassis;
-    ButtonData     button;
-    BleData        ble;
-    BatteryData    battery;
-    BuzzerData     buzzer;
-    WifiData       wifi;
-    EncoderData    encoder;
+    LedData            led;
+    DisplayBoardData   display;
+    Mpu6500Data        mpu;
+    CameraData         camera;
+    ServoData          servo;
+    ChassisData        chassis;
+    ButtonData         button;
+    BleData            ble;
+    BatteryData        battery;
+    BuzzerData         buzzer;
+    WifiData           wifi;
+    EncoderData        encoder;
 };

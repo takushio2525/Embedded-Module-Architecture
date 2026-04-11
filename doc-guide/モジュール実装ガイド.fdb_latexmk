@@ -1,10 +1,12 @@
 # Fdb version 4
-["dvipdf"] 1775864083.95669 "モジュール実装ガイド.dvi" "モジュール実装ガイド.pdf" "モジュール実装ガイド" 1775864084.10697 0
-  "モジュール実装ガイド.dvi" 1775864083.91856 983548 29cb02e30e44d896474a63ca1af9aa78 "latex"
+["dvipdf"] 1775907228.08025 "モジュール実装ガイド.dvi" "モジュール実装ガイド.pdf" "モジュール実装ガイド" 1775907228.23956 0
+  "モジュール実装ガイド.dvi" 1775907228.04058 988940 d137a664d5aec33cffd06dc3a1ed0181 "latex"
+  "モジュール実装ガイド.dvi" 1775907228.04058 988940 d137a664d5aec33cffd06dc3a1ed0181 "latex"
   (generated)
   "モジュール実装ガイド.pdf"
+  "モジュール実装ガイド.pdf"
   (rewritten before read)
-["latex"] 1775864081.57997 "main.tex" "モジュール実装ガイド.dvi" "モジュール実装ガイド" 1775864084.10598 0
+["latex"] 1775907225.77853 "main.tex" "モジュール実装ガイド.dvi" "モジュール実装ガイド" 1775907228.23848 0
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1000.tfm" 1136768653 1536 e07581a4bb3136ece9eeb4c3ffab8233 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -174,7 +176,7 @@
   "/usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf" 1749313668 42213 4e2ca030e8e2640502016e9e45868dcb ""
   "/usr/local/texlive/2025/texmf-var/web2c/euptex/uplatex.fmt" 1770929074 2371991 fb34f7ea8ca590bfabe5e089b86541ad ""
   "/usr/local/texlive/2025/texmf.cnf" 1770926123 455 5b996dcaa0eb4ef14a83b026bc0a008c ""
-  "main.tex" 1773840412.71576 6893 bd1d0209a7e5de864fd57374b10c563f ""
+  "main.tex" 1775890015.72639 6880 1688532b60b449b537bf6aed73a177ca ""
   "plistings.sty" 1773576036.8777 12288 ac8656e96afebe4019d45d29b2fa5256 ""
   "sections/battery.tex" 1775863999.48481 3426 d53994f9bb3b6fff3a779b38d735ecd0 ""
   "sections/ble.tex" 1775864045.6486 5688 2569ef77ab82eaa878a35c313f88f7e1 ""
@@ -183,20 +185,19 @@
   "sections/camera.tex" 1775864002.44141 3256 7dbcc4694bfc323d0a10d6343f31118f ""
   "sections/chassis.tex" 1775864020.05495 4715 ffbdddd9cfdd90f82b7e65606262e2cf ""
   "sections/cover.tex" 1773576080.83876 1018 aaf91a3b1ba23974a0197169fddf06cf ""
+  "sections/display_board.tex" 1775890011.02863 5672 18ca1344ddd0f40b10838e68b158cfe2 ""
   "sections/drivemotor.tex" 1775864014.46831 2735 230cd1a4c6d6e72ea513aebba44cfb53 ""
   "sections/encoder.tex" 1775864060.7364 6310 4b759540ea34f086b80dcbe264211467 ""
-  "sections/introduction.tex" 1773993146.9856 4016 d3f24bf483c8eab4bd66433c73d4125b ""
+  "sections/introduction.tex" 1775890056.46861 3941 fd9f3b6a033440c64d3f511c55326490 ""
   "sections/led.tex" 1775863997.41596 3382 0e8c5420c0dd3d3f3f8661e957a92720 ""
   "sections/mpu6500.tex" 1773707892.45573 2976 88fba1c3998f119b7b61ea02498a931f ""
   "sections/revision.tex" 1773840402.71293 608 2f1efb6ad580018969f3bc951d4ca192 ""
   "sections/servo.tex" 1775863984.9426 2536 9938a59c73e34a85883004a4051087f4 ""
-  "sections/tft.tex" 1775863987.42376 2344 237d9466c954d6661006f2b524e36ede ""
-  "sections/touch.tex" 1773707893.33094 2091 3523085e348e7d43eb164866a3b2ac2b ""
-  "sections/wifi.tex" 1775864053.18492 4520 45b8327d373714ef931e964bec15f5ed ""
-  "モジュール実装ガイド.aux" 1775864083.91636 13942 44479d0ac33477a21cee134799f24e56 "latex"
-  "モジュール実装ガイド.out" 1775864083.91786 10533 7631f0eb7dfeca677295295288466484 "latex"
-  "モジュール実装ガイド.toc" 1775864083.91839 5386 9d9ab8c9b745578e27d310ffb2f81574 "latex"
-  "モジュール実装ガイド.aux" 1775864083.91636 13942 44479d0ac33477a21cee134799f24e56 "latex"
+  "sections/wifi.tex" 1775890064.32833 4532 be7eccb95e5256a453b40add19f452d2 ""
+  "モジュール実装ガイド.aux" 1775907228.03818 13977 2885f1fcfa2737ab8d161fddd159244b "latex"
+  "モジュール実装ガイド.out" 1775907228.03959 10469 0c583ec539fa6f2c42df4829a0746aca "latex"
+  "モジュール実装ガイド.toc" 1775907228.04037 5372 87fed019fb9944725761c528fec58faa "latex"
+  "モジュール実装ガイド.aux" 1775907228.03818 13977 2885f1fcfa2737ab8d161fddd159244b "latex"
   (generated)
   "モジュール実装ガイド.aux"
   "モジュール実装ガイド.dvi"

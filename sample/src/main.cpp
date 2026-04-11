@@ -2,13 +2,11 @@
 // 3フェーズ実行モデル: 入力 → ロジック → 出力
 #include <Arduino.h>
 #include <Wire.h>
-#include <TFT_eSPI.h>
 #include "ProjectConfig.h"
 #include "ModuleTimer.h"
 
 // バスインスタンス（グローバルスコープで生成）
-static TwoWire  mpuWire  = TwoWire(0);   // MPU6500用I2C
-static TFT_eSPI tftDriver;               // TFT LCD + タッチ共有ドライバ
+static TwoWire mpuWire = TwoWire(0);   // MPU6500用I2C
 
 // システムデータ
 SystemData systemData;
@@ -16,20 +14,19 @@ SystemData systemData;
 // ===== モジュールインスタンス =====
 
 // 入力モジュール
-TouchModule    touchModule(TOUCH_CONFIG, &tftDriver);
 Mpu6500Module  mpu6500Module(MPU6500_CONFIG, &mpuWire);
 CameraModule   cameraModule(CAMERA_CONFIG);
 ButtonModule   buttonModule(BUTTON_CONFIG);
 BatteryModule  batteryModule(BATTERY_CONFIG);
 EncoderModule  encoderModule(ENCODER_CONFIG);
 
-// 入出力モジュール（BLE/WiFiは入力フェーズで受信、出力フェーズで送信）
+// 入出力モジュール
+DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG);
 BleModule      bleModule(BLE_CONFIG);
 WifiModule     wifiModule(WIFI_CONFIG);
 
 // 出力モジュール
 LedModule      ledModule(LED_CONFIG);
-TftModule      tftModule(TFT_CONFIG, &tftDriver);
 ServoModule    servoModule(SERVO_CONFIG);
 ChassisModule  chassisModule(CHASSIS_CONFIG);
 BuzzerModule   buzzerModule(BUZZER_CONFIG);
@@ -37,9 +34,9 @@ BuzzerModule   buzzerModule(BUZZER_CONFIG);
 // モジュール配列
 // 配列の並び順 = フェーズ内の実行順序
 IModule* inputModules[] = {
-    &bleModule,       // BLE受信を先に反映
-    &wifiModule,      // WiFi状態監視
-    &touchModule,
+    &bleModule,            // BLE受信を先に反映
+    &wifiModule,           // WiFi状態監視
+    &displayBoardModule,   // タッチ読み取り
     &mpu6500Module,
     &cameraModule,
     &buttonModule,
@@ -50,12 +47,12 @@ const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
 IModule* outputModules[] = {
     &ledModule,
-    &tftModule,
+    &displayBoardModule,   // 画面描画
     &servoModule,
     &chassisModule,
     &buzzerModule,
-    &bleModule,       // 全データ確定後にBLE送信
-    &wifiModule,      // 接続/切断リクエスト処理
+    &bleModule,            // 全データ確定後にBLE送信
+    &wifiModule,           // 接続/切断リクエスト処理
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
@@ -70,41 +67,41 @@ void applyPattern(SystemData& data) {
         data.led.state = !data.led.state;
     }
 
-    // MPU-6500データをTFT表示用にフォーマット
+    // MPU-6500データを表示用にフォーマット
     if (data.mpu.isValid) {
-        snprintf(data.tft.line1, sizeof(data.tft.line1),
+        snprintf(data.display.line1, sizeof(data.display.line1),
                  "Ax:%.2f Ay:%.2f Az:%.2f",
                  data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
-        snprintf(data.tft.line2, sizeof(data.tft.line2),
+        snprintf(data.display.line2, sizeof(data.display.line2),
                  "Gx:%.1f Gy:%.1f Gz:%.1f",
                  data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
-        snprintf(data.tft.line3, sizeof(data.tft.line3),
+        snprintf(data.display.line3, sizeof(data.display.line3),
                  "Temp: %.1f C", data.mpu.temperature);
     } else {
-        strncpy(data.tft.line1, "MPU: No data", sizeof(data.tft.line1));
+        strncpy(data.display.line1, "MPU: No data", sizeof(data.display.line1));
     }
 
-    // カメラ情報をTFT表示用にフォーマット
+    // カメラ情報を表示用にフォーマット
     if (data.camera.isValid && data.camera.frameReady) {
-        snprintf(data.tft.line4, sizeof(data.tft.line4),
+        snprintf(data.display.line4, sizeof(data.display.line4),
                  "CAM: %dx%d (%d B)",
                  data.camera.width, data.camera.height, (int)data.camera.frameSize);
     } else {
-        strncpy(data.tft.line4, "CAM: No frame", sizeof(data.tft.line4));
+        strncpy(data.display.line4, "CAM: No frame", sizeof(data.display.line4));
     }
 
-    // タッチ座標をTFT表示用にフォーマット（タッチ中のみ）
+    // タッチ座標を表示用にフォーマット（タッチ中のみ）
     static bool lastTouched = false;
-    if (data.touch.touchPressed) {
-        snprintf(data.tft.line5, sizeof(data.tft.line5),
-                 "Touch: %3d, %3d", data.touch.touchX, data.touch.touchY);
+    if (data.display.touchPressed) {
+        snprintf(data.display.line5, sizeof(data.display.line5),
+                 "Touch: %3d, %3d", data.display.touchX, data.display.touchY);
         if (!lastTouched) {
-            Serial.printf("[Logic] Touch: (%d, %d)\n", data.touch.touchX, data.touch.touchY);
+            Serial.printf("[Logic] Touch: (%d, %d)\n", data.display.touchX, data.display.touchY);
         }
     } else {
-        data.tft.line5[0] = '\0';
+        data.display.line5[0] = '\0';
     }
-    lastTouched = data.touch.touchPressed;
+    lastTouched = data.display.touchPressed;
 }
 
 // ===== セットアップ =====
@@ -130,14 +127,13 @@ void setup() {
 
     // バス初期化（全モジュールのinit()より前に実行）
     mpuWire.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
-    tftDriver.init();  // TFT_eSPIドライバ初期化（TouchModuleも共有するため先に実行）
 
     // モジュール初期化（両配列に含まれるモジュールの重複initを避ける）
     IModule* allModules[] = {
-        &touchModule, &mpu6500Module, &cameraModule,
+        &mpu6500Module, &cameraModule,
         &buttonModule, &batteryModule, &encoderModule,
-        &bleModule, &wifiModule,
-        &ledModule, &tftModule, &servoModule,
+        &displayBoardModule, &bleModule, &wifiModule,
+        &ledModule, &servoModule,
         &chassisModule, &buzzerModule,
     };
     const int ALL_COUNT = sizeof(allModules) / sizeof(allModules[0]);
