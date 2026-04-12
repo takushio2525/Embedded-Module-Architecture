@@ -24,16 +24,16 @@ constexpr int I2C_SCL_PIN = 3;
 // LovyanGFXが内部でSPIバスを構成するためSPIピンをConfigに含める。
 // 外部SPIClassは使用しない（LovyanGFXのbus_shared + use_lockで排他制御）。
 const DisplayBoardConfig DISPLAY_BOARD_CONFIG = {
-    .spiMosiPin = SPI_MOSI_PIN,  // 共有SPIバス MOSIピン
-    .spiMisoPin = SPI_MISO_PIN,  // 共有SPIバス MISOピン
-    .spiSckPin = SPI_SCK_PIN,    // 共有SPIバス SCKピン
-    .tftCsPin = 41,              // TFT CSピン
-    .tftDcPin = 42,              // TFT DCピン
-    .tftRstPin = 48,             // TFT RSTピン
-    .touchCsPin = 47,            // タッチCSピン
-    .touchIrqPin = 14,           // タッチIRQピン
-    .rotation = 0,               // 0=縦向き (portrait, 240x320)
-    .updateIntervalMs = 100,     // 画面更新周期 100ms (10fps)
+    .spiMosiPin = SPI_MOSI_PIN, // 共有SPIバス MOSIピン
+    .spiMisoPin = SPI_MISO_PIN, // 共有SPIバス MISOピン
+    .spiSckPin = SPI_SCK_PIN,   // 共有SPIバス SCKピン
+    .tftCsPin = 41,             // TFT CSピン
+    .tftDcPin = 42,             // TFT DCピン
+    .tftRstPin = 48,            // TFT RSTピン
+    .touchCsPin = 47,           // タッチCSピン
+    .touchIrqPin = 14,          // タッチIRQピン
+    .rotation = 0,              // 0=縦向き (portrait, 240x320)
+    .updateIntervalMs = 100,    // 画面更新周期 100ms (10fps)
 };
 
 // MPU-6500 (I2C)
