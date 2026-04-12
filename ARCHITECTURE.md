@@ -62,6 +62,7 @@ public:
 | 入力専用 | `updateInput()` のみ | `inputModules[]` | IMU, Button, Camera, Battery, Encoder |
 | 出力専用 | `updateOutput()` のみ | `outputModules[]` | LED, Servo, Buzzer, TFT, Motor |
 | 入出力 | 両方 | 両方の配列に含める | BLE, LCD+タッチ |
+| 内部専用 | — | 配列に含めない | DriveMotor（ChassisModule内部で保持・制御） |
 
 ---
 
