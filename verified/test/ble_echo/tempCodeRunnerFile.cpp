@@ -1,1 +1,0 @@
-pio run -e test-ble -t upload && pio device monitor
