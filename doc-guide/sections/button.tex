@@ -89,3 +89,125 @@ void applyPattern(SystemData& data) {
     }
 }
 \end{lstlisting}
+
+% ─── API仕様 ───────────────────────────────
+\subsection{API仕様}
+
+
+\begin{apibox}{ButtonModule --- ボタン入力モジュール}
+\textbf{定義ファイル:} \texttt{lib/ButtonModule/ButtonModule.h / .cpp}\\
+\textbf{分類:} 入力モジュール（\texttt{updateInput()}のみオーバーライド）\\
+\textbf{対象デバイス:} 汎用タクトスイッチ・プッシュボタン
+
+GPIO入力をデバウンス処理し、押下状態とエッジ（立ち上がり・立ち下がり）を検出するモジュール。
+プルアップ接続（activeLow）とプルダウン接続の両方に対応する。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item デバウンスフィルタ（\texttt{ModuleTimer}ベース、設定可能な安定時間）
+    \item プルアップ（LOW=押下）/ プルダウン（HIGH=押下）の切り替え対応
+    \item エッジ検出フラグ（\texttt{justPressed} / \texttt{justReleased}）
+    \item 安定状態の保持（\texttt{pressed}）
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{ButtonConfig}
+ボタンのハードウェア接続とデバウンスパラメータを定義する。
+
+\begin{longtable}{l l l p{5.2cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{pin}        & \texttt{uint8\_t}       & ---          & ボタン入力GPIOピン番号 \\
+\texttt{activeLow}  & \texttt{bool}           & ---          & \texttt{true}: LOW=押下（プルアップ接続）、\texttt{false}: HIGH=押下（プルダウン接続） \\
+\texttt{debounceMs} & \texttt{unsigned long}  & 例: 30       & デバウンス安定時間 [ms]。入力変化後、この時間が経過するまで状態を確定しない \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{ButtonData}
+デバウンス処理後のボタン状態を保持する。\texttt{justPressed}/\texttt{justReleased}は
+1ループ限りのエッジフラグであり、次の\texttt{updateInput()}呼び出しでクリアされる。
+
+\begin{longtable}{l l l p{5.2cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{pressed}      & \texttt{bool} & \texttt{false} & デバウンス後の押下状態。押されている間\texttt{true} \\
+\texttt{justPressed}  & \texttt{bool} & \texttt{false} & 今ループで押下された瞬間のみ\texttt{true}（立ち上がりエッジ） \\
+\texttt{justReleased} & \texttt{bool} & \texttt{false} & 今ループで離された瞬間のみ\texttt{true}（立ち下がりエッジ） \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{ButtonModule(const ButtonConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{ButtonConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 常に\texttt{true} \\
+動作     & \texttt{activeLow}に応じて\texttt{INPUT\_PULLUP}または\texttt{INPUT}でピンモードを設定。デバウンスタイマーを初期化 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateInput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+書き込み先     & \texttt{data.button} \\
+タイミング制御 & 毎ループ実行（タイマーはデバウンス判定に使用） \\
+動作           & \texttt{digitalRead()}で生入力を取得し、前回値と比較。変化があればデバウンスタイマーをリセット。タイマー経過後に安定状態を確定し、\texttt{pressed}・\texttt{justPressed}・\texttt{justReleased}を更新 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{notebox}[エッジフラグのライフサイクル]
+\texttt{justPressed}と\texttt{justReleased}は\texttt{updateInput()}の先頭で毎回\texttt{false}にリセットされる。
+状態変化があったループでのみ\texttt{true}になるため、ロジックフェーズで1回だけ検出できる。
+複数箇所で参照しても安全である（同一ループ内では値が変わらない）。
+\end{notebox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={ButtonModuleの使用例}]
+// ProjectConfig.h
+const ButtonConfig BUTTON_CONFIG = {
+    .pin        = 0,     // GPIO0: BOOTボタン
+    .activeLow  = true,  // LOW=押下（内蔵プルアップ使用）
+    .debounceMs = 30,    // デバウンス30ms
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    // ボタンが押された瞬間にLEDをトグル
+    if (data.button.justPressed) {
+        data.led.state = !data.led.state;
+    }
+}
+\end{lstlisting}

@@ -117,3 +117,187 @@ void applyPattern(SystemData& data) {
 出力フェーズでDisplayBoardModuleが画面に描画する。
 入力→ロジック→出力の典型的なデータフローの実例。
 \end{pointbox}
+
+% ─── API仕様 ───────────────────────────────
+\subsection{API仕様}
+
+
+\begin{apibox}{DisplayBoardModule --- TFT表示ボードモジュール}
+\textbf{定義ファイル:} \texttt{lib/DisplayBoardModule/DisplayBoardModule.h / .cpp}\\
+\textbf{分類:} 入出力モジュール（\texttt{updateInput()} + \texttt{updateOutput()}）\\
+\textbf{対象デバイス:} ST7789 TFT LCD + XPT2046 タッチパネル
+
+同一基板上のLCD表示（出力）とタッチ読み取り（入力）を統合管理するモジュール。
+TFT\_eSPIライブラリを内部で保持し、外部からのドライバ注入は不要。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item ST7789 TFT LCDへの5行テキスト表示
+    \item XPT2046タッチパネルの座標読み取り
+    \item 画面更新周期の制御（\texttt{ModuleTimer}ベース）
+    \item バックライトPWM制御
+    \item TFT\_eSPIインスタンスの内部管理（new/delete）
+    \item \texttt{deinit()}によるリソース解放
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{DisplayBoardConfig}
+LCD表示のパラメータを定義する。SPI/タッチのピン番号は\texttt{platformio.ini}の\texttt{build\_flags}で設定する。
+
+\begin{longtable}{l l l p{4.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{rotation}        & \texttt{uint8\_t}  & 0--3（1=横向き） & 画面回転方向 \\
+\texttt{blPin}           & \texttt{int8\_t}   & -1で常時ON       & バックライト制御GPIOピン \\
+\texttt{updateIntervalMs} & \texttt{uint32\_t} & 例: 100         & 画面更新周期 [ms]。例: 100ms = 10fps \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+\begin{notebox}[SPI/タッチのピン設定]
+TFT\_eSPIはSPIバスを内部で管理するため、外部\texttt{SPIClass}は使用しない。
+ピン番号（MOSI/MISO/SCK/CS/DC/RST/タッチCS）は\texttt{platformio.ini}の\texttt{build\_flags}で設定する:
+\begin{lstlisting}[style=cppstyle, numbers=none, frame=none, backgroundcolor=\color{white}]
+build_flags =
+    -DTFT_MOSI=11  -DTFT_MISO=13  -DTFT_SCLK=12
+    -DTFT_CS=10    -DTFT_DC=14    -DTFT_RST=15
+    -DTOUCH_CS=16
+\end{lstlisting}
+\end{notebox}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{DisplayBoardData}
+LCD表示内容とタッチ入力状態を保持する。
+
+\begin{longtable}{l l l p{4.0cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\small 次ページに続く} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{4}{l}{\textbf{--- 出力: 表示内容（ロジックフェーズで設定） ---}} \\
+\texttt{line1[48]}  & \texttt{char[]}    & \texttt{""} & 1行目テキスト \\
+\texttt{line2[48]}  & \texttt{char[]}    & \texttt{""} & 2行目テキスト \\
+\texttt{line3[48]}  & \texttt{char[]}    & \texttt{""} & 3行目テキスト \\
+\texttt{line4[48]}  & \texttt{char[]}    & \texttt{""} & 4行目テキスト \\
+\texttt{line5[48]}  & \texttt{char[]}    & \texttt{""} & 5行目テキスト（タッチ座標表示等） \\
+\midrule
+\multicolumn{4}{l}{\textbf{--- 入力: タッチ状態（入力フェーズで更新） ---}} \\
+\texttt{touchPressed} & \texttt{bool}     & \texttt{false} & タッチ押下状態 \\
+\texttt{touchX}       & \texttt{uint16\_t} & \texttt{0}    & タッチX座標 [px] \\
+\texttt{touchY}       & \texttt{uint16\_t} & \texttt{0}    & タッチY座標 [px] \\
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{DisplayBoardModule(const DisplayBoardConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{DisplayBoardConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー。\texttt{TFT\_eSPI}インスタンスを\texttt{new}で生成 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{\textasciitilde DisplayBoardModule()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & 内部の\texttt{TFT\_eSPI}インスタンスを\texttt{delete}で解放する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 常に\texttt{true} \\
+動作     & TFT初期化（\texttt{tft.init()}）、画面回転設定、背景色クリア、バックライトON、タッチキャリブレーション \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateInput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+書き込み先     & \texttt{data.display}（タッチ関連メンバ） \\
+タイミング制御 & 毎ループ実行 \\
+動作           & タッチパネルの押下状態を取得し、\texttt{touchPressed}・\texttt{touchX}・\texttt{touchY}を更新 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateOutput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+読み取り元     & \texttt{data.display}（テキスト関連メンバ） \\
+タイミング制御 & \texttt{ModuleTimer}で\texttt{updateIntervalMs}ごとに実行 \\
+動作           & 画面をクリアし、\texttt{line1}--\texttt{line5}のテキストを描画する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void deinit()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & バックライトOFF、画面クリア \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={DisplayBoardModuleの使用例}]
+// ProjectConfig.h
+const DisplayBoardConfig DISPLAY_BOARD_CONFIG = {
+    .rotation        = 1,    // 横向き
+    .blPin           = 46,   // バックライトピン
+    .updateIntervalMs = 100, // 10fps
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    // センサーデータを表示
+    snprintf(data.display.line1, 48,
+             "Accel: %.2f g", data.mpu.accelX);
+    snprintf(data.display.line2, 48,
+             "Battery: %.1f V", data.battery.voltage);
+    // タッチ座標の表示
+    if (data.display.touchPressed) {
+        snprintf(data.display.line5, 48,
+                 "Touch: (%d, %d)",
+                 data.display.touchX,
+                 data.display.touchY);
+    }
+}
+\end{lstlisting}

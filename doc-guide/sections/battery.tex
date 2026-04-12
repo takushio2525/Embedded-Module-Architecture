@@ -76,3 +76,148 @@ void BatteryModule::updateInput(SystemData& data) {
 \texttt{updateInput()}の冒頭で\texttt{getNowTime() < interval}なら即\texttt{return}するパターンは、
 周期実行の定石。ガード節として最初に書くことで、残りのコードのインデントが深くならない。
 \end{pointbox}
+
+% ─── API仕様 ───────────────────────────────
+\subsection{API仕様}
+
+
+\begin{apibox}{BatteryModule --- バッテリー電圧監視モジュール}
+\textbf{定義ファイル:} \texttt{lib/BatteryModule/BatteryModule.h / .cpp}\\
+\textbf{分類:} 入力モジュール（\texttt{updateInput()}のみオーバーライド）\\
+\textbf{対象デバイス:} ADC入力（分圧回路経由）
+
+ADCでバッテリー電圧を読み取り、移動平均フィルタで平滑化するモジュール。
+分圧比の補正、低電圧警告判定を行う。フィルタサイズは16サンプル固定。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item 周期的ADCサンプリング（\texttt{ModuleTimer}ベース）
+    \item 16サンプル移動平均フィルタ（リングバッファ実装）
+    \item 分圧回路の補正（\texttt{voltageDivider}で実電圧に換算）
+    \item 低電圧警告フラグ（\texttt{isLow}）
+    \item サンプル蓄積状態の管理（\texttt{isValid}）
+\end{itemize}
+
+% --- 定数 ---
+\begin{funcblock}{定数}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{名前} & \textbf{値} & \textbf{説明} \\
+\midrule
+\texttt{BATTERY\_FILTER\_SIZE} & \texttt{16} & 移動平均フィルタのサンプル数（リングバッファサイズ） \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{BatteryConfig}
+ADC入力と電圧計算のパラメータを定義する。
+
+\begin{longtable}{l l l p{4.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{adcPin}             & \texttt{uint8\_t}       & ---           & ADC入力GPIOピン番号 \\
+\texttt{voltageDivider}     & \texttt{float}          & 例: 2.0       & 分圧比。実電圧 = ADC電圧 $\times$ この値 \\
+\texttt{adcRefVoltage}      & \texttt{float}          & ESP32: 3.3    & ADC基準電圧 [V] \\
+\texttt{adcResolution}      & \texttt{uint16\_t}      & ESP32: 4095   & ADC分解能（12bit = 4095） \\
+\texttt{sampleIntervalMs}   & \texttt{unsigned long}  & 例: 500       & サンプリング間隔 [ms] \\
+\texttt{lowVoltageThreshold} & \texttt{float}         & 例: 3.3       & 低電圧警告閾値 [V]。フィルタ済み電圧がこの値以下で\texttt{isLow}が\texttt{true} \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{BatteryData}
+フィルタ処理後のバッテリー電圧と状態フラグを保持する。
+
+\begin{longtable}{l l l p{4.8cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{voltage}    & \texttt{float} & \texttt{0.0f}  & 移動平均フィルタ済み電圧 [V] \\
+\texttt{rawVoltage} & \texttt{float} & \texttt{0.0f}  & 最新の生電圧 [V]（フィルタ前） \\
+\texttt{isValid}    & \texttt{bool}  & \texttt{false} & サンプル数が\texttt{BATTERY\_FILTER\_SIZE}に達したら\texttt{true} \\
+\texttt{isLow}      & \texttt{bool}  & \texttt{false} & 低電圧警告フラグ \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{BatteryModule(const BatteryConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{BatteryConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持。リングバッファをゼロ初期化 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 常に\texttt{true} \\
+動作     & ADCピンのモード設定、サンプリングタイマーの初期化 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateInput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+書き込み先     & \texttt{data.battery} \\
+タイミング制御 & \texttt{ModuleTimer}で\texttt{\_config.sampleIntervalMs}ごとに実行 \\
+動作           & ADC生値を読み取り、電圧に変換してリングバッファに追加。バッファ全体の平均を計算し\texttt{voltage}に書き込む。\texttt{lowVoltageThreshold}と比較して\texttt{isLow}を更新 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{notebox}[電圧変換式]
+ADC生値から実電圧への変換は以下の式で行う:
+
+\vspace{0.3em}
+$$V_{actual} = \frac{adcValue}{adcResolution} \times adcRefVoltage \times voltageDivider$$
+\vspace{0.3em}
+
+\noindent 例: ADC値 2048、分解能 4095、基準電圧 3.3V、分圧比 2.0 の場合:
+$V = \frac{2048}{4095} \times 3.3 \times 2.0 \approx 3.30$V
+\end{notebox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={BatteryModuleの使用例}]
+// ProjectConfig.h
+const BatteryConfig BATTERY_CONFIG = {
+    .adcPin             = 3,      // GPIO3: ADC1_CH2
+    .voltageDivider     = 2.0f,   // 1/2分圧回路
+    .adcRefVoltage      = 3.3f,   // ESP32 ADC基準電圧
+    .adcResolution      = 4095,   // 12bit ADC
+    .sampleIntervalMs   = 500,    // 500msごとにサンプリング
+    .lowVoltageThreshold = 3.3f,  // 3.3V以下で低電圧警告
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    if (data.battery.isValid && data.battery.isLow) {
+        // 低電圧時の処理（LED点滅やBLE通知など）
+        data.led.state = true;
+    }
+}
+\end{lstlisting}

@@ -88,3 +88,112 @@ const LedConfig LED_CONFIG = {
 
 回路設計者はこのファイルだけ見ればピンアサインが分かる。
 \texttt{LED\_CONFIG}という大文字スネークケースの命名規則も守っている。
+
+% ─── API仕様 ───────────────────────────────
+\subsection{API仕様}
+
+
+\begin{apibox}{LedModule --- LED制御モジュール}
+\textbf{定義ファイル:} \texttt{lib/LedModule/LedModule.h / .cpp}\\
+\textbf{分類:} 出力モジュール（\texttt{updateOutput()}のみオーバーライド）\\
+\textbf{対象デバイス:} 汎用LED
+
+GPIO出力によりLEDのON/OFFを制御するシンプルなモジュール。
+本アーキテクチャの最小実装例として位置づけられる。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item GPIO出力によるLED ON/OFF制御
+    \item \texttt{state}フラグによるシンプルな状態管理
+    \item \texttt{brightness}メンバ（将来のPWM調光用に予約）
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{LedConfig}
+LED接続ピンを定義する。
+
+\begin{longtable}{l l l p{5.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{ledPin} & \texttt{uint8\_t} & --- & LED出力GPIOピン番号 \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{LedData}
+LEDの出力状態を保持する。
+
+\begin{longtable}{l l l p{5.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{state}      & \texttt{bool}     & \texttt{false} & \texttt{true}: LED点灯、\texttt{false}: LED消灯 \\
+\texttt{brightness} & \texttt{uint8\_t} & \texttt{0}     & 輝度値（0--255）。現在の実装ではGPIOのHIGH/LOWのみで未使用 \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{LedModule(const LedConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{LedConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 常に\texttt{true} \\
+動作     & \texttt{ledPin}を\texttt{OUTPUT}モードに設定し、LOWに初期化する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateOutput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+読み取り元     & \texttt{data.led} \\
+タイミング制御 & 毎ループ実行 \\
+動作           & \texttt{data.led.state}に応じて\texttt{digitalWrite()}でHIGH/LOWを出力する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={LedModuleの使用例}]
+// ProjectConfig.h
+const LedConfig LED_CONFIG = {
+    .ledPin = 2,  // GPIO2: オンボードLED
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    // ボタン押下でLEDをトグル
+    if (data.button.justPressed) {
+        data.led.state = !data.led.state;
+    }
+}
+\end{lstlisting}

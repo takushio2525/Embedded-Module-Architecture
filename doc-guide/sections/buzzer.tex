@@ -78,3 +78,135 @@ BuzzerModuleのように\textbf{ハードウェアリソース（PWMチャネル
 LedModuleやButtonModuleは\texttt{pinMode()}で設定したGPIOを使うだけで、
 特別なリソースを占有しない。こうしたモジュールでは\texttt{deinit()}をオーバーライドしなくてよい。
 \end{notebox}
+
+% ─── API仕様 ───────────────────────────────
+\subsection{API仕様}
+
+
+\begin{apibox}{BuzzerModule --- ブザー出力モジュール}
+\textbf{定義ファイル:} \texttt{lib/BuzzerModule/BuzzerModule.h / .cpp}\\
+\textbf{分類:} 出力モジュール（\texttt{updateOutput()}のみオーバーライド）\\
+\textbf{対象デバイス:} パッシブブザー（PWM駆動）
+
+LEDCによるPWMトーン再生を行うモジュール。
+周波数と再生時間を指定でき、時間経過後に自動停止する。
+\end{apibox}
+
+\subsubsection{機能概要}
+
+\begin{itemize}
+    \item LEDC PWMによるトーン生成（任意の周波数）
+    \item 再生時間指定（\texttt{durationMs}）による自動停止
+    \item 再生リクエストフラグ（\texttt{requestPlay}）による制御
+    \item \texttt{deinit()}によるPWMチャネル解放
+\end{itemize}
+
+% --- Config ---
+\subsubsection{Config構造体}
+
+\begin{funcblock}{BuzzerConfig}
+ブザーの接続ピンとPWMチャネルを定義する。
+
+\begin{longtable}{l l l p{5.0cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{制約・既定値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{pin}        & \texttt{uint8\_t} & ---         & ブザー出力GPIOピン番号 \\
+\texttt{pwmChannel} & \texttt{uint8\_t} & 0--15       & LEDCチャネル番号。他モジュールと重複しないこと \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- Data ---
+\subsubsection{Data構造体}
+
+\begin{funcblock}{BuzzerData}
+ブザーの再生パラメータを保持する。ロジックフェーズで設定し、出力フェーズで消費される。
+
+\begin{longtable}{l l l p{4.5cm}}
+\toprule
+\textbf{メンバ} & \textbf{型} & \textbf{初期値} & \textbf{説明} \\
+\midrule
+\endhead
+\texttt{frequency}   & \texttt{uint16\_t}      & \texttt{0}     & 再生周波数 [Hz]。\texttt{0}で消音 \\
+\texttt{durationMs}  & \texttt{unsigned long}  & \texttt{0}     & 再生時間 [ms]。\texttt{0}で無制限（停止は\texttt{frequency = 0}で行う） \\
+\texttt{requestPlay} & \texttt{bool}           & \texttt{false} & 再生リクエストフラグ。ロジックフェーズで\texttt{true}にセットする \\
+\bottomrule
+\end{longtable}
+\end{funcblock}
+
+% --- メソッド ---
+\subsubsection{メソッド}
+
+\begin{funcblock}{BuzzerModule(const BuzzerConfig\& config)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+引数   & \texttt{config} --- \texttt{BuzzerConfig}へのconst参照 \\
+動作   & Configを\texttt{\_config}にコピー保持する \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{bool init()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+戻り値   & \texttt{bool} --- 常に\texttt{true} \\
+動作     & LEDCチャネルの初期設定を行い、ブザーを消音状態にする \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void updateOutput(SystemData\& data)}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+読み取り元     & \texttt{data.buzzer} \\
+タイミング制御 & 毎ループ実行 \\
+動作           & \texttt{requestPlay}が\texttt{true}の場合、指定周波数でPWMトーンを開始し、\texttt{durationMs > 0}なら時間計測を開始。\texttt{requestPlay}を\texttt{false}にクリア。再生中に\texttt{durationMs}経過で自動停止 \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{funcblock}{void deinit()}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{項目} & \textbf{内容} \\
+\midrule
+動作   & PWMトーンを停止し、LEDCチャネルをデタッチする \\
+\bottomrule
+\end{tabularx}
+\end{funcblock}
+
+\begin{notebox}[\texttt{requestPlay}のライフサイクル]
+\texttt{requestPlay}はロジックフェーズで\texttt{true}にセットし、
+\texttt{updateOutput()}内で消費（\texttt{false}にクリア）される。
+毎ループ\texttt{true}にし続けると再生が毎ループリスタートされるため、
+単発再生の場合は1回だけセットすること。
+\end{notebox}
+
+% --- 使用例 ---
+\subsubsection{使用例}
+
+\begin{lstlisting}[style=cppstyle, caption={BuzzerModuleの使用例}]
+// ProjectConfig.h
+const BuzzerConfig BUZZER_CONFIG = {
+    .pin        = 47,  // GPIO47: ブザー出力
+    .pwmChannel = 6,   // LEDCチャネル6
+};
+
+// ロジックフェーズでの使用
+void applyPattern(SystemData& data) {
+    // ボタン押下で「ピッ」と鳴らす
+    if (data.button.justPressed) {
+        data.buzzer.frequency   = 1000;  // 1kHz
+        data.buzzer.durationMs  = 100;   // 100ms
+        data.buzzer.requestPlay = true;
+    }
+}
+\end{lstlisting}
