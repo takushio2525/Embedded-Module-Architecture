@@ -11,11 +11,6 @@ struct DisplayBoardLgfxImpl;
 // --- Config構造体 ---
 // 表示ボード上の全ハードウェア（ILI9341 + XPT2046）の設定
 struct DisplayBoardConfig {
-    // SPIバスピン（LovyanGFXが内部でバスを構成するため必要。
-    //             外部SPIClassは使用しない）
-    int8_t   spiMosiPin;
-    int8_t   spiMisoPin;
-    int8_t   spiSckPin;
     // TFTパネルピン
     int8_t   tftCsPin;         // TFT CSピン
     int8_t   tftDcPin;         // TFT DCピン
@@ -50,7 +45,9 @@ struct SystemData;
 
 class DisplayBoardModule : public IModule {
 public:
-    DisplayBoardModule(const DisplayBoardConfig& config);
+    // spiPins: 共有SPIバスピン {MOSI, MISO, SCK}
+    DisplayBoardModule(const DisplayBoardConfig& config,
+                       int8_t spiMosi, int8_t spiMiso, int8_t spiSck);
     ~DisplayBoardModule();
     bool init()                          override;
     void updateInput(SystemData& data)   override;  // 入力フェーズ: タッチ読み取り
@@ -60,6 +57,9 @@ public:
 private:
     DisplayBoardConfig    _config;
     DisplayBoardLgfxImpl* _impl;          // LovyanGFX内部コンポーネント群
+    int8_t                _spiMosi;       // 共有SPI MOSIピン
+    int8_t                _spiMiso;       // 共有SPI MISOピン
+    int8_t                _spiSck;        // 共有SPI SCKピン
     ModuleTimer           _updateTimer;
     bool                  _initialized = false;
 

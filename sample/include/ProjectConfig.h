@@ -17,11 +17,13 @@ const DisplayBoardConfig DISPLAY_BOARD_CONFIG = {
     .updateIntervalMs = 100, // 画面更新周期 100ms (10fps)
 };
 
+// ===== 共有I2Cバスピン =====
+constexpr int I2C_SDA_PIN = 41;
+constexpr int I2C_SCL_PIN = 42;
+
 // ===== MPU-6500 (I2C) =====
 const Mpu6500Config MPU6500_CONFIG = {
     .address          = 0x68,  // AD0=LOW: 0x68 / AD0=HIGH: 0x69
-    .sdaPin           = 41,    // I2C SDA
-    .sclPin           = 42,    // I2C SCL
     .sampleIntervalMs = 20,    // サンプリング周期 20ms (50Hz)
 };
 

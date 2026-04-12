@@ -188,10 +188,12 @@ struct SystemData {
 constexpr int SPI_MOSI_PIN = 38;
 constexpr int SPI_MISO_PIN = 40;
 constexpr int SPI_SCK_PIN  = 39;
+constexpr int I2C_SDA_PIN  = 41;
+constexpr int I2C_SCL_PIN  = 42;
 
 // モジュール固有のピンはConfig内に直書き
 const LedConfig LED_CONFIG = { .ledPin = 2 };
-const Mpu6500Config MPU6500_CONFIG = { .address = 0x68, .sdaPin = 41, ... };
+const Mpu6500Config MPU6500_CONFIG = { .address = 0x68, .sampleIntervalMs = 20 };
 ```
 
 ---
@@ -203,7 +205,7 @@ const Mpu6500Config MPU6500_CONFIG = { .address = 0x68, .sdaPin = 41, ... };
 static TwoWire mpuWire = TwoWire(0);
 
 void setup() {
-    mpuWire.begin(SDA, SCL);  // bus.begin() は全 init() より前
+    mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // bus.begin() は全 init() より前
     initModules(...);
 }
 

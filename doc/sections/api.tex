@@ -361,7 +361,7 @@ constexpr int I2C_SCL_PIN  = 3;
 // ===== Configインスタンス（ピンは直書き） =====
 const LedConfig LED_CONFIG = { .ledPin = 13 };
 const TempSensorConfig TEMP_CONFIG = { .tempPin = 36 };
-const CameraConfig CAMERA_CONFIG = { .sdaPin = 21, .sclPin = 22 };
+// 注意: 共有バスピンはConfig構造体に含めず、上のconstexpr定数を使用する
 \end{lstlisting}
 
 \begin{notebox}[ファイル分離の理由]

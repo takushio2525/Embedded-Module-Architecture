@@ -126,7 +126,7 @@ void setup() {
     Serial.println("[System] 起動");
 
     // バス初期化（全モジュールのinit()より前に実行）
-    mpuWire.begin(MPU6500_CONFIG.sdaPin, MPU6500_CONFIG.sclPin);
+    mpuWire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
     // モジュール初期化（両配列に含まれるモジュールの重複initを避ける）
     IModule* allModules[] = {

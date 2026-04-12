@@ -8,7 +8,8 @@
 #include "ModuleTimer.h"
 
 // ===== モジュール・データ =====
-DisplayBoardModule display(DISPLAY_BOARD_CONFIG);
+DisplayBoardModule display(DISPLAY_BOARD_CONFIG,
+                           SPI_MOSI_PIN, SPI_MISO_PIN, SPI_SCK_PIN);
 SystemData systemData;
 
 // シリアル出力用タイマー

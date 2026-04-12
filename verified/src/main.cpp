@@ -22,7 +22,8 @@ SystemData systemData;
 // ===== モジュールインスタンス =====
 
 // 入出力モジュール（両方の配列に含める）
-DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG);
+DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG,
+                                      SPI_MOSI_PIN, SPI_MISO_PIN, SPI_SCK_PIN);
 BleModule          bleModule(BLE_CONFIG);
 
 // 入力専用モジュール

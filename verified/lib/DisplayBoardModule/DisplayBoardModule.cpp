@@ -13,8 +13,10 @@ struct DisplayBoardLgfxImpl {
     lgfx::Touch_XPT2046  touch;
 };
 
-DisplayBoardModule::DisplayBoardModule(const DisplayBoardConfig& config)
-    : _config(config), _impl(new DisplayBoardLgfxImpl()) {}
+DisplayBoardModule::DisplayBoardModule(const DisplayBoardConfig& config,
+                                       int8_t spiMosi, int8_t spiMiso, int8_t spiSck)
+    : _config(config), _impl(new DisplayBoardLgfxImpl()),
+      _spiMosi(spiMosi), _spiMiso(spiMiso), _spiSck(spiSck) {}
 
 DisplayBoardModule::~DisplayBoardModule() {
     delete _impl;
@@ -27,9 +29,9 @@ bool DisplayBoardModule::init() {
         cfg.spi_host   = SPI2_HOST;   // FSPI (ESP32-S3)
         cfg.freq_write = 40000000;    // 書き込み 40MHz
         cfg.freq_read  = 20000000;    // 読み込み 20MHz
-        cfg.pin_mosi   = _config.spiMosiPin;
-        cfg.pin_miso   = _config.spiMisoPin;
-        cfg.pin_sclk   = _config.spiSckPin;
+        cfg.pin_mosi   = _spiMosi;
+        cfg.pin_miso   = _spiMiso;
+        cfg.pin_sclk   = _spiSck;
         cfg.pin_dc     = _config.tftDcPin;
         cfg.spi_mode   = 0;
         cfg.use_lock   = true;        // バス排他制御を有効化（SD共有）

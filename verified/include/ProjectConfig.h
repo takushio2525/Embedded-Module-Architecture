@@ -21,12 +21,9 @@ constexpr int I2C_SCL_PIN = 3;
 // 外部からピンを参照する場合は SERVO_CONFIG.pin のように構造体経由でアクセスする。
 
 // 表示ボード (ILI9341 + XPT2046, 2.8インチ)
-// LovyanGFXが内部でSPIバスを構成するためSPIピンをConfigに含める。
+// LovyanGFXが内部でSPIバスを構成するため、SPIピンはコンストラクタ引数で渡す。
 // 外部SPIClassは使用しない（LovyanGFXのbus_shared + use_lockで排他制御）。
 const DisplayBoardConfig DISPLAY_BOARD_CONFIG = {
-    .spiMosiPin      = SPI_MOSI_PIN,  // 共有SPIバス MOSIピン
-    .spiMisoPin      = SPI_MISO_PIN,  // 共有SPIバス MISOピン
-    .spiSckPin       = SPI_SCK_PIN,   // 共有SPIバス SCKピン
     .tftCsPin        = 41,   // TFT CSピン
     .tftDcPin        = 42,   // TFT DCピン
     .tftRstPin       = 48,   // TFT RSTピン

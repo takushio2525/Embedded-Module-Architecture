@@ -11,8 +11,6 @@ class TwoWire;
 // --- Config構造体 ---
 struct Mpu6500Config {
     uint8_t  address;        // I2Cアドレス (AD0=LOW: 0x68 / AD0=HIGH: 0x69)
-    int8_t   sdaPin;         // I2C SDAピン
-    int8_t   sclPin;         // I2C SCLピン
     uint32_t sampleIntervalMs; // サンプリング周期 [ms]
 };
 
