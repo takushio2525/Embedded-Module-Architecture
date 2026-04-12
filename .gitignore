@@ -14,7 +14,11 @@
 **/.vscode/launch.json
 **/.vscode/ipch
 
-# LaTeX コンパイルアーティファクト（PDF は追跡する）
+# LaTeX コンパイルアーティファクト
+# PDF は docs/ に集約（doc-*/ 内の PDF は除外）
+doc/*.pdf
+doc-guide/*.pdf
+doc-textbook/*.pdf
 *.aux
 *.bbl
 *.blg

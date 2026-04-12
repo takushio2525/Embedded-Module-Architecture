@@ -1,0 +1,51 @@
+name: LaTeX コンパイル & PDF 生成
+
+on:
+  push:
+    paths:
+      - 'doc/**'
+      - 'doc-guide/**'
+      - 'doc-textbook/**'
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/paperist/texlive-ja:debian
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: 設計仕様書のコンパイル
+        working-directory: doc
+        run: latexmk main.tex
+
+      - name: 実装ガイドのコンパイル
+        working-directory: doc-guide
+        run: latexmk main.tex
+
+      - name: 教科書のコンパイル
+        working-directory: doc-textbook
+        run: latexmk main.tex
+
+      - name: PDF を docs/ にコピー
+        run: |
+          mkdir -p docs
+          cp "doc-textbook/モジュール設計パターン教科書.pdf" "docs/01_教科書.pdf"
+          cp "doc-guide/モジュール実装ガイド.pdf" "docs/02_実装ガイド.pdf"
+          cp "doc/モジュール設計仕様書.pdf" "docs/03_設計仕様書.pdf"
+
+      - name: 変更をコミット & プッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "PDF に変更なし、スキップ"
+          else
+            git commit -m "[ドキュメント] PDF を自動生成"
+            git push
+          fi
