@@ -46,12 +46,16 @@ public:
 \begin{lstlisting}[style=cppstyle, caption={ChassisModule.cpp — init()/deinit()で内部モジュールを管理}]
 ChassisModule::ChassisModule(const ChassisConfig& config)
     : _config(config),
-      _motors{
-          DriveMotorModule(config.motors[0]),
-          DriveMotorModule(config.motors[1]),
-          DriveMotorModule(config.motors[2]),
-          DriveMotorModule(config.motors[3]),
-      } {}
+      _motorFL(config.motors[0]),
+      _motorFR(config.motors[1]),
+      _motorRL(config.motors[2]),
+      _motorRR(config.motors[3])
+{
+    _motors[0] = &_motorFL;
+    _motors[1] = &_motorFR;
+    _motors[2] = &_motorRL;
+    _motors[3] = &_motorRR;
+}
 \end{lstlisting}
 
 \begin{notebox}[コンストラクタの初期化リスト — 初学者向け解説]
@@ -59,43 +63,63 @@ ChassisModule::ChassisModule(const ChassisConfig& config)
 
 \begin{enumerate}
     \item \texttt{\_config(config)} — Config構造体をコピー保存
-    \item \texttt{\_motors\{...\}} — DriveMotorModuleの配列を、各モーターのConfigで初期化
+    \item \texttt{\_motorFL(config.motors[0])} — 各モーターを対応するConfigで初期化
 \end{enumerate}
 
-配列の初期化は波括弧 \texttt{\{\}} で囲みます。中の \texttt{DriveMotorModule(config.motors[0])} は「config.motors[0]の設定でDriveMotorModuleを作る」という意味です。
-
-\vspace{2mm}
-これは「コンストラクタの中で4つの子モジュールを一気に作る」処理です。
 初期化リスト構文に慣れないうちは「コンストラクタ引数を受け取って、メンバ変数に渡している」とだけ理解すれば十分です。
+コンストラクタ本体では、ポインタ配列\texttt{\_motors[]}に各モーターのアドレスをセットしています。
+これにより、ループで全モーターに対して統一的に操作できます。
 \end{notebox}
 
 \begin{lstlisting}[style=cppstyle, caption={ChassisModule.cpp — init()/deinit()（続き）}]
 
 bool ChassisModule::init() {
-    for (int i = 0; i < 4; i++) {
-        if (!_motors[i].init()) return false;
+    for (int i = 0; i < CHASSIS_MOTOR_COUNT; i++) {
+        if (!_motors[i]->init()) return false;
     }
     return true;
 }
 
 void ChassisModule::deinit() {
-    for (int i = 0; i < 4; i++) {
-        _motors[i].deinit();
+    for (int i = 0; i < CHASSIS_MOTOR_COUNT; i++) {
+        _motors[i]->drive(0.0f);
     }
 }
 \end{lstlisting}
 
 \begin{lstlisting}[style=cppstyle, caption={ChassisModule.cpp — updateOutput()でベクトル合成→各モーターをdrive()}]
 void ChassisModule::updateOutput(SystemData& data) {
-    float outputs[4];
-    // ベクトル合成（ホイールパターンに応じた方向行列）
-    calcWheelOutputs(data.chassis, outputs);
-    // リミッタ + スケーリング
-    applyLimiter(outputs, _config.maxOutputPercent);
-    // 各内部モジュールのdrive()を直接呼ぶ
-    for (int i = 0; i < 4; i++) {
-        _motors[i].drive(outputs[i]);
-        data.chassis.motorOutputs[i] = outputs[i];
+    float speeds[3] = {
+        data.chassis.forwardSpeed,
+        data.chassis.lateralSpeed,
+        data.chassis.rotationSpeed,
+    };
+    // ベクトル合成: 方向行列 × 入力速度 → 各モーター出力
+    float motorPowers[CHASSIS_MOTOR_COUNT] = {};
+    const float (*matrix)[CHASSIS_MOTOR_COUNT] = _getMatrix();
+    for (int dir = 0; dir < 3; dir++) {
+        for (int m = 0; m < CHASSIS_MOTOR_COUNT; m++) {
+            motorPowers[m] += matrix[dir][m] * speeds[dir];
+        }
+    }
+    // リミッタ: 最大絶対値が100を超えたら全体を等比縮小
+    float maxAbs = 0.0f;
+    for (int m = 0; m < CHASSIS_MOTOR_COUNT; m++) {
+        float absVal = fabsf(motorPowers[m]);
+        if (absVal > maxAbs) maxAbs = absVal;
+    }
+    if (maxAbs > 100.0f) {
+        float scale = 100.0f / maxAbs;
+        for (int m = 0; m < CHASSIS_MOTOR_COUNT; m++) {
+            motorPowers[m] *= scale;
+        }
+    }
+    // 最大出力割合でスケーリング & 各モーター駆動
+    float outputScale = _config.maxOutputPercent / 100.0f;
+    for (int m = 0; m < CHASSIS_MOTOR_COUNT; m++) {
+        motorPowers[m] *= outputScale;
+        _motors[m]->drive(motorPowers[m]);
+        data.chassis.motorOutputs[m] = motorPowers[m];
     }
 }
 \end{lstlisting}
@@ -262,10 +286,10 @@ Config構造体は別のConfig構造体をメンバとして持てる。
 各モーターの出力は以下の式で計算される:
 
 \vspace{0.3em}
-$output_i = M_{i,0} \times forward + M_{i,1} \times lateral + M_{i,2} \times rotation$
+$output_m = M_{0,m} \times forward + M_{1,m} \times lateral + M_{2,m} \times rotation$
 \vspace{0.3em}
 
-\noindent ここで $M$ はホイールパターンに応じた $4 \times 3$ の方向行列である。
+\noindent ここで $M$ はホイールパターンに応じた $3 \times 4$ の方向行列であり、行が方向（前進・横移動・回転）、列がモーター（左前・右前・左後・右後）を表す。
 
 \medskip
 \textbf{OMNI（オムニホイール）の方向行列:}
@@ -274,10 +298,10 @@ $output_i = M_{i,0} \times forward + M_{i,1} \times lateral + M_{i,2} \times rot
 \toprule
 & \textbf{前進} & \textbf{横移動} & \textbf{回転} \\
 \midrule
-左前 [0] & $+1$ & $-1$ & $-1$ \\
-右前 [1] & $+1$ & $+1$ & $+1$ \\
-左後 [2] & $+1$ & $+1$ & $-1$ \\
-右後 [3] & $+1$ & $-1$ & $+1$ \\
+左前 [0] & $-1$ & $+1$ & $-1$ \\
+右前 [1] & $+1$ & $+1$ & $-1$ \\
+左後 [2] & $-1$ & $-1$ & $-1$ \\
+右後 [3] & $+1$ & $-1$ & $-1$ \\
 \bottomrule
 \end{tabular}
 \end{center}

@@ -238,8 +238,9 @@ BLE通信の状態と送受信データを保持する。
 \toprule
 \textbf{項目} & \textbf{内容} \\
 \midrule
-戻り値     & \texttt{bool} --- 常に\texttt{true} \\
+戻り値     & \texttt{bool} --- サーバー・サービス作成成功で\texttt{true}、失敗で\texttt{false} \\
 動作       & BLEデバイス初期化、GATTサーバー作成、サービス・Characteristic登録、コールバック設定、アドバタイズ開始 \\
+失敗条件   & \texttt{BLEDevice::createServer()}またはサービス作成の失敗 \\
 \bottomrule
 \end{tabularx}
 \end{funcblock}
