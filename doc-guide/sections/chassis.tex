@@ -13,16 +13,19 @@
 \subsection{内部モジュールの保持}
 
 \begin{lstlisting}[style=cppstyle, caption={ChassisModule.h — 内部にDriveMotorModuleを4つ保持}]
+static constexpr int CHASSIS_MOTOR_COUNT = 4;
+
 struct ChassisConfig {
-    DriveMotorConfig motors[4];     // 4輪分のモーターConfig
+    DriveMotorConfig motors[CHASSIS_MOTOR_COUNT];
     WheelPattern     wheelPattern;
     float            maxOutputPercent;
 };
 
 class ChassisModule : public IModule {
 private:
-    ChassisConfig      _config;
-    DriveMotorModule   _motors[4];  // 内部にモジュールを直接保持
+    ChassisConfig    _config;
+    DriveMotorModule _motorFL, _motorFR, _motorRL, _motorRR;
+    DriveMotorModule* _motors[CHASSIS_MOTOR_COUNT];
 public:
     ChassisModule(const ChassisConfig& config);
     bool init() override;
@@ -32,7 +35,7 @@ public:
 \end{lstlisting}
 
 \begin{pointbox}[内部モジュールはIModule配列に登録しない]
-\texttt{\_motors[4]}は\texttt{ChassisModule}のメンバ変数であり、
+4つの\texttt{DriveMotorModule}は\texttt{ChassisModule}のメンバ変数であり、
 \texttt{main.cpp}の\texttt{outputModules[]}には登録しない。
 \texttt{SystemData}にも\texttt{DriveMotorData}を含める必要がない。
 外部からは\texttt{ChassisModule}1つだけが見え、3軸入力だけで4輪を制御できる。

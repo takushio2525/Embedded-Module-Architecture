@@ -12,47 +12,53 @@
 
 \subsection{2つの使い方}
 
-\texttt{DriveMotorModule}は2つのモードで使える。
+\texttt{DriveMotorModule}は2つの用途を想定した設計になっている。
 
 \begin{enumerate}
-    \item \textbf{単体使用} — \texttt{outputModules[]}に登録し、\texttt{SystemData}経由で制御
-    \item \textbf{統合モジュールの内部部品} — \texttt{ChassisModule}等が内部で\texttt{drive()}を呼ぶ
+    \item \textbf{統合モジュールの内部部品}（主な用途） — \texttt{ChassisModule}等が内部で\texttt{drive()}を呼ぶ
+    \item \textbf{単体使用}（拡張時） — \texttt{updateOutput()}を実装し、\texttt{outputModules[]}に登録して使う（現在のコードでは空実装）
 \end{enumerate}
 
 \begin{lstlisting}[style=cppstyle, caption={DriveMotorModule.h — drive()メソッド}]
 class DriveMotorModule : public IModule {
 public:
-    // SystemData経由の制御（単体使用時）
+    // SystemData経由の制御（空実装。単体使用時は書き換えが必要）
     void updateOutput(SystemData& data) override;
 
     // SystemData非経由の直接制御（統合モジュールから使用）
     void drive(float power);
-    void brake();
 };
 \end{lstlisting}
 
 \begin{pointbox}[updateOutput()とdrive()の使い分け]
-\texttt{updateOutput()}はSystemDataの\texttt{DriveMotorData.power}を読んで\texttt{drive()}を呼ぶラッパー。
-統合モジュールの内部部品として使う場合は\texttt{drive()}を直接呼び、
-\texttt{updateOutput()}は空実装（呼ばれない）となる。
-この設計により、同じモジュールコードを単体でも統合でも使い回せる。
+現在の実装では\texttt{updateOutput()}は空実装であり、\texttt{ChassisModule}が\texttt{drive()}を直接呼ぶ設計。
+単体モーターとして\texttt{outputModules[]}に登録して使いたい場合は、\texttt{updateOutput()}内で
+\texttt{data.driveMotor.power}を読み取り\texttt{drive()}を呼ぶように実装する。
 \end{pointbox}
 
 \subsection{逆転保護}
 
 \begin{lstlisting}[style=cppstyle, caption={DriveMotorModule.cpp — 逆転保護}]
-void DriveMotorModule::drive(float power) {
-    Direction newDir = (power > 0) ? FORWARD
-                     : (power < 0) ? REVERSE : STOP;
+void DriveMotorModule::_applyMotor(float power) {
+    // 現在の方向を判定
+    int8_t direction = 0;
+    if (power > _config.minPowerThreshold) {
+        direction = 1;   // 正転
+    } else if (power < -_config.minPowerThreshold) {
+        direction = -1;  // 逆転
+    }
 
     // 正転<->逆転の直接切り替え時、1フレーム分のブレーキを挿入
-    if ((_lastDir == FORWARD && newDir == REVERSE) ||
-        (_lastDir == REVERSE && newDir == FORWARD)) {
-        brake();
-        _lastDir = STOP;
+    if ((direction == 1 && _prevDirection == -1) ||
+        (direction == -1 && _prevDirection == 1)) {
+        // ブレーキ（IN1=HIGH, IN2=HIGH で短絡ブレーキ）
+        digitalWrite(_config.in1Pin, HIGH);
+        digitalWrite(_config.in2Pin, HIGH);
+        ledcWrite(_config.pwmChannel, MOTOR_DUTY_MAX);
+        _prevDirection = 0;
         return;  // 次のupdateOutput()で実際の方向転換が行われる
     }
-    // ... 実際のPWM制御 ...
+    // ... IN1/IN2方向設定 + PWMデューティ設定 ...
 }
 \end{lstlisting}
 
@@ -177,7 +183,7 @@ Hブリッジドライバの接続ピンとPWMパラメータを定義する。
 
 \begin{notebox}[方向反転時のブレーキ]
 前回の方向と今回の方向が逆転した場合（正転→逆転、逆転→正転）、
-モーターと駆動回路を保護するため1フレーム分のブレーキ（IN1=IN2=LOW、PWM=0）を挿入する。
+モーターと駆動回路を保護するため1フレーム分のブレーキ（IN1=IN2=HIGH、短絡ブレーキ）を挿入する。
 次のループで新しい方向の駆動が開始される。
 \end{notebox}
 

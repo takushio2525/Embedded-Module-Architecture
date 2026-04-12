@@ -32,17 +32,7 @@ enum class WifiState : uint8_t {
 
 \begin{lstlisting}[style=cppstyle, caption={WifiModule.cpp — updateInput()のステートマシン}]
 void WifiModule::updateInput(SystemData& data) {
-    // ロジックフェーズからのリクエスト処理
-    if (data.wifi.requestConnect) {
-        data.wifi.requestConnect = false;
-        if (_state == WifiState::DISCONNECTED
-            || _state == WifiState::FAILED) {
-            _retryCount = 0;
-            _startConnect();
-        }
-    }
-
-    // ステートマシン
+    // ステートマシン（WiFi状態の監視・自動再接続）
     switch (_state) {
         case WifiState::CONNECTING:
         case WifiState::RECONNECTING:
@@ -79,6 +69,24 @@ void WifiModule::updateInput(SystemData& data) {
 }
 \end{lstlisting}
 
+\begin{lstlisting}[style=cppstyle, caption={WifiModule.cpp — updateOutput()のリクエスト処理}]
+void WifiModule::updateOutput(SystemData& data) {
+    // ロジックフェーズからのリクエスト処理
+    if (data.wifi.requestConnect) {
+        data.wifi.requestConnect = false;
+        if (_state == WifiState::DISCONNECTED
+            || _state == WifiState::FAILED) {
+            _retryCount = 0;
+            _startConnect();
+        }
+    }
+    if (data.wifi.requestDisconnect) {
+        data.wifi.requestDisconnect = false;
+        _disconnect();
+    }
+}
+\end{lstlisting}
+
 \begin{pointbox}[ノンブロッキングなステートマシン]
 WiFi接続は通常数秒かかるが、\texttt{delay()}で待たない。
 \texttt{CONNECTING}状態では毎ループ\texttt{WiFi.status()}を確認し、
@@ -89,7 +97,7 @@ WiFi接続は通常数秒かかるが、\texttt{delay()}で待たない。
 \begin{pointbox}[リクエストフラグパターン]
 \texttt{requestConnect}はロジックフェーズからの「接続して」という指示。
 BuzzerModuleの\texttt{requestPlay}と同じパターンで、
-\texttt{updateInput()}が処理後に\texttt{false}に戻す。
+\texttt{updateOutput()}が処理後に\texttt{false}に戻す。
 \end{pointbox}
 
 \subsection{ロジックフェーズでの使用例}

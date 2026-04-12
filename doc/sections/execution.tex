@@ -209,7 +209,7 @@ void LedModule::updateOutput(SystemData& data) {
 リアルタイム性が求められるプロジェクトや、カメラ等の重い処理を含むプロジェクトでは、
 3フェーズループをタイマー割り込みで周期実行し、メインループは重い処理に専念する構成をとる。
 
-\begin{lstlisting}[style=cppstyle, caption={タイマー割り込みによる3フェーズ実行}]
+\begin{lstlisting}[style=cppstyle, caption={タイマー割り込みによる3フェーズ実行（ESP32の例）}]
 // main.cpp
 hw_timer_t* moduleTimer = NULL;
 volatile bool updateFlag = false;
@@ -225,6 +225,7 @@ void setup() {
     // モジュール初期化（省略）
 
     // タイマー割り込み設定（10ms周期）
+    // ※ Arduino Core v2.x のAPI。v3.x では引数が異なるため注意
     moduleTimer = timerBegin(0, 80, true);  // 80分周 = 1MHz
     timerAttachInterrupt(moduleTimer, &onModuleTimer, true);
     timerAlarmWrite(moduleTimer, 10000, true);  // 10ms
@@ -313,7 +314,9 @@ public:
 \texttt{volatile}は「この変数は外部から変更される可能性がある」とコンパイラに伝えるキーワードである。
 これがないと、コンパイラの最適化によりフラグの変更が検出されない場合がある。\\
 \\
-\texttt{bool}型フラグ1個の読み書きは原子的であるため、
+\texttt{bool}型フラグ1個の読み書きは、ESP32等の32bitマイコンでは実質的に原子的である
+（ただしC++標準では保証されていない。厳密にはプラットフォーム依存の動作）。
+この性質を利用し、
 「バッファへの書き込み完了後にフラグを立てる」→「フラグ確認後にバッファを読む」の順序で
 安全にデータを受け渡しできる。mutexは不要である。
 \end{notebox}
