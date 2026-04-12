@@ -6,35 +6,36 @@
 #include "SystemData.h"
 
 // LGFX内部コンポーネント（ヘッダではforward declareのみ）
-struct DisplayBoardLgfxImpl {
-    lgfx::LGFX_Device    lcd;
-    lgfx::Panel_ILI9341  panel;
-    lgfx::Bus_SPI        bus;
-    lgfx::Touch_XPT2046  touch;
+struct DisplayBoardLgfxImpl
+{
+    lgfx::LGFX_Device lcd;
+    lgfx::Panel_ILI9341 panel;
+    lgfx::Bus_SPI bus;
+    lgfx::Touch_XPT2046 touch;
 };
 
-DisplayBoardModule::DisplayBoardModule(const DisplayBoardConfig& config,
-                                       int8_t spiMosi, int8_t spiMiso, int8_t spiSck)
-    : _config(config), _impl(new DisplayBoardLgfxImpl()),
-      _spiMosi(spiMosi), _spiMiso(spiMiso), _spiSck(spiSck) {}
+DisplayBoardModule::DisplayBoardModule(const DisplayBoardConfig &config)
+    : _config(config), _impl(new DisplayBoardLgfxImpl()) {}
 
-DisplayBoardModule::~DisplayBoardModule() {
+DisplayBoardModule::~DisplayBoardModule()
+{
     delete _impl;
 }
 
-bool DisplayBoardModule::init() {
+bool DisplayBoardModule::init()
+{
     // SPIバス設定
     {
         auto cfg = _impl->bus.config();
-        cfg.spi_host   = SPI2_HOST;   // FSPI (ESP32-S3)
-        cfg.freq_write = 40000000;    // 書き込み 40MHz
-        cfg.freq_read  = 20000000;    // 読み込み 20MHz
-        cfg.pin_mosi   = _spiMosi;
-        cfg.pin_miso   = _spiMiso;
-        cfg.pin_sclk   = _spiSck;
-        cfg.pin_dc     = _config.tftDcPin;
-        cfg.spi_mode   = 0;
-        cfg.use_lock   = true;        // バス排他制御を有効化（SD共有）
+        cfg.spi_host = SPI2_HOST;  // FSPI (ESP32-S3)
+        cfg.freq_write = 40000000; // 書き込み 40MHz
+        cfg.freq_read = 20000000;  // 読み込み 20MHz
+        cfg.pin_mosi = _config.spiMosiPin;
+        cfg.pin_miso = _config.spiMisoPin;
+        cfg.pin_sclk = _config.spiSckPin;
+        cfg.pin_dc = _config.tftDcPin;
+        cfg.spi_mode = 0;
+        cfg.use_lock = true; // バス排他制御を有効化（SD共有）
         _impl->bus.config(cfg);
         _impl->panel.setBus(&_impl->bus);
     }
@@ -42,33 +43,33 @@ bool DisplayBoardModule::init() {
     // パネル設定 (ILI9341, 2.8インチ 320x240)
     {
         auto cfg = _impl->panel.config();
-        cfg.pin_cs        = _config.tftCsPin;
-        cfg.pin_rst       = _config.tftRstPin;
-        cfg.panel_width   = 240;
-        cfg.panel_height  = 320;
-        cfg.memory_width  = 240;
+        cfg.pin_cs = _config.tftCsPin;
+        cfg.pin_rst = _config.tftRstPin;
+        cfg.panel_width = 240;
+        cfg.panel_height = 320;
+        cfg.memory_width = 240;
         cfg.memory_height = 320;
-        cfg.offset_x      = 0;
-        cfg.offset_y      = 0;
-        cfg.offset_rotation = 6;  // パネル取り付け方向の補正（180° + ミラー）
-        cfg.readable      = true;
-        cfg.invert        = false;
-        cfg.rgb_order     = false;
-        cfg.bus_shared    = true;     // SDカードとSPIバス共有
+        cfg.offset_x = 0;
+        cfg.offset_y = 0;
+        cfg.offset_rotation = 6; // パネル取り付け方向の補正（180° + ミラー）
+        cfg.readable = true;
+        cfg.invert = false;
+        cfg.rgb_order = false;
+        cfg.bus_shared = true; // SDカードとSPIバス共有
         _impl->panel.config(cfg);
     }
 
     // タッチパネル設定 (XPT2046)
     {
         auto cfg = _impl->touch.config();
-        cfg.spi_host = SPI2_HOST;     // TFTと同じSPIバス
-        cfg.freq     = 2500000;       // タッチSPI 2.5MHz
-        cfg.pin_cs   = _config.touchCsPin;
-        cfg.pin_int  = _config.touchIrqPin;
-        cfg.x_min    = 300;
-        cfg.x_max    = 3900;
-        cfg.y_min    = 200;
-        cfg.y_max    = 3700;
+        cfg.spi_host = SPI2_HOST; // TFTと同じSPIバス
+        cfg.freq = 2500000;       // タッチSPI 2.5MHz
+        cfg.pin_cs = _config.touchCsPin;
+        cfg.pin_int = _config.touchIrqPin;
+        cfg.x_min = 300;
+        cfg.x_max = 3900;
+        cfg.y_min = 200;
+        cfg.y_max = 3700;
         _impl->touch.config(cfg);
         _impl->panel.setTouch(&_impl->touch);
     }
@@ -93,47 +94,60 @@ bool DisplayBoardModule::init() {
     return true;
 }
 
-void DisplayBoardModule::deinit() {
+void DisplayBoardModule::deinit()
+{
     _initialized = false;
     Serial.println("[DisplayBoard] deinit");
 }
 
-void DisplayBoardModule::updateInput(SystemData& data) {
-    if (!_initialized) return;
+void DisplayBoardModule::updateInput(SystemData &data)
+{
+    if (!_initialized)
+        return;
 
     // タッチ読み取り
     lgfx::touch_point_t tp;
     int touchCount = _impl->lcd.getTouch(&tp, 1);
     data.display.touchPressed = (touchCount > 0);
-    if (data.display.touchPressed) {
+    if (data.display.touchPressed)
+    {
         data.display.touchX = tp.x;
         data.display.touchY = tp.y;
     }
 }
 
-void DisplayBoardModule::updateOutput(SystemData& data) {
-    if (!_initialized) return;
+void DisplayBoardModule::updateOutput(SystemData &data)
+{
+    if (!_initialized)
+        return;
 
-    if (_updateTimer.getNowTime() >= _config.updateIntervalMs) {
+    if (_updateTimer.getNowTime() >= _config.updateIntervalMs)
+    {
         _updateTimer.setTime();
         renderDisplay(data);
     }
 }
 
-void DisplayBoardModule::renderDisplay(const SystemData& data) {
+void DisplayBoardModule::renderDisplay(const SystemData &data)
+{
     const uint16_t lineHeight = 22;
     const uint16_t startX = 4;
     uint16_t y = 4;
 
     // 上部: テキスト情報（タッチ座標・MPU・ステータス）
     _impl->lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-    _impl->lcd.drawString(data.display.line1, startX, y); y += lineHeight;
-    _impl->lcd.drawString(data.display.line2, startX, y); y += lineHeight;
-    _impl->lcd.drawString(data.display.line3, startX, y); y += lineHeight;
-    _impl->lcd.drawString(data.display.line4, startX, y); y += lineHeight;
+    _impl->lcd.drawString(data.display.line1, startX, y);
+    y += lineHeight;
+    _impl->lcd.drawString(data.display.line2, startX, y);
+    y += lineHeight;
+    _impl->lcd.drawString(data.display.line3, startX, y);
+    y += lineHeight;
+    _impl->lcd.drawString(data.display.line4, startX, y);
+    y += lineHeight;
 
     // line5（メモリ情報など — 黄色テキスト）
-    if (data.display.line5[0] != '\0') {
+    if (data.display.line5[0] != '\0')
+    {
         _impl->lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
         _impl->lcd.drawString(data.display.line5, startX, y);
     }
@@ -144,10 +158,13 @@ void DisplayBoardModule::renderDisplay(const SystemData& data) {
     y += 4;
 
     // 下部: カメラJPEG画像
-    if (data.display.jpegData && data.display.jpegSize > 0) {
+    if (data.display.jpegData && data.display.jpegSize > 0)
+    {
         _impl->lcd.drawJpg(data.display.jpegData, data.display.jpegSize,
                            0, y, 240, 176);
-    } else {
+    }
+    else
+    {
         // カメラ無効時はプレースホルダ表示
         _impl->lcd.setTextColor(TFT_DARKGREY, TFT_BLACK);
         _impl->lcd.drawString("CAM: No frame", startX, y + 80);

@@ -8,22 +8,23 @@
 #include "ModuleTimer.h"
 
 // ===== モジュール・データ =====
-DisplayBoardModule display(DISPLAY_BOARD_CONFIG,
-                           SPI_MOSI_PIN, SPI_MISO_PIN, SPI_SCK_PIN);
+DisplayBoardModule display(DISPLAY_BOARD_CONFIG);
 SystemData systemData;
 
 // シリアル出力用タイマー
 static ModuleTimer printTimer;
 static constexpr uint32_t PRINT_INTERVAL_MS = 200;
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
-    delay(3000);  // USB-CDC再接続待ち
+    delay(3000); // USB-CDC再接続待ち
 
     Serial.println("[DisplayTest] 起動");
 
     // モジュール初期化
-    if (!display.init()) {
+    if (!display.init())
+    {
         Serial.println("[DisplayTest] init失敗");
         display.enabled = false;
     }
@@ -32,18 +33,23 @@ void setup() {
     Serial.println("[DisplayTest] 開始（画面をタッチしてください）");
 }
 
-void loop() {
+void loop()
+{
     // 1. 入力フェーズ
-    if (display.enabled) {
+    if (display.enabled)
+    {
         display.updateInput(systemData);
     }
 
     // 2. ロジックフェーズ
-    if (systemData.display.touchPressed) {
+    if (systemData.display.touchPressed)
+    {
         snprintf(systemData.display.line1, sizeof(systemData.display.line1),
                  "Touch: X=%d Y=%d",
                  systemData.display.touchX, systemData.display.touchY);
-    } else {
+    }
+    else
+    {
         strncpy(systemData.display.line1, "Touch: ---",
                 sizeof(systemData.display.line1));
     }
@@ -54,10 +60,12 @@ void loop() {
              (int)(ESP.getFreePsram() / 1024));
 
     // シリアルにも出力
-    if (printTimer.getNowTime() >= PRINT_INTERVAL_MS) {
+    if (printTimer.getNowTime() >= PRINT_INTERVAL_MS)
+    {
         printTimer.setTime();
 
-        if (systemData.display.touchPressed) {
+        if (systemData.display.touchPressed)
+        {
             Serial.printf("Touch: X=%d Y=%d\n",
                           systemData.display.touchX,
                           systemData.display.touchY);
@@ -65,7 +73,8 @@ void loop() {
     }
 
     // 3. 出力フェーズ
-    if (display.enabled) {
+    if (display.enabled)
+    {
         display.updateOutput(systemData);
     }
 }

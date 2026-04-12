@@ -22,13 +22,12 @@ SystemData systemData;
 // ===== モジュールインスタンス =====
 
 // 入出力モジュール（両方の配列に含める）
-DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG,
-                                      SPI_MOSI_PIN, SPI_MISO_PIN, SPI_SCK_PIN);
-BleModule          bleModule(BLE_CONFIG);
+DisplayBoardModule displayBoardModule(DISPLAY_BOARD_CONFIG);
+BleModule bleModule(BLE_CONFIG);
 
 // 入力専用モジュール
-Mpu6500Module mpu6500Module(MPU6500_CONFIG, 1);  // I2Cポート1（ポート0はesp_camera SCCBが使用）
-CameraModule  cameraModule(CAMERA_CONFIG);
+Mpu6500Module mpu6500Module(MPU6500_CONFIG, 1); // I2Cポート1（ポート0はesp_camera SCCBが使用）
+CameraModule cameraModule(CAMERA_CONFIG);
 
 // 未使用モジュール（Configは残すがモジュール配列には含めない）
 // SdModule      sdModule(SD_CONFIG, &sharedSpi);  // SDカード未テスト
@@ -36,17 +35,17 @@ CameraModule  cameraModule(CAMERA_CONFIG);
 
 // モジュール配列
 // 配列の並び順 = フェーズ内の実行順序
-IModule* inputModules[] = {
-    &bleModule,           // BLE受信を先に反映
-    &displayBoardModule,  // タッチ読み取り
+IModule *inputModules[] = {
+    &bleModule,          // BLE受信を先に反映
+    &displayBoardModule, // タッチ読み取り
     &mpu6500Module,
     &cameraModule,
 };
 const int INPUT_COUNT = sizeof(inputModules) / sizeof(inputModules[0]);
 
-IModule* outputModules[] = {
-    &displayBoardModule,  // 画面描画
-    &bleModule,           // 全データ確定後にBLE送信
+IModule *outputModules[] = {
+    &displayBoardModule, // 画面描画
+    &bleModule,          // 全データ確定後にBLE送信
 };
 const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
@@ -54,32 +53,39 @@ const int OUTPUT_COUNT = sizeof(outputModules) / sizeof(outputModules[0]);
 
 // BLE経由でIMUデータを送信する周期タイマー
 static ModuleTimer bleSendTimer;
-static constexpr uint32_t BLE_SEND_INTERVAL_MS = 100;  // 100ms (10Hz)
+static constexpr uint32_t BLE_SEND_INTERVAL_MS = 100; // 100ms (10Hz)
 
 // init失敗モジュールの再試行タイマーと間隔
 static ModuleTimer reinitTimer;
-static constexpr uint32_t REINIT_INTERVAL_MS = 5000;  // 5秒ごとに再試行
+static constexpr uint32_t REINIT_INTERVAL_MS = 5000; // 5秒ごとに再試行
 
-void applyPattern(SystemData& data) {
+void applyPattern(SystemData &data)
+{
     // タッチ座標の表示
-    if (data.display.touchPressed) {
+    if (data.display.touchPressed)
+    {
         snprintf(data.display.line1, sizeof(data.display.line1),
                  "Touch: X=%3d Y=%3d  ",
                  data.display.touchX, data.display.touchY);
-    } else {
+    }
+    else
+    {
         strncpy(data.display.line1, "Touch: ---            ",
                 sizeof(data.display.line1));
     }
 
     // MPU6500データの表示
-    if (data.mpu.isValid) {
+    if (data.mpu.isValid)
+    {
         snprintf(data.display.line2, sizeof(data.display.line2),
                  "A:%.1f %.1f %.1f  ",
                  data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ);
         snprintf(data.display.line3, sizeof(data.display.line3),
                  "G:%.0f %.0f %.0f  ",
                  data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
-    } else {
+    }
+    else
+    {
         strncpy(data.display.line2, "MPU: No data          ",
                 sizeof(data.display.line2));
         data.display.line3[0] = '\0';
@@ -98,36 +104,47 @@ void applyPattern(SystemData& data) {
              (int)(ESP.getFreePsram() / 1024));
 
     // カメラJPEGフレームをディスプレイDataに設定
-    if (data.camera.isValid && data.camera.frameReady) {
+    if (data.camera.isValid && data.camera.frameReady)
+    {
         data.display.jpegData = cameraModule.getFrameBuffer();
         data.display.jpegSize = data.camera.frameSize;
-    } else {
+    }
+    else
+    {
         data.display.jpegData = nullptr;
         data.display.jpegSize = 0;
     }
 
     // BLE接続中はIMUデータをNotifyで定期送信
     if (data.ble.connected && data.mpu.isValid &&
-        bleSendTimer.getNowTime() >= BLE_SEND_INTERVAL_MS) {
+        bleSendTimer.getNowTime() >= BLE_SEND_INTERVAL_MS)
+    {
         bleSendTimer.setTime();
         // CSV形式: "ax,ay,az,gx,gy,gz\n"
-        int len = snprintf((char*)data.ble.txData, BLE_TX_BUFFER_SIZE,
+        int len = snprintf((char *)data.ble.txData, BLE_TX_BUFFER_SIZE,
                            "%.2f,%.2f,%.2f,%.1f,%.1f,%.1f\n",
                            data.mpu.accelX, data.mpu.accelY, data.mpu.accelZ,
                            data.mpu.gyroX, data.mpu.gyroY, data.mpu.gyroZ);
-        data.ble.txLength    = (uint8_t)len;
+        data.ble.txLength = (uint8_t)len;
         data.ble.sendRequest = true;
     }
 
     // init失敗モジュールの定期再試行
-    if (reinitTimer.getNowTime() >= REINIT_INTERVAL_MS) {
+    if (reinitTimer.getNowTime() >= REINIT_INTERVAL_MS)
+    {
         reinitTimer.setTime();
-        IModule* allModules[] = {
-            &displayBoardModule, &mpu6500Module, &cameraModule, &bleModule,
+        IModule *allModules[] = {
+            &displayBoardModule,
+            &mpu6500Module,
+            &cameraModule,
+            &bleModule,
         };
-        for (auto* mod : allModules) {
-            if (!mod->enabled) {
-                if (mod->init()) {
+        for (auto *mod : allModules)
+        {
+            if (!mod->enabled)
+            {
+                if (mod->init())
+                {
                     mod->enabled = true;
                     Serial.println("[System] モジュール再init成功、有効化");
                 }
@@ -138,7 +155,8 @@ void applyPattern(SystemData& data) {
 
 // ===== セットアップ =====
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
     delay(3000); // USB CDC 接続待ち
     Serial.println("[System] 本実装起動");
@@ -146,7 +164,7 @@ void setup() {
                   ESP.getFreeHeap(), ESP.getFreePsram());
 
     // SPIバス初期化（全モジュールのinit()より前に実行）
-    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1);  // 共有SPIバス
+    sharedSpi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1); // 共有SPIバス
     Serial.println("[System] SPIバス初期化完了");
 
     // モジュール初期化（順序が重要）
@@ -157,22 +175,31 @@ void setup() {
     // 5. BLE（メモリ消費が大きいため最後）
 
     // フェーズ1: カメラより前のモジュール
-    IModule* preI2cModules[] = { &displayBoardModule, &cameraModule };
-    const char* preI2cNames[] = { "Display", "Camera" };
+    IModule *preI2cModules[] = {&displayBoardModule, &cameraModule};
+    const char *preI2cNames[] = {"Display", "Camera"};
     const int PRE_I2C_COUNT = 2;
     const int MAX_RETRY = 3;
 
-    for (int i = 0; i < PRE_I2C_COUNT; i++) {
+    for (int i = 0; i < PRE_I2C_COUNT; i++)
+    {
         Serial.printf("[System] %s init開始... (heap=%d)\n",
                       preI2cNames[i], ESP.getFreeHeap());
         bool success = false;
-        for (int r = 0; r < MAX_RETRY; r++) {
-            if (preI2cModules[i]->init()) { success = true; break; }
+        for (int r = 0; r < MAX_RETRY; r++)
+        {
+            if (preI2cModules[i]->init())
+            {
+                success = true;
+                break;
+            }
             delay(100);
         }
-        if (success) {
+        if (success)
+        {
             Serial.printf("[System] %s init成功\n", preI2cNames[i]);
-        } else {
+        }
+        else
+        {
             Serial.printf("[System] %s init失敗、無効化\n", preI2cNames[i]);
             preI2cModules[i]->enabled = false;
         }
@@ -192,21 +219,30 @@ void setup() {
     Serial.println("[System] I2Cバス初期化完了（カメラinit後）");
 
     // フェーズ3: I2C依存モジュール + BLE
-    IModule* postI2cModules[] = { &mpu6500Module, &bleModule };
-    const char* postI2cNames[] = { "MPU6500", "BLE" };
+    IModule *postI2cModules[] = {&mpu6500Module, &bleModule};
+    const char *postI2cNames[] = {"MPU6500", "BLE"};
     const int POST_I2C_COUNT = 2;
 
-    for (int i = 0; i < POST_I2C_COUNT; i++) {
+    for (int i = 0; i < POST_I2C_COUNT; i++)
+    {
         Serial.printf("[System] %s init開始... (heap=%d)\n",
                       postI2cNames[i], ESP.getFreeHeap());
         bool success = false;
-        for (int r = 0; r < MAX_RETRY; r++) {
-            if (postI2cModules[i]->init()) { success = true; break; }
+        for (int r = 0; r < MAX_RETRY; r++)
+        {
+            if (postI2cModules[i]->init())
+            {
+                success = true;
+                break;
+            }
             delay(100);
         }
-        if (success) {
+        if (success)
+        {
             Serial.printf("[System] %s init成功\n", postI2cNames[i]);
-        } else {
+        }
+        else
+        {
             Serial.printf("[System] %s init失敗、無効化\n", postI2cNames[i]);
             postI2cModules[i]->enabled = false;
         }
@@ -219,10 +255,13 @@ void setup() {
 
 // ===== メインループ =====
 
-void loop() {
+void loop()
+{
     // 1. 入力フェーズ
-    for (int i = 0; i < INPUT_COUNT; i++) {
-        if (inputModules[i]->enabled) {
+    for (int i = 0; i < INPUT_COUNT; i++)
+    {
+        if (inputModules[i]->enabled)
+        {
             inputModules[i]->updateInput(systemData);
         }
     }
@@ -231,8 +270,10 @@ void loop() {
     applyPattern(systemData);
 
     // 3. 出力フェーズ
-    for (int i = 0; i < OUTPUT_COUNT; i++) {
-        if (outputModules[i]->enabled) {
+    for (int i = 0; i < OUTPUT_COUNT; i++)
+    {
+        if (outputModules[i]->enabled)
+        {
             outputModules[i]->updateOutput(systemData);
         }
     }
